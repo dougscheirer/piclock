@@ -68,9 +68,9 @@ func settingsFromJSON(s Settings, data []byte) Settings {
 	sleepTime := getDuration(data, "sleepTime")
 	alarmPath := getString(data, "alarmPath")
 
-	if countdown >= 0 { s.countdownTime = countdown }
-	if sleepTime >= 0 { s.sleepTime 		= sleepTime }
-	if alarmPath != "" { s.alarmPath   = alarmPath }
+	if countdown >= 0 	{ s.countdownTime = countdown }
+	if sleepTime >= 0 	{ s.sleepTime 		= sleepTime }
+	if alarmPath != "" 	{ s.alarmPath   = alarmPath }
 	return s
 }
 
@@ -130,6 +130,19 @@ func disableFirstAlarm(table []Alarm) { }
 func nextAlarm(table []Alarm) { }
 func getNextAlarm(table []Alarm) Alarm { return table[0] }
 
+func reconcileAlarms(path string) {
+	// TODO: get alarms from calendar, remove ones that don't exist
+}
+
+func getAlarms(settings Settings) {
+	for true {
+		reconcileAlarms(settings.alarmPath)
+		// TODO: signal that the alarms got refreshed?
+		time.Sleep(1 * time.Minute)
+	}
+
+}
+
 func main() {
 	/*
 		Main app
@@ -139,34 +152,36 @@ func main() {
 	initLCD()
 	initAlarms()
 
+	go getAlarms(settings)
+
 	// loop:
 	loop := true
 	for loop {
 		time.Sleep(settings.sleepTime)
 		// Read cache dir every 1(?) secs in table
-		alarmTable := readAlarmCache();
+		alarmTable := readAlarmCache()
 		// If button press
 		if mainButtonPressed() {
 		  // If table.empty
 		  if len(alarmTable) == 0 {
 		   	// Clear cache directory
-		   	clearAlarmCacheFiles();
+		   	clearAlarmCacheFiles()
 		   	// run calendar job
-		   	runCalendarRefresh();
+		   	runCalendarRefresh()
  			  // Else if alarm.active
 		  } else if isAlarming() {
 		    // Alarm.disable
-		    endAlarm();
+		    endAlarm()
 		    // Set clock mode
-		    setClockMode();
+		    setClockMode()
 			} else {
 		  	// Table.findfirstenabled.disable (to file)
-		  	disableFirstAlarm(alarmTable);
+		  	disableFirstAlarm(alarmTable)
 		  }
 
 		  // get the next alarm that is going to fire
-		  nextAlarm := getNextAlarm(alarmTable);
-		  duration := nextAlarm.time.Sub(time.Now());
+		  nextAlarm := getNextAlarm(alarmTable)
+		  duration := nextAlarm.time.Sub(time.Now())
 
 		  if (duration > 0) {
 			  // start a countdown?
@@ -175,13 +190,13 @@ func main() {
 		  	}
 		  } else {
 		    // Set alarm mode
-		    setAlarmMode();
-		    disableAlarm(nextAlarm);
+		    setAlarmMode()
+		    disableAlarm(nextAlarm)
 		  }
 
 		  // update UI
-		  updateAlarmLEDs();
-		  updateExtraLEDs();
+		  updateAlarmLEDs()
+		  updateExtraLEDs()
 		}
 	}
 }
