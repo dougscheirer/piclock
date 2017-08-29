@@ -20,6 +20,7 @@ type Settings struct {
 	countdownTime time.Duration
 	sleepTime time.Duration
 	alarmPath string
+	alarmRefreshTime time.Duration
 }
 
 func logMessage(msg string) {
@@ -30,11 +31,11 @@ func logMessage(msg string) {
 
 func defaultSettings() Settings {
 	var s Settings
-	
+
 	s.countdownTime, _ = time.ParseDuration("1m")
 	s.sleepTime, _ = time.ParseDuration("10ms")
 	s.alarmPath = "/etc/default/piclock/alarms"
-
+	s.alarmRefreshTime, _ = time.ParseDuration("1m")
 	return s
 }
 
@@ -51,9 +52,9 @@ func getDuration(data []byte, name string) time.Duration {
 	duration, err := jsonparser.GetString(data, name)
 	if err == nil {
 		d, err := time.ParseDuration(duration)
-		if err == nil { 
+		if err == nil {
 			logMessage(fmt.Sprintf("%s : %s", name, duration))
-			return d 
+			return d
 		} else {
 			logMessage(fmt.Sprintf("bad value '%s' : %s", duration, err.Error()))
 			return -1
@@ -67,10 +68,13 @@ func settingsFromJSON(s Settings, data []byte) Settings {
 	countdown := getDuration(data, "countdownTime")
 	sleepTime := getDuration(data, "sleepTime")
 	alarmPath := getString(data, "alarmPath")
+	alarmRefreshTime := getDuration(data, "alarmRefreshTime")
 
 	if countdown >= 0 	{ s.countdownTime = countdown }
 	if sleepTime >= 0 	{ s.sleepTime 		= sleepTime }
 	if alarmPath != "" 	{ s.alarmPath   = alarmPath }
+	if alarmRefreshTime >= 0 { s.alarmRefreshTime = alarmRefreshTime }
+
 	return s
 }
 
@@ -138,9 +142,8 @@ func getAlarms(settings Settings) {
 	for true {
 		reconcileAlarms(settings.alarmPath)
 		// TODO: signal that the alarms got refreshed?
-		time.Sleep(1 * time.Minute)
+		time.Sleep(settings.alarmRefreshTime)
 	}
-
 }
 
 func main() {
