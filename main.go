@@ -4,10 +4,10 @@ import "fmt"
 import "time"
 import "runtime"
 import "flag"
-import "io"
+// import "io"
 import "io/ioutil"
-import "encoding/json"
-import "strings"
+import "github.com/buger/jsonparser"
+// import "strings"
 
 // piclock -config={config file}
 
@@ -18,6 +18,8 @@ type Alarm struct {
 
 type Settings struct {
 	countdownTime time.Duration
+	sleepTime time.Duration
+	alarmPath string
 }
 
 func logMessage(msg string) {
@@ -28,34 +30,47 @@ func logMessage(msg string) {
 
 func defaultSettings() Settings {
 	var s Settings
-	s.countdownTime = 60
+	
+	s.countdownTime, _ = time.ParseDuration("1m")
+	s.sleepTime, _ = time.ParseDuration("10ms")
+	s.alarmPath = "/etc/default/piclock/alarms"
+
 	return s
 }
 
+func getString(data []byte, name string) string {
+	s, err := jsonparser.GetString(data, name)
+	if err == nil {
+		logMessage(fmt.Sprintf("%s : %s", name, s))
+		return s
+	}
+	return ""
+}
+
+func getDuration(data []byte, name string) time.Duration {
+	duration, err := jsonparser.GetString(data, name)
+	if err == nil {
+		d, err := time.ParseDuration(duration)
+		if err == nil { 
+			logMessage(fmt.Sprintf("%s : %s", name, duration))
+			return d 
+		} else {
+			logMessage(fmt.Sprintf("bad value '%s' : %s", duration, err.Error()))
+			return -1
+		}
+	} else {
+		return -1
+	}
+}
+
 func settingsFromJSON(s Settings, data []byte) Settings {
-	type Message struct {
-		key, val string
-	}
-	logMessage(string(data))
-	dec := json.NewDecoder(strings.NewReader(string(data)))
-	for {
-		var m Message
-		if err := dec.Decode(&m); err == io.EOF {
-			break
-		} else if err != nil {
-			logMessage(err.Error())
-			return s
-		}
-		logMessage(fmt.Sprintf("%s: %s", m.key, m.val))
-		switch {
-			case m.key == "countdown" :
-				d, err := time.ParseDuration(m.val)
-				if err != nil { s.countdownTime = d }
-			default:
-				logMessage(fmt.Sprintf("unknown key '%s'", m.key))
-				break
-		}
-	}
+	countdown := getDuration(data, "countdownTime")
+	sleepTime := getDuration(data, "sleepTime")
+	alarmPath := getString(data, "alarmPath")
+
+	if countdown >= 0 { s.countdownTime = countdown }
+	if sleepTime >= 0 { s.sleepTime 		= sleepTime }
+	if alarmPath != "" { s.alarmPath   = alarmPath }
 	return s
 }
 
@@ -127,7 +142,7 @@ func main() {
 	// loop:
 	loop := true
 	for loop {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(settings.sleepTime)
 		// Read cache dir every 1(?) secs in table
 		alarmTable := readAlarmCache();
 		// If button press
