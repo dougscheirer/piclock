@@ -2,6 +2,7 @@ package sevenseg_backpack
 
 import "i2c"
 
+// translate characters to bitmasks
 digitValues := map[byte]byte {
     ' ': 0x00,
     '-': 0x40,
@@ -58,15 +59,17 @@ func NewSevenseg(address uint8, bus int) (*Sevenseg, error) {
 	}
 	this := &Sevenseg{i2c_dev: i2c}
 	// clear the display
-	for i:=0;i<len(display);i++ {
-		display[i]=0
+	for i:=0;i<len(this.display);i++ {
+		this.display[i]=0
 	}
 	return this, nil
 }
 
 func (this *sevenseg) refresh_display()
 {
-	i2c_dev.Write_byte()
+    // start with the address (0)
+    buf := [6]byte{ 0x00, display[0], display[1], display[2], display[3], display[4]}
+	i2c_dev.Write(buf)
 }
 
 func (this *sevenseg) Write_colon(on bool) error {
