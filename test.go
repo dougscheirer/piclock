@@ -2,24 +2,28 @@ package main
 
 import (
 	"fmt"
+	"piclock/i2c"
+	"time"
 )
 
-var displayBuf [5]uint8;
-
-// open an i2c connection
-func NewI2C(addr uint8, bus int) (*I2C, error) {
-	f, err := os.OpenFile(fmt.Sprintf("/dev/i2c-%d", bus), os.O_RDWR, 0600)
-	if err != nil {
-		return nil, err
-	}
-	if err := ioctl(f.Fd(), I2C_SLAVE, uintptr(addr)); err != nil {
-		return nil, err
-	}
-	this := &I2C{rc: f}
-	return this, nil
-}
-
 func main() {
+
+	dev, err := i2c.Open(0x70, 0)
+	if err != nil {
+		fmt.Printf("Failed to open: %s", err.Error())
+	} else {
+		var buf [16]uint8;
+		for j:=1;j<11;j+=2{
+			fmt.Printf("j is %d\n",j)
+			for b:=0;b<len(buf);b++ { buf[b]=0 }
+			for i:=0;i<256;i++ {
+				buf[j] = uint8(i)
+				dev.Write(buf[:])
+				time.Sleep(25*time.Millisecond)
+			}
+		}
+	}
+	var displayBuf [5]byte
 	for i := 0; i < 5; i++ {
 		displayBuf[i] = 0
 	}
