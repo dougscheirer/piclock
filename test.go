@@ -2,83 +2,36 @@ package main
 
 import (
 	"fmt"
-	"piclock/i2c"
+	"piclock/sevenseg_backpack"
 	"time"
 )
 
-// set a segment on a digit
-func setSegment(pos byte, segNum byte, display [10]uint8) [10]uint8 {
-	if pos > 1 {
-		pos++
-	}
-	// +1 to skip the address byte, & 0x80 to keep the dot
-	display[1+pos*2] = (display[1+pos*2] & 0x80) | (1 << segNum)
-	return display
-}
-
-// turn a dot on or off
-func setDot(pos byte, dotOn bool, display [10]uint8) [10]uint8 {
-	if pos > 1 {
-		pos++
-	}
-	val := 0x80
-	if !dotOn {
-		val = 0x00
-	}
-	display[1+pos*2] = (display[1+pos*2] & 0x7F) | uint8(val)
-	return display
-}
-
-func setColon(colonOn bool, display [10]uint8) [10]uint8 {
-	val := 0xff
-	if !colonOn {
-		val = 0
-	}
-	display[5] = uint8(val)
-	return display
-}
-
 func main() {
 
-	dev, err := i2c.Open(0x70, 0)
+	display, err := sevenseg_backpack.Open(0x70, 0)
 	if err != nil {
-		fmt.Printf("Failed to open: %s", err.Error())
+		fmt.Printf("Failed to open: %s\n", err.Error())
 		return
 	}
 
-	// first some commands
-  dev.WriteByte(0x21)  // turn on oscillator
-  dev.WriteByte(0x81)	// turn on display, no blinking
-  dev.WriteByte(0xEF)	// max brightness
+	display.ClearDisplay()
 
-	// write to display:
-	// AA D0 xx D1 xx CL xx D2 xx D3 xx xx xx xx xx xx
-	// 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-	// digit bit order:
-	//  -    0
-	// | |  6  1
-	//  -			5
-	// | |  4  2
-	//  - .  3    7
-	//
-	//  :  0
-	var displayBuf [10]uint8; // every other byte is unused
-	for i:=0;i<len(displayBuf);i++ {
-		displayBuf[i]=0
-	}
+	segmentOrder := []byte{
+		sevenseg_backpack.LED_TOP,
+		sevenseg_backpack.LED_TOPR,
+		sevenseg_backpack.LED_BOTR,
+		sevenseg_backpack.LED_BOT,
+		sevenseg_backpack.LED_BOTL,
+		sevenseg_backpack.LED_TOPL }
 
-	// roll through each digit's 7 bits, flash the dots and flash the colon
-	itsOn := true
 	for true {
-		for i:=0;i<7;i++ {
-			dev.WriteByte(0xE0 | uint8(i))
-			itsOn = !itsOn
-			for j:=0;j<4;j++ {
-				displayBuf = setSegment(byte(j), byte(i), displayBuf)
-				displayBuf = setDot(byte(j), itsOn, displayBuf)
+		for i:=0;i<len(segmentOrder);i++ {
+			display.RefreshOn(false)
+			display.ClearDisplay()
+			for p:=0;p<4;p++ {
+				display.SegmentOn(byte(p), segmentOrder[i], true)
 			}
-			displayBuf = setColon(itsOn, displayBuf)
-			dev.Write(displayBuf[:])
+			display.RefreshOn(true)
 			time.Sleep(25 * time.Millisecond)
 		}
 	}

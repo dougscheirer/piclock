@@ -30,7 +30,7 @@ func (this *I2C) Close() error {
 	return this.fd.Close()
 }
 
-// this is to write command-style bytes
+// this is to write a command-style byte
 func (this *I2C) WriteByte(single byte) (int, error) {
 	var buf [1]byte;
 	buf[0] = single
