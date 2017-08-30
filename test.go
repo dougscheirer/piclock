@@ -8,7 +8,7 @@ import (
 
 // set a segment on a digit
 func setSegment(pos byte, segNum byte, display [10]uint8) [10]uint8 {
-	if pos > 2 {
+	if pos > 1 {
 		pos++
 	}
 	// +1 to skip the address byte, & 0x80 to keep the dot
@@ -18,7 +18,7 @@ func setSegment(pos byte, segNum byte, display [10]uint8) [10]uint8 {
 
 // turn a dot on or off
 func setDot(pos byte, dotOn bool, display [10]uint8) [10]uint8 {
-	if pos > 2 {
+	if pos > 1 {
 		pos++
 	}
 	val := 0x80
@@ -30,7 +30,7 @@ func setDot(pos byte, dotOn bool, display [10]uint8) [10]uint8 {
 }
 
 func setColon(colonOn bool, display [10]uint8) [10]uint8 {
-	val := 1
+	val := 0xff 
 	if !colonOn {
 		val = 0
 	}
@@ -49,7 +49,7 @@ func main() {
 	// first some commands
   dev.WriteByte(0x21)  // turn on oscillator
   dev.WriteByte(0x81)	// turn on display, no blinking
-  dev.WriteByte(0xEF)	// max brightness
+//  dev.WriteByte(0xEF)	// max brightness
 
 	// write to display:
 	// AA D0 xx D1 xx CL xx D2 xx D3 xx xx xx xx xx xx
@@ -68,19 +68,18 @@ func main() {
 	}
 
 	// roll through each digit's 7 bits, flash the dots and flash the colon
+	itsOn := true
 	for true {
 		for i:=0;i<7;i++ {
-			itsOn := false
-			if i % 2 == 0 {
-				itsOn = true
-			}
+			dev.WriteByte(0xE0 | uint8(i))
+			itsOn = !itsOn
 			for j:=0;j<4;j++ {
 				displayBuf = setSegment(byte(j), byte(i), displayBuf)
 				displayBuf = setDot(byte(j), itsOn, displayBuf)
 			}
 			displayBuf = setColon(itsOn, displayBuf)
 			dev.Write(displayBuf[:])
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(25 * time.Millisecond)
 		}
 	}
 }
