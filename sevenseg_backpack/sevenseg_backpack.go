@@ -2,6 +2,29 @@ package sevenseg_backpack
 
 import "i2c"
 
+// commands we support
+
+// OSC on/off 0/1
+i2c_OSC_CMD   := 0x20
+i2c_OSC_ON    := 0x21
+i2c_OSC_OFF   := 0x20
+
+// display on/off and 2 "blink" bits in position 2+1
+i2c_DISPLAY_CMD := 0x80
+i2c_DISPLAY_ON  := 0x81
+i2c_DISPLAY_OFF := 0x80
+
+i2c_BLINK_OFF := 0
+i2c_BLINK_2HZ := 1
+i2c_BLINK_1HZ := 2
+i2c_BLINK_HALFHZ := 3
+
+// 0x0 -> 0xF brightness levels
+i2c_BRIGHTNESS_CMD  := 0xE0
+i2c_BRIGHTNESS_MAX  := 0xEF
+i2c_BRIGHTNESS_MIN  := 0xE0
+i2c_BRIGHTNESS_HALF := 0xE7
+
 // translate characters to bitmasks
 digitValues := map[byte]byte {
     ' ': 0x00,
@@ -48,28 +71,44 @@ inverseDigitValues := map[byte]byte {
 }
 
 type Sevenseg struct {
-	display [5]byte
+	display [5*2]byte  // 7-seg skips bytes for each display element
 	i2c_dev I2C
 }
 
 func NewSevenseg(address uint8, bus int) (*Sevenseg, error) {
-	i2c, err = i2c.Open(address, bus)
+	i2c_dev, err = i2c.Open(address, bus)
 	if err != nil {
 		return nil, err
 	}
-	this := &Sevenseg{i2c_dev: i2c}
+	this := &Sevenseg{i2c_dev: i2c_dev}
 	// clear the display
 	for i:=0;i<len(this.display);i++ {
 		this.display[i]=0
 	}
+    // turn on the oscillator, set default brightness
+    i2c_dev.WriteByte(i2c_OSC_ON)
+    i2c_dev.WriteByte(i2c_BRIGHTNESS_MAX)
+
+    // you still need to call DisplayOn(true) to see stuff
 	return this, nil
+}
+
+func (this *sevenseg) ClearDisplay() {
+    for i:=0;i<len(display);i++ {
+        display[i]=0
+    }
+    
 }
 
 func (this *sevenseg) refresh_display()
 {
     // start with the address (0)
-    buf := [6]byte{ 0x00, display[0], display[1], display[2], display[3], display[4]}
-	i2c_dev.Write(buf)
+    buf := [1+len(this.display)]byte
+    buf[0] = 0
+    for i:=0;i<len(this.display);i++ {
+        buf[1+i]=display[i]
+    }
+	this.i2c_dev.Write(buf)
 }
 
 func (this *sevenseg) Write_colon(on bool) error {

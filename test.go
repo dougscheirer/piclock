@@ -30,7 +30,7 @@ func setDot(pos byte, dotOn bool, display [10]uint8) [10]uint8 {
 }
 
 func setColon(colonOn bool, display [10]uint8) [10]uint8 {
-	val := 0xff 
+	val := 0xff
 	if !colonOn {
 		val = 0
 	}
@@ -49,7 +49,7 @@ func main() {
 	// first some commands
   dev.WriteByte(0x21)  // turn on oscillator
   dev.WriteByte(0x81)	// turn on display, no blinking
-//  dev.WriteByte(0xEF)	// max brightness
+  dev.WriteByte(0xEF)	// max brightness
 
 	// write to display:
 	// AA D0 xx D1 xx CL xx D2 xx D3 xx xx xx xx xx xx
