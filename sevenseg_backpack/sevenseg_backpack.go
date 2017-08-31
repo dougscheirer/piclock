@@ -95,6 +95,7 @@ type Sevenseg struct {
 	i2c_dev *i2c.I2C
     refresh bool
     inverted bool
+    dump bool
     blink byte
 }
 
@@ -117,6 +118,7 @@ func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
         refresh: true,
         inverted: false,
         blink: BLINK_OFF,
+	dump: false,
         display: getClearDisplay() }
     // turn on the oscillator, set default brightness
     this.i2c_dev.WriteByte(i2c_OSC_ON)
@@ -124,6 +126,10 @@ func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
 
     // you still need to call DisplayOn(true) to turn on the display
 	return this, nil
+}
+
+func (this *Sevenseg) DebugDump(on bool) {
+	this.dump = on
 }
 
 func (this *Sevenseg) SetInverted(inverted bool) {
@@ -246,7 +252,7 @@ func (this *Sevenseg) refresh_display() error {
     if !this.refresh { return nil }
     // display has the address 0 embedded in it
     // for debugging, dump out twhat we think we're putting on the display
-    this.dumpDisplay()
+    if this.dump { this.dumpDisplay() }
 	_, err := this.i2c_dev.Write(this.display[:])
     return err
 }

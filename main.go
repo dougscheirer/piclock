@@ -149,6 +149,12 @@ func getAlarms(settings Settings) {
 	}
 }
 
+func replaceAtIndex(in string, r rune, i int) string {
+	    out := []rune(in)
+	    out[i] = r
+	    return string(out)
+}
+
 func runClock(setting Settings) {
 	simulated := true
 	if runtime.GOARCH == "arm" {
@@ -159,17 +165,23 @@ func runClock(setting Settings) {
 		fmt.Printf("Error: %s", err.Error())
 		return
 	}
+	display.DisplayOn(true)
+	display.SetBrightness(3)
 	display.Print("8888")
 	for true {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(250 * time.Millisecond)
 		colon := "15:04"
 		now := time.Now()
 		if now.Second() % 2 == 0 {
 			// no space required for the colon
 			colon = "1504"
 		}
-		fmt.Printf("%d : %s %s\n", now.Second(), colon, now.Format(colon))
-		err := display.Print(now.Format(colon))
+		timeString := now.Format(colon)
+		if timeString[0] == '0' {
+			timeString = replaceAtIndex(timeString, ' ', 0)
+		}
+		// fmt.Printf("%d : %s %s\n", now.Second(), colon, timeString)
+		err := display.Print(timeString)
 		if err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
 		}
