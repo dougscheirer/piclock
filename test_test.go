@@ -1,13 +1,30 @@
 package main
 
 import (
+	"testing"
+	"runtime"
+	"time"
 	"fmt"
 	"piclock/sevenseg_backpack"
-	"time"
-	"runtime"
 )
 
-func runTests(display *sevenseg_backpack.Sevenseg, inverted bool) {
+func TestRun(t *testing.T) {
+	simulated := true
+	if runtime.GOARCH == "arm" {
+		simulated = false
+	}
+
+	display, err := sevenseg_backpack.Open(0x70, 0, simulated)	// set to false when on a PI
+	if err != nil {
+		t.Errorf("Failed to open: %s\n", err.Error())
+		return
+	}
+
+	runTests(t, display, true)
+	runTests(t, display, false)
+}
+
+func runTests(t *testing.T, display *sevenseg_backpack.Sevenseg, inverted bool) {
 	display.ClearDisplay()
 	display.SetInverted(inverted)
 
@@ -94,21 +111,4 @@ func runTests(display *sevenseg_backpack.Sevenseg, inverted bool) {
 			time.Sleep(25 * time.Millisecond)
 		}
 	}
-}
-
-func main() {
-	simulated := true
-	if runtime.GOARCH == "arm" {
-		simulated = false
-	}
-	display, err := sevenseg_backpack.Open(0x70, 0, simulated)	// set to false when on a PI
-	if err != nil {
-		fmt.Printf("Failed to open: %s\n", err.Error())
-		return
-	}
-
-	runTests(display, true)
-	runTests(display, false)
-
-	// TODO: brightness tests, blink tests
 }
