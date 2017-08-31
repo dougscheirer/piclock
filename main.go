@@ -1,13 +1,16 @@
 package main
 
-import "fmt"
-import "time"
-import "runtime"
-import "flag"
-// import "io"
-import "io/ioutil"
-import "github.com/buger/jsonparser"
-// import "strings"
+import (
+	"fmt"
+	"time"
+	"runtime"
+	"flag"
+	// "io"
+	"io/ioutil"
+	"github.com/buger/jsonparser"
+	// "strings"
+	"piclock/sevenseg_backpack"
+)
 
 // piclock -config={config file}
 
@@ -114,7 +117,7 @@ func initLCD() bool {
 }
 
 func readAlarmCache() []Alarm {
-	logMessage("readAlarmCache")
+	// logMessage("readAlarmCache")
 	ret := make([]Alarm, 0, 100)
  	return ret
 }
@@ -146,6 +149,33 @@ func getAlarms(settings Settings) {
 	}
 }
 
+func runClock(setting Settings) {
+	simulated := true
+	if runtime.GOARCH == "arm" {
+		simulated = false
+	}
+	display, err := sevenseg_backpack.Open(0x70, 0, simulated)
+	if err != nil {
+		fmt.Printf("Error: %s", err.Error())
+		return
+	}
+	display.Print("8888")
+	for true {
+		time.Sleep(500 * time.Millisecond)
+		colon := "15:04"
+		now := time.Now()
+		if now.Second() % 2 == 0 {
+			// no space required for the colon
+			colon = "1504"
+		}
+		fmt.Printf("%d : %s %s\n", now.Second(), colon, now.Format(colon))
+		err := display.Print(now.Format(colon))
+		if err != nil {
+			fmt.Printf("Error: %s\n", err.Error())
+		}
+	}
+}
+
 func main() {
 	/*
 		Main app
@@ -156,6 +186,7 @@ func main() {
 	initAlarms()
 
 	go getAlarms(settings)
+	go runClock(settings)
 
 	// loop:
 	loop := true
