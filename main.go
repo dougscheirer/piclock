@@ -6,6 +6,7 @@ import (
 	"piclock/sevenseg_backpack"
 	"sync"
 	"errors"
+	"strings"
 )
 
 var wg sync.WaitGroup
@@ -66,7 +67,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect) {
 			cE <- alarmError()
 			// TODO: use the cached alarms
 			time.Sleep(time.Second)
-			continue			
+			continue
 		}
 
 		// get next 10 alarms
@@ -82,13 +83,13 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect) {
 		 	cE <- alarmError()
 			// TODO: use the cached alarms
 			time.Sleep(time.Second)
-			continue			
+			continue
 		}
 
 		fmt.Printf("Upcoming events: %T\n", events.Items)
 		if len(events.Items) > 0 {
 		  for _, i := range events.Items {
-		  	if !i.Summary.Contains("#piclock")  {
+		  	if !strings.Contains(i.Summary, "#piclock")  {
 		  		continue
 		  	}
 		    var when string
@@ -220,7 +221,7 @@ func runEffects(settings *Settings, c chan Effect) {
 				fmt.Printf("Unknown mode: '%s'", mode)
 		}
 	}
-	
+
 	display.DisplayOn(false)
 }
 
