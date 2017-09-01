@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"time"
-	// "io"
-	// "strings"
 	"piclock/sevenseg_backpack"
+	"sync"
 )
+
+var wg sync.WaitGroup
 
 // piclock -config={config file}
 
@@ -15,13 +16,12 @@ type Alarm struct {
 	time time.Time
 }
 
-func initAlarms() bool {
-	logMessage("initAlarms")
-	return true
+type Effect struct {
+	data string  // TODO: a struct to tell the effects generator what to do
 }
 
-func initLCD() bool {
-	logMessage("initLCD")
+func initAlarms(settings *Settings) bool {
+	logMessage("initAlarms")
 	return true
 }
 
@@ -50,9 +50,38 @@ func reconcileAlarms(path string) {
 	// TODO: get alarms from calendar, remove ones that don't exist
 }
 
-func getAlarms(settings *Settings) {
+func getAlarms(settings *Settings, c chan Alarm) {
+	defer wg.Done()
+
 	for true {
-		reconcileAlarms(settings.GetString("alarmPath"))
+		srv := GetCalenderService()
+		// TODO: if it wasn't available, send an Alarm message
+		fmt.Printf("srv: %T\n", srv)
+		// get next 10 alarms
+		t := time.Now().Format(time.RFC3339)
+		events, err := srv.Events.List("primary").ShowDeleted(false).
+		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
+		if err != nil {
+		  // log.Fatalf("Unable to retrieve next ten of the user's events. %v", err)
+		}
+
+		fmt.Println("Upcoming events:")
+		if len(events.Items) > 0 {
+		  for _, i := range events.Items {
+		    var when string
+		    // If the DateTime is an empty string the Event is an all-day Event.
+		    // So only Date is available.
+		    if i.Start.DateTime != "" {
+		      when = i.Start.DateTime
+		    } else {
+		      when = i.Start.Date
+		    }
+		    fmt.Printf("%s (%s)\n", i.Summary, when)
+		  }
+		} else {
+		  fmt.Printf("No upcoming events found.\n")
+		}
+
 		// TODO: signal that the alarms got refreshed?
 		time.Sleep(settings.GetDuration("alarmRefreshTime"))
 	}
@@ -64,7 +93,9 @@ func replaceAtIndex(in string, r rune, i int) string {
 	    return string(out)
 }
 
-func runClock(settings *Settings) {
+func runEffects(settings *Settings, c chan Effect) {
+	defer wg.Done()
+
 	display, err := sevenseg_backpack.Open(
 		settings.GetByte("i2c_device"),
 		settings.GetInt("i2c_bus"),
@@ -105,21 +136,8 @@ func runClock(settings *Settings) {
 	display.DisplayOn(false)
 }
 
-func main() {
-	/*
-		Main app
-		    startup: initialization lcd/alarms
-	*/
-	settings := InitSettings()
-	// dump them (debugging)
-	fmt.Println("Settings:")
-	settings.Dump()
-
-	initLCD()
-	initAlarms()
-
-	go getAlarms(settings)
-	go runClock(settings)
+func checkAlarm(settings *Settings, c0 chan Alarm, c1 chan Effect) {
+	defer wg.Done()
 
 	// loop:
 	loop := true
@@ -166,4 +184,32 @@ func main() {
 		  updateExtraLEDs()
 		}
 	}
+}
+
+func main() {
+	// read config information
+	settings := InitSettings()
+
+	// dump them (debugging)
+	fmt.Println("\n>>> Settings <<<\n")
+	settings.Dump()
+	fmt.Println("\n>>> Settings <<<\n")
+
+	/*
+		Main app
+		    startup: initialization HW/alarms
+	*/
+	initAlarms(settings)
+
+	// wait on our three workers: alarm fetcher, clock runner, alarm checker
+  wg.Add(3)
+
+  alarmChannel := make(chan Alarm, 1)
+  effectChannel := make(chan Effect, 1)
+
+	go getAlarms(settings, alarmChannel)
+	go runEffects(settings, effectChannel)
+	go checkAlarm(settings, alarmChannel, effectChannel)
+
+	wg.Wait()
 }
