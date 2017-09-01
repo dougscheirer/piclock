@@ -5,6 +5,7 @@ import (
 	"time"
 	"piclock/sevenseg_backpack"
 	"sync"
+	"errors"
 )
 
 var wg sync.WaitGroup
@@ -17,7 +18,8 @@ type Alarm struct {
 }
 
 type Effect struct {
-	data string  // TODO: a struct to tell the effects generator what to do
+	id string  // TODO: a struct to tell the effects generator what to do
+	val interface{}
 }
 
 func initAlarms(settings *Settings) bool {
@@ -88,9 +90,18 @@ func getAlarms(settings *Settings, c chan Alarm) {
 }
 
 func replaceAtIndex(in string, r rune, i int) string {
-	    out := []rune(in)
-	    out[i] = r
-	    return string(out)
+  out := []rune(in)
+  out[i] = r
+  return string(out)
+}
+
+func toBool(val interface{}) (bool, error) {
+	switch v := val.(type) {
+		case bool:
+			return v, nil
+		default:
+			return false, errors.New(fmt.Sprintf("Bad type: %T", v))
+	}
 }
 
 func runEffects(settings *Settings, c chan Effect) {
@@ -115,24 +126,41 @@ func runEffects(settings *Settings, c chan Effect) {
 	display.DisplayOn(true)
 
 	for true {
-		time.Sleep(250 * time.Millisecond)
+		var e Effect
+		select {
+		case e = <-c:
+			switch e.id {
+				case "debug":
+					v, _ := toBool(e.val)
+					display.DebugDump(v)
+				default:
+					fmt.Printf("Unhandled %s\n", e.id)
+			}
+		default:
+			// nothing?
+			time.Sleep(250 * time.Millisecond)
+		}
+
+		// standard time display
 		colon := "15:04"
 		now := time.Now()
 		if now.Second() % 2 == 0 {
 			// no space required for the colon
 			colon = "1504"
 		}
+
 		timeString := now.Format(colon)
 		if timeString[0] == '0' {
 			timeString = replaceAtIndex(timeString, ' ', 0)
 		}
+
 		// fmt.Printf("%d : %s %s\n", now.Second(), colon, timeString)
 		err := display.Print(timeString)
 		if err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
 		}
 	}
-	// never get here, the above loop is "forever"
+	
 	display.DisplayOn(false)
 }
 
@@ -186,6 +214,21 @@ func checkAlarm(settings *Settings, c0 chan Alarm, c1 chan Effect) {
 	}
 }
 
+func toggleDebugDump(on bool) Effect {
+	return Effect{ id: "debug", val: !on }
+}
+
+func confirm_calendar_auth(settings *Settings, c chan Effect) {
+	defer func(){ c <- toggleDebugDump(false) }()
+
+	c <- toggleDebugDump(true)
+	for true {
+		c := GetCalenderService()
+		if c != nil { return }
+		// TODO: set some error indicators
+	}
+}
+
 func main() {
 	// read config information
 	settings := InitSettings()
@@ -201,14 +244,19 @@ func main() {
 	*/
 	initAlarms(settings)
 
-	// wait on our three workers: alarm fetcher, clock runner, alarm checker
-  wg.Add(3)
-
   alarmChannel := make(chan Alarm, 1)
   effectChannel := make(chan Effect, 1)
 
-	go getAlarms(settings, alarmChannel)
+	// wait on our three workers: alarm fetcher, clock runner, alarm checker
+  wg.Add(3)
+
 	go runEffects(settings, effectChannel)
+
+	// google calendar requires OAuth access, so make sure we get it
+	// before we go into the main loop
+	confirm_calendar_auth(settings, effectChannel)
+
+	go getAlarms(settings, alarmChannel)
 	go checkAlarm(settings, alarmChannel, effectChannel)
 
 	wg.Wait()

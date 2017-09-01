@@ -8,13 +8,15 @@ type I2C struct {
 	fd 			*os.File
 	address uint8
 	fd_sim	bool
+	debugdump bool
 }
 
 const (
 	I2C_SLAVE = 0x0703
 )
 
-func logWrite(buf []uint8) error {
+func (this *I2C) logWrite(buf []uint8) error {
+	if !this.debugdump { return nil }
 	fmt.Printf("Write : ")
 	for i:=0;i<len(buf);i++ {
 		fmt.Printf("%02x ", buf[i])
@@ -23,7 +25,8 @@ func logWrite(buf []uint8) error {
 	return nil
 }
 
-func logMsg(msg string) error {
+func (this *I2C) logMsg(msg string) error { 
+	if !this.debugdump { return nil }
 	fmt.Println(msg)
 	return nil
 }
@@ -38,16 +41,17 @@ func Open(address uint8, bus int, simulated bool) (*I2C, error) {
 		if err := ioctl(f.Fd(), I2C_SLAVE, uintptr(address)); err != nil {
 			return nil, err
 		}
-		this := &I2C{fd: f, address: address, fd_sim: false}
+		this := &I2C{fd: f, address: address, fd_sim: false, debugdump: false}
 		return this, nil
 	} else {
-		this := &I2C{fd_sim: true, address: address, fd: nil}
+		this := &I2C{fd_sim: true, address: address, fd: nil, debugdump: false}
 		return this, nil
 	}
 }
 
 func (this *I2C) Close() error {
-	if this.fd_sim { return logMsg(fmt.Sprintf("Close: %d", this.address)) }
+	this.logMsg(fmt.Sprintf("Close: %d", this.address))
+	if this.fd_sim { return nil }
 	return this.fd.Close()
 }
 
@@ -60,11 +64,9 @@ func (this *I2C) WriteByte(single byte) (int, error) {
 		return 0, err
 	}
 
-	if this.fd_sim {
-		return 0, logWrite(buf[:])
-	} else {
-		return this.fd.Write(buf[:])
-	}
+	this.logWrite(buf[:])
+	if this.fd_sim { return 0, nil }
+	return this.fd.Write(buf[:])
 }
 
 func (this *I2C) Write(buf []uint8) (int, error) {
@@ -72,19 +74,15 @@ func (this *I2C) Write(buf []uint8) (int, error) {
 	if err := select_line(this); err != nil {
 		return 0, err
 	}
-	if this.fd_sim {
-		return 0, logWrite(buf)
-	} else {
-		return this.fd.Write(buf)
-	}
+	this.logWrite(buf)
+	if this.fd_sim { return 0, nil }
+	return this.fd.Write(buf)
 }
 
 func select_line(this *I2C) error {
-	if this.fd_sim {
-		return logMsg(fmt.Sprintf("ioctl: I2C_SLAVE @ 0x%02x", this.address))
-	} else {
-		return ioctl(this.fd.Fd(), I2C_SLAVE, uintptr(this.address))
-	}
+	this.logMsg(fmt.Sprintf("ioctl: I2C_SLAVE @ 0x%02x", this.address))
+	if this.fd_sim { return nil }
+	return ioctl(this.fd.Fd(), I2C_SLAVE, uintptr(this.address))
 }
 
 func ioctl(fd, cmd, arg uintptr) error {
