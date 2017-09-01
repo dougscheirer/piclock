@@ -1,5 +1,6 @@
-/calendar_auth
+/calender_auth
 /piclock
 /test
 /main
 /client_secret.json
+/alarms/*

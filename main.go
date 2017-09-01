@@ -7,6 +7,9 @@ import (
 	"sync"
 	"errors"
 	"strings"
+	"encoding/json"
+	"io/ioutil"
+	"os"
 )
 
 var wg sync.WaitGroup
@@ -14,8 +17,9 @@ var wg sync.WaitGroup
 // piclock -config={config file}
 
 type Alarm struct {
-	name string
-	time time.Time
+	name 		string
+	when 		time.Time
+	effect  string
 }
 
 type Effect struct {
@@ -57,56 +61,134 @@ func alarmError() Effect {
 	return Effect{ id: "alarmError" }
 }
 
+func writeAlarms(alarms []Alarm, fname string) error {
+	output, err := json.Marshal(alarms)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(fname, output, 0644)
+}
+
+func cacheFilename(settings *Settings) string {
+	return settings.GetString("alarmPath") + "/alarm.json"
+}
+
+func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
+	alarms := make([]Alarm, 0)
+	srv := GetCalenderService()
+	// TODO: if it wasn't available, send an Alarm message
+	if srv == nil {
+		return alarms, errors.New("Failed to get calendar service")
+	}
+
+	// get next 10 (?) alarms
+	t := time.Now().Format(time.RFC3339)
+	events, err := srv.Events.List("primary").
+										ShowDeleted(false).
+										SingleEvents(true).
+										TimeMin(t).
+										MaxResults(100).
+										OrderBy("startTime").
+										Do()
+	if err != nil {
+		return alarms, err
+	}
+
+	// remove the cached alarms if they are present
+	cacheFile := cacheFilename(settings)
+	if _, err := os.Stat(cacheFile); !os.IsNotExist(err) {
+		err = os.Remove(cacheFile)
+		// an error here is a system config issue
+		if err != nil {
+			// TODO: severe error effect
+			logMessage(fmt.Sprintf("Error: %s", err.Error()))
+			return alarms, err
+		}
+	}
+
+	// calculate the alarms, write to a file
+	if len(events.Items) > 0 {
+	  for _, i := range events.Items {
+	  	if !strings.Contains(i.Summary, "#piclock")  {
+	  		logMessage(fmt.Sprintf("Not an alarm: %s @ %s", i.Summary, i.Start.DateTime))
+	  		continue
+	  	}
+	    // If the DateTime is an empty string the Event is an all-day Event.
+	    // So only Date is available.
+	    if i.Start.DateTime == "" { 
+	  		logMessage(fmt.Sprintf("Not a time based alarm: %s @ %s", i.Summary, i.Start.Date))
+	    	continue
+	    }
+	    alm := Alarm{name: i.Summary}
+	    alm.when, err = time.Parse(time.RFC3339, i.Start.DateTime)
+	    if err != nil {
+	    	// bad, but keep going
+	    	logMessage(err.Error())
+	    	continue
+	    }
+
+	    // look for hastags
+	    music := strings.Contains(i.Summary, "#music")
+	    random := strings.Contains(i.Summary, "#random")
+	    file := strings.Contains(i.Summary, "#file")
+	    tones := strings.Contains(i.Summary, "#tone")	// tone or tones
+
+	    // priority is arbitrary except for random (default)
+	    if music {
+	    	alm.effect = "music"
+	    } else if file {
+	     	alm.effect = "file" // TODO: figure out the filename
+	    }	else if tones {
+	    	alm.effect = "tones" // TODO: tone options
+	    } else if random {
+	    	alm.effect = "random"
+			}	else {
+	    	alm.effect = "random"
+	    }
+
+	    alarms = append(alarms, alm)
+	  }
+
+	  // cache in a file for later if we go offline
+	  writeAlarms(alarms, cacheFile)
+	}
+
+	return alarms, nil
+}
+
+func getAlarmsFromCache(settings *Settings) ([]Alarm, error) {
+	alarms := make([]Alarm, 0)
+	data, err := ioutil.ReadFile(cacheFilename(settings))
+	if err != nil {
+		return alarms, err
+	}
+	err = json.Unmarshal(data, &alarms)
+	return alarms, err
+}
+
 func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect) {
 	defer wg.Done()
 
 	for true {
-		srv := GetCalenderService()
-		// TODO: if it wasn't available, send an Alarm message
-		if srv == nil {
-			cE <- alarmError()
-			// TODO: use the cached alarms
-			time.Sleep(time.Second)
-			continue
-		}
-
-		// get next 10 alarms
-		t := time.Now().Format(time.RFC3339)
-		events, err := srv.Events.List("primary").
-											ShowDeleted(false).
-											SingleEvents(true).
-											TimeMin(t).
-											MaxResults(10).
-											OrderBy("startTime").
-											Do()
+		alarms, err := getAlarmsFromService(settings)
 		if err != nil {
-		 	cE <- alarmError()
-			// TODO: use the cached alarms
-			time.Sleep(time.Second)
-			continue
+			cE <- alarmError()
+			// try the backup
+			alarms, err = getAlarmsFromCache(settings)
+			if err != nil {
+				// very bad, so...delete and try again later?
+				// TODO: more effects
+				fmt.Printf("Error reading alarm cache: %s\n", err.Error())
+				time.Sleep(time.Second)
+			}
 		}
 
-		fmt.Printf("Upcoming events: %T\n", events.Items)
-		if len(events.Items) > 0 {
-		  for _, i := range events.Items {
-		  	if !strings.Contains(i.Summary, "#piclock")  {
-		  		continue
-		  	}
-		    var when string
-		    // If the DateTime is an empty string the Event is an all-day Event.
-		    // So only Date is available.
-		    if i.Start.DateTime != "" {
-		      when = i.Start.DateTime
-		    } else {
-		      when = i.Start.Date
-		    }
-		    fmt.Printf("%s (%s)\n", i.Summary, when)
-		  }
-		} else {
-		  fmt.Printf("No upcoming events found.\n")
+		// tell cA that we have some alarms
+		cA <- Alarm{}	// reset hack
+		for i:=0;i<len(alarms);i++ {
+			cA <- alarms[i]
 		}
 
-		// TODO: signal that the alarms got refreshed?
 		time.Sleep(settings.GetDuration("alarmRefreshTime"))
 	}
 }
@@ -175,13 +257,13 @@ func runEffects(settings *Settings, c chan Effect) {
 	// turn on LED dump?
 	display.DebugDump(settings.GetBool("i2c_simulated"))
 
-	display.Print("8888")
 	display.SetBrightness(3)
 	// ready to rock
 	display.DisplayOn(true)
 
 	var mode string = "clock"
 	var countdown = 0
+	var error_id = 0
 
 	for true {
 		var e Effect
@@ -198,7 +280,9 @@ func runEffects(settings *Settings, c chan Effect) {
 					countdown, _ = toInt(e.val)
 				case "alarmError":
 					// TODO: alarm error LED
-					fmt.Printf("alarmError")
+					mode = e.id
+					display.Print("Err")
+					error_id, _ = toInt(e.val)
 				case "terminate":
 					fmt.Printf("terminate")
 					return
@@ -217,6 +301,8 @@ func runEffects(settings *Settings, c chan Effect) {
 				displayCountdown(display, countdown)
 				countdown--
 				if countdown < 0 { mode = "clock" }
+			case "alarmError":
+				fmt.Printf("Error: %d", error_id)
 			default:
 				fmt.Printf("Unknown mode: '%s'", mode)
 		}
@@ -225,7 +311,7 @@ func runEffects(settings *Settings, c chan Effect) {
 	display.DisplayOn(false)
 }
 
-func checkAlarm(settings *Settings, c0 chan Alarm, c1 chan Effect) {
+func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect) {
 	defer wg.Done()
 
 	// loop:
@@ -233,7 +319,7 @@ func checkAlarm(settings *Settings, c0 chan Alarm, c1 chan Effect) {
 	for loop {
 		time.Sleep(settings.GetDuration("sleepTime"))
 		// Read cache dir every 1(?) secs in table
-		alarmTable := readAlarmCache()
+		/* alarmTable := readAlarmCache()
 		// If button press
 		if mainButtonPressed() {
 		  // If table.empty
@@ -270,8 +356,8 @@ func checkAlarm(settings *Settings, c0 chan Alarm, c1 chan Effect) {
 
 		  // update UI
 		  updateAlarmLEDs()
-		  updateExtraLEDs()
-		}
+		  updateExtraLEDs() 
+		} */
 	}
 }
 

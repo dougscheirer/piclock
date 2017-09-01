@@ -28,7 +28,7 @@ func runTests(t *testing.T, display *sevenseg_backpack.Sevenseg, inverted bool) 
 	display.ClearDisplay()
 	display.SetInverted(inverted)
 
-	knownChars := []byte{ ' ', '-', '_', '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','X'}
+	knownChars := []byte{ ' ', '-', '_', '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','R','r','H','h','X'}
 
 	// init
 	display.Print("8.8.:8.8.")
