@@ -52,24 +52,45 @@ func reconcileAlarms(path string) {
 	// TODO: get alarms from calendar, remove ones that don't exist
 }
 
-func getAlarms(settings *Settings, c chan Alarm) {
+func alarmError() Effect {
+	return Effect{ id: "alarmError" }
+}
+
+func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect) {
 	defer wg.Done()
 
 	for true {
 		srv := GetCalenderService()
 		// TODO: if it wasn't available, send an Alarm message
-		fmt.Printf("srv: %T\n", srv)
-		// get next 10 alarms
-		t := time.Now().Format(time.RFC3339)
-		events, err := srv.Events.List("primary").ShowDeleted(false).
-		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
-		if err != nil {
-		  // log.Fatalf("Unable to retrieve next ten of the user's events. %v", err)
+		if srv == nil {
+			cE <- alarmError()
+			// TODO: use the cached alarms
+			time.Sleep(time.Second)
+			continue			
 		}
 
-		fmt.Println("Upcoming events:")
+		// get next 10 alarms
+		t := time.Now().Format(time.RFC3339)
+		events, err := srv.Events.List("primary").
+											ShowDeleted(false).
+											SingleEvents(true).
+											TimeMin(t).
+											MaxResults(10).
+											OrderBy("startTime").
+											Do()
+		if err != nil {
+		 	cE <- alarmError()
+			// TODO: use the cached alarms
+			time.Sleep(time.Second)
+			continue			
+		}
+
+		fmt.Printf("Upcoming events: %T\n", events.Items)
 		if len(events.Items) > 0 {
 		  for _, i := range events.Items {
+		  	if !i.Summary.Contains("#piclock")  {
+		  		continue
+		  	}
 		    var when string
 		    // If the DateTime is an empty string the Event is an all-day Event.
 		    // So only Date is available.
@@ -104,6 +125,39 @@ func toBool(val interface{}) (bool, error) {
 	}
 }
 
+func toInt(val interface{}) (int, error) {
+	switch v := val.(type) {
+		case int:
+			return v, nil
+		default:
+			return -1, errors.New(fmt.Sprintf("Bad type: %T", v))
+	}
+}
+
+func displayClock(display *sevenseg_backpack.Sevenseg) {
+	// standard time display
+	colon := "15:04"
+	now := time.Now()
+	if now.Second() % 2 == 0 {
+		// no space required for the colon
+		colon = "1504"
+	}
+
+	timeString := now.Format(colon)
+	if timeString[0] == '0' {
+		timeString = replaceAtIndex(timeString, ' ', 0)
+	}
+
+	err := display.Print(timeString)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+	}
+}
+
+func displayCountdown(display *sevenseg_backpack.Sevenseg, count int) {
+	display.Print(fmt.Sprintf("%d", count))
+}
+
 func runEffects(settings *Settings, c chan Effect) {
 	defer wg.Done()
 
@@ -125,6 +179,9 @@ func runEffects(settings *Settings, c chan Effect) {
 	// ready to rock
 	display.DisplayOn(true)
 
+	var mode string = "clock"
+	var countdown = 0
+
 	for true {
 		var e Effect
 		select {
@@ -133,6 +190,17 @@ func runEffects(settings *Settings, c chan Effect) {
 				case "debug":
 					v, _ := toBool(e.val)
 					display.DebugDump(v)
+				case "clock":
+					mode = e.id
+				case "countdown":
+					mode = e.id
+					countdown, _ = toInt(e.val)
+				case "alarmError":
+					// TODO: alarm error LED
+					fmt.Printf("alarmError")
+				case "terminate":
+					fmt.Printf("terminate")
+					return
 				default:
 					fmt.Printf("Unhandled %s\n", e.id)
 			}
@@ -141,23 +209,15 @@ func runEffects(settings *Settings, c chan Effect) {
 			time.Sleep(250 * time.Millisecond)
 		}
 
-		// standard time display
-		colon := "15:04"
-		now := time.Now()
-		if now.Second() % 2 == 0 {
-			// no space required for the colon
-			colon = "1504"
-		}
-
-		timeString := now.Format(colon)
-		if timeString[0] == '0' {
-			timeString = replaceAtIndex(timeString, ' ', 0)
-		}
-
-		// fmt.Printf("%d : %s %s\n", now.Second(), colon, timeString)
-		err := display.Print(timeString)
-		if err != nil {
-			fmt.Printf("Error: %s\n", err.Error())
+		switch mode {
+			case "clock":
+				displayClock(display)
+			case "countdown":
+				displayCountdown(display, countdown)
+				countdown--
+				if countdown < 0 { mode = "clock" }
+			default:
+				fmt.Printf("Unknown mode: '%s'", mode)
 		}
 	}
 	
@@ -256,7 +316,7 @@ func main() {
 	// before we go into the main loop
 	confirm_calendar_auth(settings, effectChannel)
 
-	go getAlarms(settings, alarmChannel)
+	go getAlarms(settings, alarmChannel, effectChannel)
 	go checkAlarm(settings, alarmChannel, effectChannel)
 
 	wg.Wait()
