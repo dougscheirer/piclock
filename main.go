@@ -546,12 +546,16 @@ func watchButtons(settings *Settings, cE chan Effect) {
 				pressed := false
 				for true {
 					res := pin.Read()  // Read state from pin (High / Low)
-					if res == 0 {
-						if !pressed { cE <- mainButtonPressed() }
-						pressed = true
+					if !pressed {
+						if res == 0 {
+						 	cE <- mainButtonPressed()
+							pressed = true
+						}
 					} else {
-						if pressed { cE <- mainButtonReleased() }
-						pressed = false
+						if res == 1 {
+							cE <- mainButtonReleased()
+							pressed = false
+						}
 					}
 					time.Sleep(10*time.Millisecond)
 				}
