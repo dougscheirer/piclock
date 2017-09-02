@@ -28,12 +28,14 @@ func defaultSettings() *Settings {
 	// setting the type here makes the conversion "automatic" later
 	s["countdownTime"], _ = time.ParseDuration("1m")
 	s["sleepTime"], _ = time.ParseDuration("10ms")
+	s["secretPath"] = "/etc/default"
 	s["alarmPath"] = "/etc/default/piclock/alarms"
 	s["alarmRefreshTime"], _ = time.ParseDuration("1m")
 	s["i2c_bus"] = byte(0)
 	s["i2c_device"] = byte(0x70)
 	s["calendar"] = "piclock"
 	s["debug_dump"] = false
+	s["button_simulated"] = ""
 
 	on := true
 	if runtime.GOARCH == "arm" { on = false }

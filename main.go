@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	// gpio lib
+	"github.com/stianeikeland/go-rpio"
 )
 
 var wg sync.WaitGroup
@@ -42,12 +44,8 @@ func readAlarmCache() []Alarm {
  	return ret
 }
 
-func mainButtonPressed() bool { return false }
-func clearAlarmCacheFiles() { }
-func runCalendarRefresh() { }
-func isAlarming() bool { return false }
-func endAlarm() { }
-func setClockMode() { }
+func mainButtonPressed() Effect 	{ return Effect{ id:"mainButton", val : true  } }
+func mainButtonReleased() Effect  { return Effect{ id:"mainButton", val : false } }
 
 func setCountdownMode(alarm Alarm) Effect {
 	return Effect{id:"countdown", val: alarm}
@@ -88,7 +86,7 @@ func cacheFilename(settings *Settings) string {
 
 func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
 	alarms := make([]Alarm, 0)
-	srv := GetCalenderService()
+	srv := GetCalenderService(settings.GetString("secretPath"))
 	// TODO: if it wasn't available, send an Alarm message
 	if srv == nil {
 		return alarms, errors.New("Failed to get calendar service")
@@ -334,7 +332,7 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm) bool {
 		return false
 	}
 	s := fmt.Sprintf("%d.%d", count / 10, count % 10)
-	var blinkRate uint8 = sevenseg_backpack.BLINK_1HZ
+	var blinkRate uint8 = sevenseg_backpack.BLINK_OFF
 	if count < 100 {
 		blinkRate = sevenseg_backpack.BLINK_2HZ
 	}
@@ -400,6 +398,13 @@ func runEffects(settings *Settings, c chan Effect) {
 					alm, _ := toAlarm(e.val)
 					sleepTime = 10*time.Millisecond
 					fmt.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
+				case "mainButton":
+					state, _ := toBool(e.val)
+					if state {
+						logMessage("Main button pressed")
+					} else {
+						logMessage("Main button released")
+					}
 				default:
 					fmt.Printf("Unhandled %s\n", e.id)
 			}
@@ -424,6 +429,7 @@ func runEffects(settings *Settings, c chan Effect) {
 			case "alarm":
 				// do a strobing 0, light up segments 0 - 5
 				display.RefreshOn(false)
+				display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
 				display.ClearDisplay()
 				for i:=0;i<4;i++ {
 					display.SegmentOn(byte(i), byte(alarmSegment), true)
@@ -509,9 +515,47 @@ func confirm_calendar_auth(settings *Settings, c chan Effect) {
 	c <- toggleDebugDump(false)
 	c <- Effect{id: "print", val: "...."}
 	for true {
-		c := GetCalenderService()
+		c := GetCalenderService(settings.GetString("secretPath"))
 		if c != nil { return }
 		// TODO: set some error indicators
+	}
+}
+
+func watchButtons(settings *Settings, cE chan Effect) {
+	defer wg.Done()
+
+	simulated := settings.GetString("button_simulated")
+
+	for true {
+		if len(simulated) != 0 {
+				// TODO: map buttons to keys
+
+			} else {
+				// map ports to buttons
+				err := rpio.Open()
+				if err != nil {
+					logMessage(err.Error())
+					return
+				}
+
+				// TODO: configurable pin numbers and high or low
+				pin := rpio.Pin(4)
+
+				// for now we only care about the "low" state
+				pin.Input()        // Input mode
+				pressed := false
+				for true {
+					res := pin.Read()  // Read state from pin (High / Low)
+					if res == 0 {
+						if !pressed { cE <- mainButtonPressed() }
+						pressed = true
+					} else {
+						if pressed { cE <- mainButtonReleased() }
+						pressed = false
+					}
+					time.Sleep(10*time.Millisecond)
+				}
+			}
 	}
 }
 
@@ -534,8 +578,8 @@ func main() {
   effectChannel := make(chan Effect, 1)
   handledChannel := make(chan Alarm, 1)
 
-	// wait on our three workers: alarm fetcher, clock runner, alarm checker
-  wg.Add(3)
+	// wait on our three workers: alarm fetcher, clock runner, alarm checker, button checker
+  wg.Add(4)
 
   // start the effect thread so we can update the LEDs
 	go runEffects(settings, effectChannel)
@@ -546,6 +590,7 @@ func main() {
 
 	go getAlarms(settings, alarmChannel, effectChannel, handledChannel)
 	go checkAlarm(settings, alarmChannel, effectChannel, handledChannel)
+	go watchButtons(settings, effectChannel)
 
 	wg.Wait()
 }
