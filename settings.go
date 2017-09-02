@@ -32,6 +32,7 @@ func defaultSettings() *Settings {
 	s["alarmRefreshTime"], _ = time.ParseDuration("1m")
 	s["i2c_bus"] = byte(0)
 	s["i2c_device"] = byte(0x70)
+	s["calendar"] = "piclock"
 
 	on := true
 	if runtime.GOARCH == "arm" { on = false }

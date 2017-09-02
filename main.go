@@ -16,10 +16,12 @@ var wg sync.WaitGroup
 
 // piclock -config={config file}
 
+// Note: fields must be capitalized or json.Marshal will not convert them
 type Alarm struct {
-	name 		string
-	when 		time.Time
-	effect  string
+	Name 		string
+	When 		time.Time
+	Effect  string
+	disabled bool
 }
 
 type Effect struct {
@@ -44,8 +46,14 @@ func runCalendarRefresh() { }
 func isAlarming() bool { return false }
 func endAlarm() { }
 func setClockMode() { }
-func setCountdownMode() { }
-func setAlarmMode() { }
+
+func setCountdownMode(duration time.Duration) Effect {
+	return Effect{id:"countdown", val: duration}
+}
+func setAlarmMode(alarm Alarm) Effect {
+	return Effect{id:"alarm", val: alarm}
+}
+
 func disableAlarm(a Alarm) { }
 func updateAlarmLEDs() {}
 func updateExtraLEDs() {}
@@ -63,6 +71,7 @@ func alarmError() Effect {
 
 func writeAlarms(alarms []Alarm, fname string) error {
 	output, err := json.Marshal(alarms)
+	logMessage(string(output))
 	if err != nil {
 		return err
 	}
@@ -81,13 +90,33 @@ func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
 		return alarms, errors.New("Failed to get calendar service")
 	}
 
+	// map the calendar to an ID
+	calName := settings.GetString("calendar")
+	var id string
+	{
+		list, err := srv.CalendarList.List().Do()
+		if err != nil {
+			logMessage(err.Error())
+			return alarms, err
+		}
+		for _, i := range list.Items {
+			if i.Summary == calName {
+				id = i.Id
+				break
+			}
+		}
+	}
+
+	if id == "" {
+		return alarms, errors.New(fmt.Sprintf("Could not find calendar %s", calName))
+	}
 	// get next 10 (?) alarms
 	t := time.Now().Format(time.RFC3339)
-	events, err := srv.Events.List("primary").
+	events, err := srv.Events.List(id).
 										ShowDeleted(false).
 										SingleEvents(true).
 										TimeMin(t).
-										MaxResults(100).
+										MaxResults(10).
 										OrderBy("startTime").
 										Do()
 	if err != nil {
@@ -109,25 +138,27 @@ func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
 	// calculate the alarms, write to a file
 	if len(events.Items) > 0 {
 	  for _, i := range events.Items {
-	  	if !strings.Contains(i.Summary, "#piclock")  {
-	  		logMessage(fmt.Sprintf("Not an alarm: %s @ %s", i.Summary, i.Start.DateTime))
-	  		continue
-	  	}
 	    // If the DateTime is an empty string the Event is an all-day Event.
 	    // So only Date is available.
-	    if i.Start.DateTime == "" { 
+	    if i.Start.DateTime == "" {
 	  		logMessage(fmt.Sprintf("Not a time based alarm: %s @ %s", i.Summary, i.Start.Date))
 	    	continue
 	    }
-	    alm := Alarm{name: i.Summary}
-	    alm.when, err = time.Parse(time.RFC3339, i.Start.DateTime)
+	    var when time.Time
+	    when, err = time.Parse(time.RFC3339, i.Start.DateTime)
 	    if err != nil {
-	    	// bad, but keep going
+	    	// skip bad formats
 	    	logMessage(err.Error())
 	    	continue
 	    }
+	    if when.Sub(time.Now()) < 0 {
+	    	logMessage(fmt.Sprintf("Already passed the time for: %s (%s)\n", i.Summary, i.Start.DateTime))
+	    	continue
+	    }
 
-	    // look for hastags
+	    alm := Alarm{Name: i.Summary, disabled: false, When: when}
+
+	    // look for hastags (does not work ATM, the gAPI is broken I think)
 	    music := strings.Contains(i.Summary, "#music")
 	    random := strings.Contains(i.Summary, "#random")
 	    file := strings.Contains(i.Summary, "#file")
@@ -135,15 +166,15 @@ func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
 
 	    // priority is arbitrary except for random (default)
 	    if music {
-	    	alm.effect = "music"
+	    	alm.Effect = "music"
 	    } else if file {
-	     	alm.effect = "file" // TODO: figure out the filename
+	     	alm.Effect = "file" // TODO: figure out the filename
 	    }	else if tones {
-	    	alm.effect = "tones" // TODO: tone options
+	    	alm.Effect = "tones" // TODO: tone options
 	    } else if random {
-	    	alm.effect = "random"
+	    	alm.Effect = "random"
 			}	else {
-	    	alm.effect = "random"
+	    	alm.Effect = "random"
 	    }
 
 	    alarms = append(alarms, alm)
@@ -173,6 +204,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect) {
 		alarms, err := getAlarmsFromService(settings)
 		if err != nil {
 			cE <- alarmError()
+			logMessage(err.Error())
 			// try the backup
 			alarms, err = getAlarmsFromCache(settings)
 			if err != nil {
@@ -214,6 +246,15 @@ func toInt(val interface{}) (int, error) {
 			return v, nil
 		default:
 			return -1, errors.New(fmt.Sprintf("Bad type: %T", v))
+	}
+}
+
+func toAlarm(val interface{}) (*Alarm, error) {
+	switch v := val.(type) {
+	case Alarm:
+		return &v, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Bad type: %T", v))
 	}
 }
 
@@ -286,6 +327,9 @@ func runEffects(settings *Settings, c chan Effect) {
 				case "terminate":
 					fmt.Printf("terminate")
 					return
+				case "alarm":
+					alm, _ := toAlarm(e.val)
+					fmt.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
 				default:
 					fmt.Printf("Unhandled %s\n", e.id)
 			}
@@ -302,7 +346,7 @@ func runEffects(settings *Settings, c chan Effect) {
 				countdown--
 				if countdown < 0 { mode = "clock" }
 			case "alarmError":
-				fmt.Printf("Error: %d", error_id)
+				fmt.Sprintf("Error: %d\n", error_id)
 			default:
 				fmt.Printf("Unknown mode: '%s'", mode)
 		}
@@ -314,50 +358,52 @@ func runEffects(settings *Settings, c chan Effect) {
 func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect) {
 	defer wg.Done()
 
-	// loop:
-	loop := true
-	for loop {
-		time.Sleep(settings.GetDuration("sleepTime"))
-		// Read cache dir every 1(?) secs in table
-		/* alarmTable := readAlarmCache()
-		// If button press
-		if mainButtonPressed() {
-		  // If table.empty
-		  if len(alarmTable) == 0 {
-		   	// Clear cache directory
-		   	clearAlarmCacheFiles()
-		   	// run calendar job
-		   	runCalendarRefresh()
- 			  // Else if alarm.active
-		  } else if isAlarming() {
-		    // Alarm.disable
-		    endAlarm()
-		    // Set clock mode
-		    setClockMode()
-			} else {
-		  	// Table.findfirstenabled.disable (to file)
-		  	disableFirstAlarm(alarmTable)
-		  }
+	alarms := make([]Alarm, 0)
 
-		  // get the next alarm that is going to fire
-		  nextAlarm := getNextAlarm(alarmTable)
-		  duration := nextAlarm.time.Sub(time.Now())
+	for true {
+		// try reading from our channel
+		keepReading := true
+		alarmsRead := 0
+		for keepReading {
+			select {
+				case alm := <- cA :
+					alarmsRead++
+					if alm.Name == "" {
+						// reset the list
+						alarms = make([]Alarm, 0)
+					} else {
+						alarms = append(alarms, alm)
+					}
+				default:
+					keepReading = false
+			}
+		}
+
+		if alarmsRead > 0 {
+			logMessage(fmt.Sprintf("%+v\n", alarms))
+		}
+
+		// alarms come in sorted with soonest first
+	  for index:=0;index<len(alarms);index++ {
+	  	if alarms[index].disabled {
+	  		continue
+	  	}
+
+	  	duration := alarms[index].When.Sub(time.Now())
 
 		  if (duration > 0) {
 			  // start a countdown?
-		  	if (duration < settings.GetDuration("countdownTime")) {
-		  		setCountdownMode()
+			  countdown := settings.GetDuration("countdownTime")
+		  	if (duration < countdown) {
+		  		cE <- setCountdownMode(duration)
 		  	}
 		  } else {
 		    // Set alarm mode
-		    setAlarmMode()
-		    disableAlarm(nextAlarm)
+				cE <- setAlarmMode(alarms[index])
+		    alarms[index].disabled = true
 		  }
-
-		  // update UI
-		  updateAlarmLEDs()
-		  updateExtraLEDs() 
-		} */
+		  break
+		}
 	}
 }
 
