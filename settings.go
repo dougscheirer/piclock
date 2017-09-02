@@ -28,7 +28,7 @@ func defaultSettings() *Settings {
 	// setting the type here makes the conversion "automatic" later
 	s["countdownTime"], _ = time.ParseDuration("1m")
 	s["sleepTime"], _ = time.ParseDuration("10ms")
-	s["secretPath"] = "/etc/default"
+	s["secretPath"] = "/etc/default/piclock"
 	s["alarmPath"] = "/etc/default/piclock/alarms"
 	s["alarmRefreshTime"], _ = time.ParseDuration("1m")
 	s["i2c_bus"] = byte(0)
