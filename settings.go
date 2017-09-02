@@ -116,6 +116,7 @@ func InitSettings() *Settings {
 	// json parse it
 	if err := s.settingsFromJSON(data); err != nil {
 		// log a message about crappy JSON?
+		logMessage(err.Error())
 	}
 
 	return s

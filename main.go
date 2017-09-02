@@ -334,6 +334,11 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm) bool {
 		return false
 	}
 	s := fmt.Sprintf("%d.%d", count / 10, count % 10)
+	var blinkRate uint8 = sevenseg_backpack.BLINK_1HZ
+	if count < 100 {
+		blinkRate = sevenseg_backpack.BLINK_2HZ
+	}
+	display.SetBlinkRate(blinkRate)
 	display.Print(s)
 	return true
 }
@@ -361,6 +366,7 @@ func runEffects(settings *Settings, c chan Effect) {
 	var mode string = "clock"
 	var countdown *Alarm
 	var error_id = 0
+	alarmSegment := 0
 	DEFAULT_SLEEP := settings.GetDuration("sleepTime")
 	sleepTime := DEFAULT_SLEEP
 
@@ -377,7 +383,7 @@ func runEffects(settings *Settings, c chan Effect) {
 				case "countdown":
 					mode = e.id
 					countdown, _ = toAlarm(e.val)
-					sleepTime = 10
+					sleepTime = 10 * time.Millisecond
 				case "alarmError":
 					// TODO: alarm error LED
 					mode = e.id
@@ -392,13 +398,14 @@ func runEffects(settings *Settings, c chan Effect) {
 				case "alarm":
 					mode = e.id
 					alm, _ := toAlarm(e.val)
+					sleepTime = 10*time.Millisecond
 					fmt.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
 				default:
 					fmt.Printf("Unhandled %s\n", e.id)
 			}
 		default:
 			// nothing?
-			time.Sleep(time.Duration(sleepTime * time.Millisecond))
+			time.Sleep(time.Duration(sleepTime))
 		}
 
 		switch mode {
@@ -415,7 +422,14 @@ func runEffects(settings *Settings, c chan Effect) {
 			case "output":
 				// do nothing
 			case "alarm":
-				// figure something out
+				// do a strobing 0, light up segments 0 - 5
+				display.RefreshOn(false)
+				display.ClearDisplay()
+				for i:=0;i<4;i++ {
+					display.SegmentOn(byte(i), byte(alarmSegment), true)
+				}
+				display.RefreshOn(true)
+				alarmSegment = (alarmSegment + 1) % 6
 			default:
 				logMessage(fmt.Sprintf("Unknown mode: '%s'\n", mode))
 		}
