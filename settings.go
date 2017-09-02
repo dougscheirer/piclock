@@ -76,7 +76,7 @@ func (this *Settings) settingsFromJSON(data []byte) (error) {
 				if err == nil {
 					var dur2 time.Duration
 					dur2, err = time.ParseDuration(dur)
-					if err != nil {
+					if err == nil {
 						this.settings[k] = dur2
 					}
 				}

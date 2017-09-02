@@ -361,8 +361,8 @@ func runEffects(settings *Settings, c chan Effect) {
 	var mode string = "clock"
 	var countdown *Alarm
 	var error_id = 0
-	const DEFAULT_SLEEP = 250
-	var sleepTime time.Duration = DEFAULT_SLEEP
+	DEFAULT_SLEEP := settings.GetDuration("sleepTime")
+	sleepTime := DEFAULT_SLEEP
 
 	for true {
 		var e Effect
