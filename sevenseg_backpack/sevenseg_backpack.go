@@ -64,7 +64,11 @@ var digitValues = map[byte]byte {
     'C': 0x39,
     'D': 0x5E,
     'E': 0x79,
-    'F': 0x71 }
+    'F': 0x71,
+    'R': 0x50,
+    'r': 0x50,
+    'H': 0x76,
+    'h': 0x74 }
 
 // TODO: support inverse
 var inverseDigitValues = map[byte]byte {
@@ -86,7 +90,12 @@ var inverseDigitValues = map[byte]byte {
     'C': 0x0F,
     'D': 0x73,
     'E': 0x4F,
-    'F': 0x4E }
+    'F': 0x4E,
+    'R': 0x42,
+    'r': 0x42,
+    'H': 0x76,
+    'h': 0x66 }
+
 
 // one address byte, plus 7-seg skips bytes for each display element
 const displaySize = 1 + 5*2
@@ -118,7 +127,7 @@ func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
         refresh: true,
         inverted: false,
         blink: BLINK_OFF,
-	dump: false,
+	    dump: false,
         display: getClearDisplay() }
     // turn on the oscillator, set default brightness
     this.i2c_dev.WriteByte(i2c_OSC_ON)

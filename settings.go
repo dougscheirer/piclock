@@ -32,6 +32,8 @@ func defaultSettings() *Settings {
 	s["alarmRefreshTime"], _ = time.ParseDuration("1m")
 	s["i2c_bus"] = byte(0)
 	s["i2c_device"] = byte(0x70)
+	s["calendar"] = "piclock"
+	s["debug_dump"] = false
 
 	on := true
 	if runtime.GOARCH == "arm" { on = false }
@@ -74,7 +76,7 @@ func (this *Settings) settingsFromJSON(data []byte) (error) {
 				if err == nil {
 					var dur2 time.Duration
 					dur2, err = time.ParseDuration(dur)
-					if err != nil {
+					if err == nil {
 						this.settings[k] = dur2
 					}
 				}
@@ -114,6 +116,7 @@ func InitSettings() *Settings {
 	// json parse it
 	if err := s.settingsFromJSON(data); err != nil {
 		// log a message about crappy JSON?
+		logMessage(err.Error())
 	}
 
 	return s
