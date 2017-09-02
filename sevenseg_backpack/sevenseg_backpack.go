@@ -127,7 +127,7 @@ func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
         refresh: true,
         inverted: false,
         blink: BLINK_OFF,
-	dump: false,
+	    dump: false,
         display: getClearDisplay() }
     // turn on the oscillator, set default brightness
     this.i2c_dev.WriteByte(i2c_OSC_ON)

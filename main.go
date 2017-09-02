@@ -18,10 +18,12 @@ var wg sync.WaitGroup
 
 // Note: fields must be capitalized or json.Marshal will not convert them
 type Alarm struct {
+	Id 			string
 	Name 		string
 	When 		time.Time
 	Effect  string
-	disabled bool
+	disabled bool 	// set to true when we're checking alarms and it fired
+	countdown bool  // set to true when we're checking alarms and we signaled countdown
 }
 
 type Effect struct {
@@ -47,23 +49,16 @@ func isAlarming() bool { return false }
 func endAlarm() { }
 func setClockMode() { }
 
-func setCountdownMode(duration time.Duration) Effect {
-	return Effect{id:"countdown", val: duration}
+func setCountdownMode(alarm Alarm) Effect {
+	return Effect{id:"countdown", val: alarm}
 }
+
 func setAlarmMode(alarm Alarm) Effect {
 	return Effect{id:"alarm", val: alarm}
 }
 
-func disableAlarm(a Alarm) { }
 func updateAlarmLEDs() {}
 func updateExtraLEDs() {}
-func disableFirstAlarm(table []Alarm) { }
-func nextAlarm(table []Alarm) { }
-func getNextAlarm(table []Alarm) Alarm { return table[0] }
-
-func reconcileAlarms(path string) {
-	// TODO: get alarms from calendar, remove ones that don't exist
-}
 
 func alarmError() Effect {
 	return Effect{ id: "alarmError" }
@@ -78,11 +73,20 @@ func writeAlarms(alarms []Alarm, fname string) error {
 	return ioutil.WriteFile(fname, output, 0644)
 }
 
+func handledAlarm(alarm Alarm, handled map[string]Alarm) bool {
+	// if the time changed, consider it "unhandled"
+	v, ok := handled[alarm.Id]
+	if !ok { return false}
+	if v.When != alarm.When { return false }
+	// everything else ignore
+	return true
+}
+
 func cacheFilename(settings *Settings) string {
 	return settings.GetString("alarmPath") + "/alarm.json"
 }
 
-func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
+func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
 	alarms := make([]Alarm, 0)
 	srv := GetCalenderService()
 	// TODO: if it wasn't available, send an Alarm message
@@ -151,12 +155,13 @@ func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
 	    	logMessage(err.Error())
 	    	continue
 	    }
+
 	    if when.Sub(time.Now()) < 0 {
-	    	logMessage(fmt.Sprintf("Already passed the time for: %s (%s)\n", i.Summary, i.Start.DateTime))
+	    	logMessage(fmt.Sprintf("Skipping old alarm: %s", i.Id))
 	    	continue
 	    }
 
-	    alm := Alarm{Name: i.Summary, disabled: false, When: when}
+	    alm := Alarm{Id: i.Id, Name: i.Summary, When: when, disabled: false}
 
 	    // look for hastags (does not work ATM, the gAPI is broken I think)
 	    music := strings.Contains(i.Summary, "#music")
@@ -177,6 +182,11 @@ func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
 	    	alm.Effect = "random"
 	    }
 
+	    // has this one been handled?
+	    if handledAlarm(alm, handled) {
+	    	logMessage(fmt.Sprintf("Skipping handled alarm: %s", alm.Id))
+	    }
+
 	    alarms = append(alarms, alm)
 	  }
 
@@ -187,26 +197,54 @@ func getAlarmsFromService(settings *Settings) ([]Alarm, error) {
 	return alarms, nil
 }
 
-func getAlarmsFromCache(settings *Settings) ([]Alarm, error) {
+func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
 	alarms := make([]Alarm, 0)
 	data, err := ioutil.ReadFile(cacheFilename(settings))
 	if err != nil {
 		return alarms, err
 	}
 	err = json.Unmarshal(data, &alarms)
-	return alarms, err
+	if err != nil {
+		return alarms, err
+	}
+	// remove any that are in the "handled" map
+	for i:=len(alarms)-1;i>=0;i-- {
+		if handledAlarm(alarms[i], handled) {
+			// remove is append two slices without the part we don't want
+			logMessage(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
+			alarms = append(alarms[:i], alarms[i+1:]...)
+		}
+	}
+
+	return alarms, nil
 }
 
-func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect) {
+func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cH chan Alarm) {
 	defer wg.Done()
 
+	// keep a list of things that we have done
+	// TODO: GC the list occasionally
+	handledAlarms := map[string]Alarm{}
+
 	for true {
-		alarms, err := getAlarmsFromService(settings)
+		// read any handled alarms first
+		keepReading := true;
+		for keepReading {
+			select {
+				case alm := <- cH:
+					handledAlarms[alm.Id] = alm
+				default:
+					keepReading = false
+					logMessage("No handled alarms")
+			}
+		}
+
+		alarms, err := getAlarmsFromService(settings, handledAlarms)
 		if err != nil {
 			cE <- alarmError()
 			logMessage(err.Error())
 			// try the backup
-			alarms, err = getAlarmsFromCache(settings)
+			alarms, err = getAlarmsFromCache(settings, handledAlarms)
 			if err != nil {
 				// very bad, so...delete and try again later?
 				// TODO: more effects
@@ -258,6 +296,15 @@ func toAlarm(val interface{}) (*Alarm, error) {
 	}
 }
 
+func toString(val interface{}) (string, error) {
+	switch v := val.(type) {
+	case string:
+		return v, nil
+	default:
+		return "", errors.New(fmt.Sprintf("Bad type: %T", v))
+	}
+}
+
 func displayClock(display *sevenseg_backpack.Sevenseg) {
 	// standard time display
 	colon := "15:04"
@@ -278,8 +325,17 @@ func displayClock(display *sevenseg_backpack.Sevenseg) {
 	}
 }
 
-func displayCountdown(display *sevenseg_backpack.Sevenseg, count int) {
-	display.Print(fmt.Sprintf("%d", count))
+func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm) bool {
+	// calculate 10ths of secs to alarm time
+	count := alarm.When.Sub(time.Now()) / (time.Second/10)
+	if count > 9999 {
+		count = 9999
+	} else if count <= 0 {
+		return false
+	}
+	s := fmt.Sprintf("%d.%d", count / 10, count % 10)
+	display.Print(s)
+	return true
 }
 
 func runEffects(settings *Settings, c chan Effect) {
@@ -296,15 +352,17 @@ func runEffects(settings *Settings, c chan Effect) {
 	}
 
 	// turn on LED dump?
-	display.DebugDump(settings.GetBool("i2c_simulated"))
+	display.DebugDump(settings.GetBool("debug_dump"))
 
 	display.SetBrightness(3)
 	// ready to rock
 	display.DisplayOn(true)
 
 	var mode string = "clock"
-	var countdown = 0
+	var countdown *Alarm
 	var error_id = 0
+	const DEFAULT_SLEEP = 250
+	var sleepTime time.Duration = DEFAULT_SLEEP
 
 	for true {
 		var e Effect
@@ -318,7 +376,8 @@ func runEffects(settings *Settings, c chan Effect) {
 					mode = e.id
 				case "countdown":
 					mode = e.id
-					countdown, _ = toInt(e.val)
+					countdown, _ = toAlarm(e.val)
+					sleepTime = 10
 				case "alarmError":
 					// TODO: alarm error LED
 					mode = e.id
@@ -327,7 +386,11 @@ func runEffects(settings *Settings, c chan Effect) {
 				case "terminate":
 					fmt.Printf("terminate")
 					return
+				case "print":
+					v, _ := toString(e.val)
+					display.Print(v)
 				case "alarm":
+					mode = e.id
 					alm, _ := toAlarm(e.val)
 					fmt.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
 				default:
@@ -335,30 +398,37 @@ func runEffects(settings *Settings, c chan Effect) {
 			}
 		default:
 			// nothing?
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(time.Duration(sleepTime * time.Millisecond))
 		}
 
 		switch mode {
 			case "clock":
 				displayClock(display)
 			case "countdown":
-				displayCountdown(display, countdown)
-				countdown--
-				if countdown < 0 { mode = "clock" }
+				if !displayCountdown(display, countdown) {
+					mode = "clock"
+					sleepTime = DEFAULT_SLEEP
+				}
 			case "alarmError":
 				fmt.Sprintf("Error: %d\n", error_id)
+				display.Print("Err")
+			case "output":
+				// do nothing
+			case "alarm":
+				// figure something out
 			default:
-				fmt.Printf("Unknown mode: '%s'", mode)
+				logMessage(fmt.Sprintf("Unknown mode: '%s'\n", mode))
 		}
 	}
 
 	display.DisplayOn(false)
 }
 
-func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect) {
+func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cH chan Alarm) {
 	defer wg.Done()
 
 	alarms := make([]Alarm, 0)
+	var lastLogSecond = -1
 
 	for true {
 		// try reading from our channel
@@ -370,8 +440,10 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect) {
 					alarmsRead++
 					if alm.Name == "" {
 						// reset the list
+						logMessage("Reset alarm list")
 						alarms = make([]Alarm, 0)
 					} else {
+						logMessage(fmt.Sprintf("Alarm: %+v", alm))
 						alarms = append(alarms, alm)
 					}
 				default:
@@ -379,42 +451,49 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect) {
 			}
 		}
 
-		if alarmsRead > 0 {
-			logMessage(fmt.Sprintf("%+v\n", alarms))
-		}
-
 		// alarms come in sorted with soonest first
 	  for index:=0;index<len(alarms);index++ {
 	  	if alarms[index].disabled {
-	  		continue
+	  		continue // skip processed alarms
 	  	}
 
-	  	duration := alarms[index].When.Sub(time.Now())
+	  	now := time.Now()
+	  	duration := alarms[index].When.Sub(now)
+	  	if lastLogSecond != now.Second() && now.Second() % 30 == 0 {
+	  		lastLogSecond = now.Second()
+	  		logMessage(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration / time.Second, (duration - settings.GetDuration("countdownTime"))/time.Second))
+	  	}
 
 		  if (duration > 0) {
 			  // start a countdown?
 			  countdown := settings.GetDuration("countdownTime")
 		  	if (duration < countdown) {
-		  		cE <- setCountdownMode(duration)
+		  		cE <- setCountdownMode(alarms[0])
+		  		alarms[index].countdown = true
 		  	}
 		  } else {
 		    // Set alarm mode
 				cE <- setAlarmMode(alarms[index])
-		    alarms[index].disabled = true
+				// let someone know we handled it
+				cH <- alarms[index]
+				alarms[index].disabled = true
 		  }
 		  break
 		}
+		// take some time off
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
 func toggleDebugDump(on bool) Effect {
-	return Effect{ id: "debug", val: !on }
+	return Effect{ id: "debug", val: on }
 }
 
 func confirm_calendar_auth(settings *Settings, c chan Effect) {
-	defer func(){ c <- toggleDebugDump(false) }()
+	defer func(){ c <- toggleDebugDump(settings.GetBool("debug_dump")) }()
 
-	c <- toggleDebugDump(true)
+	c <- toggleDebugDump(false)
+	c <- Effect{id: "print", val: "...."}
 	for true {
 		c := GetCalenderService()
 		if c != nil { return }
@@ -439,18 +518,20 @@ func main() {
 
   alarmChannel := make(chan Alarm, 1)
   effectChannel := make(chan Effect, 1)
+  handledChannel := make(chan Alarm, 1)
 
 	// wait on our three workers: alarm fetcher, clock runner, alarm checker
   wg.Add(3)
 
+  // start the effect thread so we can update the LEDs
 	go runEffects(settings, effectChannel)
 
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop
 	confirm_calendar_auth(settings, effectChannel)
 
-	go getAlarms(settings, alarmChannel, effectChannel)
-	go checkAlarm(settings, alarmChannel, effectChannel)
+	go getAlarms(settings, alarmChannel, effectChannel, handledChannel)
+	go checkAlarm(settings, alarmChannel, effectChannel, handledChannel)
 
 	wg.Wait()
 }

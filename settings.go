@@ -33,6 +33,7 @@ func defaultSettings() *Settings {
 	s["i2c_bus"] = byte(0)
 	s["i2c_device"] = byte(0x70)
 	s["calendar"] = "piclock"
+	s["debug_dump"] = false
 
 	on := true
 	if runtime.GOARCH == "arm" { on = false }
