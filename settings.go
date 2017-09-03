@@ -48,7 +48,13 @@ func defaultSettings() *Settings {
 func (this *Settings) settingsFromJSON(data []byte) (error) {
 	tmp := defaultSettings()
 	for k, initVal := range tmp.settings {
-		var err error
+		// ignore missing fields;
+		_, err := jsonparser.GetString(data, k)
+		if err != nil {
+			logMessage(fmt.Sprintf("Skipping key %s",k))
+			continue
+		}
+
 		switch initVal.(type) {
 			case uint8:
 				var val uint64
