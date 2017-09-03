@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"bufio"
 	// gpio lib
 	"github.com/stianeikeland/go-rpio"
 )
@@ -429,7 +430,7 @@ func runEffects(settings *Settings, c chan Effect) {
 							sleepTime = DEFAULT_SLEEP
 						}
 					} else {
-						logMessage(fmt.Sprintf("Main button released: %ds", info.duration))
+						logMessage(fmt.Sprintf("Main button released: %dms", info.duration / time.Millisecond))
 					}
 				default:
 					fmt.Printf("Unhandled %s\n", e.id)
@@ -554,8 +555,24 @@ func watchButtons(settings *Settings, cE chan Effect) {
 
 	for true {
 		if len(simulated) != 0 {
-				// TODO: map buttons to keys
+				lSim := strings.ToLower(simulated)
+				uSim := strings.ToUpper(simulated)
 
+				// TODO: map buttons to keys
+		    reader := bufio.NewReader(os.Stdin)
+		    input, _ := reader.ReadString('\n')
+
+		    if []byte(input)[0] == lSim[0] {
+		    	pressTime := time.Now()
+		    	cE <- mainButtonPressed()
+		    	time.Sleep(100 * time.Millisecond)
+		    	cE <- mainButtonReleased(time.Now().Sub(pressTime))
+		    } else if []byte(input)[0] == uSim[0] {
+		    	pressTime := time.Now()
+					cE <- mainButtonPressed()
+					time.Sleep(6 * time.Second)
+					cE <- mainButtonReleased(time.Now().Sub(pressTime))
+				}
 			} else {
 				// map ports to buttons
 				err := rpio.Open()
