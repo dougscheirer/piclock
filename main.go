@@ -33,6 +33,11 @@ type Effect struct {
 	val interface{}
 }
 
+type ButtonInfo struct {
+	pressed 	bool
+	duration 	time.Duration
+}
+
 func initAlarms(settings *Settings) bool {
 	logMessage("initAlarms")
 	return true
@@ -44,8 +49,13 @@ func readAlarmCache() []Alarm {
  	return ret
 }
 
-func mainButtonPressed() Effect 	{ return Effect{ id:"mainButton", val : true  } }
-func mainButtonReleased() Effect  { return Effect{ id:"mainButton", val : false } }
+func mainButtonPressed() Effect {
+	return Effect{ id:"mainButton", val : ButtonInfo{pressed: true}  }
+}
+
+func mainButtonReleased(d time.Duration) Effect {
+	return Effect{ id:"mainButton", val : ButtonInfo{pressed: false, duration: d} }
+}
 
 func setCountdownMode(alarm Alarm) Effect {
 	return Effect{id:"countdown", val: alarm}
@@ -87,6 +97,7 @@ func cacheFilename(settings *Settings) string {
 func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
 	alarms := make([]Alarm, 0)
 	srv := GetCalenderService(settings.GetString("secretPath"))
+
 	// TODO: if it wasn't available, send an Alarm message
 	if srv == nil {
 		return alarms, errors.New("Failed to get calendar service")
@@ -96,6 +107,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 	calName := settings.GetString("calendar")
 	var id string
 	{
+		logMessage("get calendar list")
 		list, err := srv.CalendarList.List().Do()
 		if err != nil {
 			logMessage(err.Error())
@@ -267,6 +279,15 @@ func replaceAtIndex(in string, r rune, i int) string {
   return string(out)
 }
 
+func toButtonInfo(val interface{}) (*ButtonInfo, error) {
+	switch v:=val.(type) {
+	case ButtonInfo:
+		return &v, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Bad type: %T", v))
+	}
+}
+
 func toBool(val interface{}) (bool, error) {
 	switch v := val.(type) {
 		case bool:
@@ -399,11 +420,16 @@ func runEffects(settings *Settings, c chan Effect) {
 					sleepTime = 10*time.Millisecond
 					fmt.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
 				case "mainButton":
-					state, _ := toBool(e.val)
-					if state {
+					info, _ := toButtonInfo(e.val)
+					if info.pressed {
 						logMessage("Main button pressed")
+						if (mode == "alarm") {
+							// TODO: cancel the alarm
+							mode = "clock"
+							sleepTime = DEFAULT_SLEEP
+						}
 					} else {
-						logMessage("Main button released")
+						logMessage(fmt.Sprintf("Main button released: %ds", info.duration))
 					}
 				default:
 					fmt.Printf("Unhandled %s\n", e.id)
@@ -539,21 +565,26 @@ func watchButtons(settings *Settings, cE chan Effect) {
 				}
 
 				// TODO: configurable pin numbers and high or low
-				pin := rpio.Pin(4)
+				// picking GPIO 4 results in collisions with I2C operations
+				pin := rpio.Pin(25)
 
 				// for now we only care about the "low" state
 				pin.Input()        // Input mode
+				pin.PullUp()			 // GND => button press
 				pressed := false
+				pressTime := time.Now()
+
 				for true {
 					res := pin.Read()  // Read state from pin (High / Low)
 					if !pressed {
 						if res == 0 {
+							pressTime = time.Now()
 						 	cE <- mainButtonPressed()
 							pressed = true
 						}
 					} else {
 						if res == 1 {
-							cE <- mainButtonReleased()
+							cE <- mainButtonReleased(time.Now().Sub(pressTime))
 							pressed = false
 						}
 					}
