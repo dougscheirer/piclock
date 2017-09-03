@@ -33,6 +33,6 @@ else
     return 1
   fi
   killall piclock
-  bin/piclock
+  bin/piclock &
   return $?
 fi
