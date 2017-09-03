@@ -112,3 +112,17 @@ func GetCalenderService(secret_path string) *calendar.Service {
 
   return srv
 }
+
+// a looping function to get the Oauth key before anything else
+func confirm_calendar_auth(settings *Settings, c chan Effect) {
+  defer func(){ c <- toggleDebugDump(settings.GetBool("debug_dump")) }()
+
+  c <- toggleDebugDump(false)
+  c <- Effect{id: "print", val: "...."}
+  for true {
+    c := GetCalenderService(settings.GetString("secretPath"))
+    if c != nil { return }
+    // TODO: set some error indicators
+  }
+}
+
