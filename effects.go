@@ -165,6 +165,7 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
   alarmSegment := 0
   DEFAULT_SLEEP := settings.GetDuration("sleepTime")
   sleepTime := DEFAULT_SLEEP
+  buttonPressActed := false
 
   for true {
     var e Effect
@@ -200,6 +201,9 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
         case "mainButton":
           info, _ := toButtonInfo(e.val)
           if info.pressed {
+            if buttonPressActed {
+              logMessage("Ignore button hold")
+            }
             logMessage("Main button pressed")
             switch mode {
               case "alarm":
@@ -214,11 +218,13 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
               case "clock":
                 if info.duration > 5 * time.Second {
                   cL <- reloadMessage()
+                  buttonPressActed = true
                 }
               default:
                 logMessage(fmt.Sprintf("No action for mode %s", mode))
             }
           } else {
+            buttonPressActed = false
             logMessage(fmt.Sprintf("Main button released: %dms", info.duration / time.Millisecond))
           }
         default:
