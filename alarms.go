@@ -220,7 +220,6 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
           }
         default:
           keepReading = false
-          logMessage("No handled alarms")
       }
     }
 
