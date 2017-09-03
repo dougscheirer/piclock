@@ -27,7 +27,11 @@ func main() {
   effectChannel := make(chan Effect, 1)
   handledChannel := make(chan Alarm, 1)
 
-	// wait on our three workers: alarm fetcher, clock runner, alarm checker, button checker
+	// wait on our workers: 
+	// alarm fetcher
+	// clock runner
+	// alarm checker
+	// button checker
   wg.Add(4)
 
   // start the effect thread so we can update the LEDs
