@@ -122,7 +122,7 @@ func confirm_calendar_auth(settings *Settings, c chan Effect) {
 
 
   c <- toggleDebugDump(false)
-  c <- Effect{id: "print", val: " . . . ."} // spaces required
+  c <- printEffect(" . . . .") // spaces required
 
   // if' we're pretending, skip the check
   if settings.GetBool("cached_alarms") { return }
