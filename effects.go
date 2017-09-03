@@ -37,6 +37,10 @@ func toggleDebugDump(on bool) Effect {
   return Effect{ id: "debug", val: on }
 }
 
+func printEffect(s string) Effect {
+  return Effect{ id: "print", val: s }
+}
+
 func replaceAtIndex(in string, r rune, i int) string {
   out := []rune(in)
   out[i] = r
