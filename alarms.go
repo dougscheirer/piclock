@@ -19,6 +19,20 @@ type Alarm struct {
   countdown bool  // set to true when we're checking alarms and we signaled countdown
 }
 
+type LoaderMsg struct {
+  msg   string
+  alarm Alarm
+  val   interface{}
+}
+
+func handledMessage(alm Alarm) LoaderMsg {
+  return LoaderMsg{msg:"handled", alarm: alm}
+}
+
+func reloadMessage() LoaderMsg {
+  return LoaderMsg{msg:"reload"}
+}
+
 func writeAlarms(alarms []Alarm, fname string) error {
   output, err := json.Marshal(alarms)
   logMessage(string(output))
@@ -176,51 +190,72 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
   return alarms, nil
 }
 
-func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cH chan Alarm) {
+func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   // keep a list of things that we have done
   // TODO: GC the list occassionally
   handledAlarms := map[string]Alarm{}
 
+  var lastRefresh time.Time
+
   for true {
-    // read any handled alarms first
+    // read any messages alarms first
     keepReading := true;
+    reload := false
+    if time.Now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
+      reload = true
+    }
+
     for keepReading {
       select {
-        case alm := <- cH:
-          handledAlarms[alm.Id] = alm
+        case msg := <- cL:
+          switch (msg.msg) {
+          case "handled":
+            handledAlarms[msg.alarm.Id] = msg.alarm
+          case "reload":
+            reload = true
+          default:
+            logMessage(fmt.Sprintf("Unknown msg id: %s", msg.msg))
+          }
         default:
           keepReading = false
           logMessage("No handled alarms")
       }
     }
 
-    alarms, err := getAlarmsFromService(settings, handledAlarms)
-    if err != nil {
-      cE <- alarmError(5 * time.Second)
-      logMessage(err.Error())
-      // try the backup
-      alarms, err = getAlarmsFromCache(settings, handledAlarms)
+    if reload {
+      alarms, err := getAlarmsFromService(settings, handledAlarms)
       if err != nil {
-        // very bad, so...delete and try again later?
-        // TODO: more effects
-        fmt.Printf("Error reading alarm cache: %s\n", err.Error())
-        time.Sleep(time.Second)
+        cE <- alarmError(5 * time.Second)
+        logMessage(err.Error())
+        // try the backup
+        alarms, err = getAlarmsFromCache(settings, handledAlarms)
+        if err != nil {
+          // very bad, so...delete and try again later?
+          // TODO: more effects
+          cE <- alarmError(5 * time.Second)
+          fmt.Printf("Error reading alarm cache: %s\n", err.Error())
+          time.Sleep(time.Second)
+          continue
+        }
       }
-    }
 
-    // tell cA that we have some alarms
-    cA <- Alarm{} // reset hack
-    for i:=0;i<len(alarms);i++ {
-      cA <- alarms[i]
-    }
+      lastRefresh = time.Now()
 
-    time.Sleep(settings.GetDuration("alarmRefreshTime"))
+      // tell cA that we have some alarms
+      cA <- Alarm{} // reset hack
+      for i:=0;i<len(alarms);i++ {
+        cA <- alarms[i]
+      }
+    } else {
+      // wait a little
+      time.Sleep(100 * time.Millisecond)
+    }
   }
 }
 
-func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cH chan Alarm) {
+func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   alarms := make([]Alarm, 0)
@@ -271,7 +306,7 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cH chan Alarm
         // Set alarm mode
         cE <- setAlarmMode(alarms[index])
         // let someone know we handled it
-        cH <- alarms[index]
+        cL <- handledMessage(alarms[index])
         alarms[index].disabled = true
       }
       break

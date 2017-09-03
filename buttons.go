@@ -30,12 +30,12 @@ func watchButtons(settings *Settings, cE chan Effect) {
 
         if []byte(input)[0] == lSim[0] {
           pressTime := time.Now()
-          cE <- mainButtonPressed()
+          cE <- mainButtonPressed(0)
           time.Sleep(100 * time.Millisecond)
           cE <- mainButtonReleased(time.Now().Sub(pressTime))
         } else if []byte(input)[0] == uSim[0] {
           pressTime := time.Now()
-          cE <- mainButtonPressed()
+          cE <- mainButtonPressed(0)
           time.Sleep(6 * time.Second)
           cE <- mainButtonReleased(time.Now().Sub(pressTime))
         }
@@ -56,19 +56,26 @@ func watchButtons(settings *Settings, cE chan Effect) {
         pin.PullUp()       // GND => button press
         pressed := false
         pressTime := time.Now()
+        // send "the button is still pressed" message every 1 sec
+        lastMsg := pressTime
 
         for true {
           res := pin.Read()  // Read state from pin (High / Low)
+          now := time.Now()
           if !pressed {
             if res == 0 {
-              pressTime = time.Now()
-              cE <- mainButtonPressed()
+              pressTime = now
+              lastMsg = now
+              cE <- mainButtonPressed(0)
               pressed = true
             }
           } else {
             if res == 1 {
               cE <- mainButtonReleased(time.Now().Sub(pressTime))
               pressed = false
+            } else if now.Sub(lastMsg) > time.Second {
+              lastMsg = now
+              cE <- mainButtonPressed(now.Sub(pressTime))
             }
           }
           time.Sleep(10*time.Millisecond)

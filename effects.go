@@ -13,8 +13,8 @@ type Effect struct {
 }
 
 // channel messagimng functions
-func mainButtonPressed() Effect {
-  return Effect{ id:"mainButton", val : ButtonInfo{pressed: true}  }
+func mainButtonPressed(d time.Duration) Effect {
+  return Effect{ id:"mainButton", val : ButtonInfo{pressed: true, duration: d}  }
 }
 
 func mainButtonReleased(d time.Duration) Effect {
@@ -135,7 +135,7 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm) bool {
   return true
 }
 
-func runEffects(settings *Settings, c chan Effect) {
+func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   display, err := sevenseg_backpack.Open(
@@ -165,7 +165,7 @@ func runEffects(settings *Settings, c chan Effect) {
   for true {
     var e Effect
     select {
-    case e = <-c:
+    case e = <- cE:
       switch e.id {
         case "debug":
           v, _ := toBool(e.val)
@@ -196,10 +196,22 @@ func runEffects(settings *Settings, c chan Effect) {
           info, _ := toButtonInfo(e.val)
           if info.pressed {
             logMessage("Main button pressed")
-            if (mode == "alarm") {
-              // TODO: cancel the alarm
-              mode = "clock"
-              sleepTime = DEFAULT_SLEEP
+            switch mode {
+              case "alarm":
+                // TODO: cancel the alarm
+                mode = "clock"
+                sleepTime = DEFAULT_SLEEP
+              case "countdown":
+                // cancel the alarm
+                mode = "clock"
+                cL <- handledMessage(*countdown)
+                countdown = nil
+              case "clock":
+                if info.duration > 5 * time.Second {
+                  cL <- reloadMessage()
+                }
+              default:
+                logMessage(fmt.Sprintf("No action for mode %s", mode))
             }
           } else {
             logMessage(fmt.Sprintf("Main button released: %dms", info.duration / time.Millisecond))
