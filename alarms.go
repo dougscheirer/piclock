@@ -43,7 +43,7 @@ func cacheFilename(settings *Settings) string {
 
 func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
   alarms := make([]Alarm, 0)
-  srv := GetCalenderService(settings.GetString("secretPath"))
+  srv := GetCalenderService(settings)
 
   // TODO: if it wasn't available, send an Alarm message
   if srv == nil {
@@ -180,7 +180,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cH chan Alarm)
   defer wg.Done()
 
   // keep a list of things that we have done
-  // TODO: GC the list occasionally
+  // TODO: GC the list occassionally
   handledAlarms := map[string]Alarm{}
 
   for true {
@@ -198,7 +198,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cH chan Alarm)
 
     alarms, err := getAlarmsFromService(settings, handledAlarms)
     if err != nil {
-      cE <- alarmError()
+      cE <- alarmError(5 * time.Second)
       logMessage(err.Error())
       // try the backup
       alarms, err = getAlarmsFromCache(settings, handledAlarms)

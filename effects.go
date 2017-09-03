@@ -29,8 +29,8 @@ func setAlarmMode(alarm Alarm) Effect {
   return Effect{id:"alarm", val: alarm}
 }
 
-func alarmError() Effect {
-  return Effect{ id: "alarmError" }
+func alarmError(d time.Duration) Effect {
+  return Effect{ id: "alarmError", val: d }
 }
 
 func toggleDebugDump(on bool) Effect {
@@ -85,6 +85,15 @@ func toString(val interface{}) (string, error) {
     return v, nil
   default:
     return "", errors.New(fmt.Sprintf("Bad type: %T", v))
+  }
+}
+
+func toDuration(val interface{}) (time.Duration, error) {
+  switch v := val.(type) {
+  case time.Duration:
+    return v, nil
+  default:
+    return 0, errors.New(fmt.Sprintf("Bad type: %T", v))
   }
 }
 
@@ -169,9 +178,9 @@ func runEffects(settings *Settings, c chan Effect) {
           sleepTime = 10 * time.Millisecond
         case "alarmError":
           // TODO: alarm error LED
-          mode = e.id
           display.Print("Err")
-          error_id, _ = toInt(e.val)
+          d, _ := toDuration(e.val)
+          time.Sleep(d)
         case "terminate":
           fmt.Printf("terminate")
           return

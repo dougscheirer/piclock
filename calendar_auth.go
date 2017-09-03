@@ -89,10 +89,13 @@ func saveToken(file string, token *oauth2.Token) {
   json.NewEncoder(f).Encode(token)
 }
 
-func GetCalenderService(secret_path string) *calendar.Service {
+func GetCalenderService(settings *Settings) *calendar.Service {
+  // if' we're pretending, skip the check
+  if settings.GetBool("cached_alarms") { return nil }
+
   ctx := context.Background()
 
-  b, err := ioutil.ReadFile(secret_path + "/client_secret.json")
+  b, err := ioutil.ReadFile(settings.GetString("secretPath") + "/client_secret.json")
   if err != nil {
     log.Fatalf("Unable to read client secret file: %v", err)
   }
@@ -117,10 +120,15 @@ func GetCalenderService(secret_path string) *calendar.Service {
 func confirm_calendar_auth(settings *Settings, c chan Effect) {
   defer func(){ c <- toggleDebugDump(settings.GetBool("debug_dump")) }()
 
+
   c <- toggleDebugDump(false)
-  c <- Effect{id: "print", val: "...."}
+  c <- Effect{id: "print", val: " . . . ."} // spaces required
+
+  // if' we're pretending, skip the check
+  if settings.GetBool("cached_alarms") { return }
+
   for true {
-    c := GetCalenderService(settings.GetString("secretPath"))
+    c := GetCalenderService(settings)
     if c != nil { return }
     // TODO: set some error indicators
   }

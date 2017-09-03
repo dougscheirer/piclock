@@ -36,6 +36,7 @@ func defaultSettings() *Settings {
 	s["calendar"] = "piclock"
 	s["debug_dump"] = false
 	s["button_simulated"] = ""
+	s["cached_alarms"] = false	// only use the cache, pretend that gcal is down
 
 	on := true
 	if runtime.GOARCH == "arm" { on = false }
