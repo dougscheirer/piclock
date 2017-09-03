@@ -19,7 +19,7 @@ function git_checkme
 }
 
 git_checkme src/piclock
-if [ $? -eq 0 ];
+if [ $? -eq 0 ]; then
   return 0
 else
   pushd src/piclock
