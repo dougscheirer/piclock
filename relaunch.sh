@@ -20,19 +20,19 @@ function git_checkme
 
 git_checkme src/piclock
 if [ $? -eq 0 ]; then
-  return 0
+  exit 0
 else
   pushd src/piclock
   git pull origin master
   if [ ! $? -eq 0 ]; then
-    return 1
+    exit 1
   fi
   popd
   go install piclock
   if [ ! $? -eq 0 ]; then
-    return 1
+    exit 1
   fi
   killall piclock
   bin/piclock &
-  return $?
+  exit $?
 fi
