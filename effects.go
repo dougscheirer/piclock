@@ -203,25 +203,28 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
           if info.pressed {
             if buttonPressActed {
               logMessage("Ignore button hold")
-            }
-            logMessage("Main button pressed")
-            switch mode {
-              case "alarm":
-                // TODO: cancel the alarm
-                mode = "clock"
-                sleepTime = DEFAULT_SLEEP
-              case "countdown":
-                // cancel the alarm
-                mode = "clock"
-                cL <- handledMessage(*countdown)
-                countdown = nil
-              case "clock":
-                if info.duration > 5 * time.Second {
-                  cL <- reloadMessage()
+            } else {
+              logMessage("Main button pressed")
+              switch mode {
+                case "alarm":
+                  // TODO: cancel the alarm
+                  mode = "clock"
+                  sleepTime = DEFAULT_SLEEP
                   buttonPressActed = true
-                }
-              default:
-                logMessage(fmt.Sprintf("No action for mode %s", mode))
+                case "countdown":
+                  // cancel the alarm
+                  mode = "clock"
+                  cL <- handledMessage(*countdown)
+                  countdown = nil
+                  buttonPressActed = true
+                case "clock":
+                  if info.duration > 5 * time.Second {
+                    cL <- reloadMessage()
+                    buttonPressActed = true
+                  }
+                default:
+                  logMessage(fmt.Sprintf("No action for mode %s", mode))
+              }
             }
           } else {
             buttonPressActed = false
