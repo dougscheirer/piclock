@@ -8,6 +8,7 @@ import (
   "encoding/json"
   "io/ioutil"
   "os"
+  "log"
 )
 
 type Alarm struct {
@@ -25,6 +26,11 @@ type LoaderMsg struct {
   val   interface{}
 }
 
+type CheckMsg struct {
+  displayCurrent  bool
+  alarms          []Alarm
+}
+
 func handledMessage(alm Alarm) LoaderMsg {
   return LoaderMsg{msg:"handled", alarm: alm}
 }
@@ -35,7 +41,7 @@ func reloadMessage() LoaderMsg {
 
 func writeAlarms(alarms []Alarm, fname string) error {
   output, err := json.Marshal(alarms)
-  logMessage(string(output))
+  log.Println(string(output))
   if err != nil {
     return err
   }
@@ -68,10 +74,10 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
   calName := settings.GetString("calendar")
   var id string
   {
-    logMessage("get calendar list")
+    log.Println("get calendar list")
     list, err := srv.CalendarList.List().Do()
     if err != nil {
-      logMessage(err.Error())
+      log.Println(err.Error())
       return alarms, err
     }
     for _, i := range list.Items {
@@ -105,7 +111,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
     // an error here is a system config issue
     if err != nil {
       // TODO: severe error effect
-      logMessage(fmt.Sprintf("Error: %s", err.Error()))
+      log.Printf("Error: %s", err.Error())
       return alarms, err
     }
   }
@@ -116,19 +122,19 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
       // If the DateTime is an empty string the Event is an all-day Event.
       // So only Date is available.
       if i.Start.DateTime == "" {
-        logMessage(fmt.Sprintf("Not a time based alarm: %s @ %s", i.Summary, i.Start.Date))
+        log.Println(fmt.Sprintf("Not a time based alarm: %s @ %s", i.Summary, i.Start.Date))
         continue
       }
       var when time.Time
       when, err = time.Parse(time.RFC3339, i.Start.DateTime)
       if err != nil {
         // skip bad formats
-        logMessage(err.Error())
+        log.Println(err.Error())
         continue
       }
 
       if when.Sub(time.Now()) < 0 {
-        logMessage(fmt.Sprintf("Skipping old alarm: %s", i.Id))
+        log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
         continue
       }
 
@@ -155,7 +161,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 
       // has this one been handled?
       if handledAlarm(alm, handled) {
-        logMessage(fmt.Sprintf("Skipping handled alarm: %s", alm.Id))
+        log.Println(fmt.Sprintf("Skipping handled alarm: %s", alm.Id))
         continue
       }
 
@@ -183,12 +189,12 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
   for i:=len(alarms)-1;i>=0;i-- {
     if handledAlarm(alarms[i], handled) {
       // remove is append two slices without the part we don't want
-      logMessage(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
+      log.Println(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
       alarms = append(alarms[:i], alarms[i+1:]...)
     }
     if alarms[i].When.Sub(time.Now()) < 0 {
       // remove is append two slices without the part we don't want
-      logMessage(fmt.Sprintf("Discard expired alarm: %s", alarms[i].Id))
+      log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].Id))
       alarms = append(alarms[:i], alarms[i+1:]...)
     }
   }
@@ -196,7 +202,7 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
   return alarms, nil
 }
 
-func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan LoaderMsg) {
+func getAlarms(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   // keep a list of things that we have done
@@ -209,6 +215,8 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
     // read any messages alarms first
     keepReading := true;
     reload := false
+    displayCurrent := false
+
     if time.Now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
       reload = true
     }
@@ -220,12 +228,13 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
           case "handled":
             handledAlarms[msg.alarm.Id] = msg.alarm
             // reload sends a new list without the ones that are handled
-            reload = true
+            displayCurrent = true
           case "reload":
+            displayCurrent = true
             reload = true
             cE  <- printEffect("rLd", 2*time.Second)
           default:
-            logMessage(fmt.Sprintf("Unknown msg id: %s", msg.msg))
+            log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
           }
         default:
           keepReading = false
@@ -236,14 +245,14 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
       alarms, err := getAlarmsFromService(settings, handledAlarms)
       if err != nil {
         cE <- alarmError(5 * time.Second)
-        logMessage(err.Error())
+        log.Println(err.Error())
         // try the backup
         alarms, err = getAlarmsFromCache(settings, handledAlarms)
         if err != nil {
           // very bad, so...delete and try again later?
           // TODO: more effects
           cE <- alarmError(5 * time.Second)
-          fmt.Printf("Error reading alarm cache: %s\n", err.Error())
+          log.Printf("Error reading alarm cache: %s\n", err.Error())
           time.Sleep(time.Second)
           continue
         }
@@ -252,10 +261,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
       lastRefresh = time.Now()
 
       // tell cA that we have some alarms?
-      cA <- Alarm{} // reset hack
-      for i:=0;i<len(alarms);i++ {
-        cA <- alarms[i]
-      }
+      cA <- CheckMsg{ alarms: alarms, displayCurrent: displayCurrent}
     } else {
       // wait a little
       time.Sleep(100 * time.Millisecond)
@@ -263,34 +269,25 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
   }
 }
 
-func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cL chan LoaderMsg) {
+func checkAlarm(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   alarms := make([]Alarm, 0)
   var lastLogSecond = -1
 
-  var lastAlarm Alarm
+  var lastAlarm *Alarm
 
   for true {
     // try reading from our channel
-    keepReading := true
-    alarmsRead := 0
-    for keepReading {
-      select {
-        case alm := <- cA :
-          alarmsRead++
-          if alm.Name == "" {
-            // reset the list
-            logMessage("Reset alarm list")
-            alarms = make([]Alarm, 0)
-          } else {
-            logMessage(fmt.Sprintf("Alarm: %+v", alm))
-            alarms = append(alarms, alm)
-          }
-        default:
-          keepReading = false
+    select {
+      case checkMsg := <- cA :
+        alarms = checkMsg.alarms
+        if checkMsg.displayCurrent {
+          lastAlarm = nil
+        }
+      default:
+        // continue
       }
-    }
 
     // alarms come in sorted with soonest first
     for index:=0;index<len(alarms);index++ {
@@ -299,8 +296,8 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loade
       }
 
       // if alarms[index] != lastAlarm, run some effects
-      if lastAlarm.When != alarms[index].When {
-        lastAlarm = alarms[index]
+      if lastAlarm == nil || lastAlarm.When != alarms[index].When {
+        lastAlarm = &alarms[index]
         cE <- printEffect("AL:", 2*time.Second)
         cE <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
         cE <- printEffect(lastAlarm.When.Format("01.02"), 3*time.Second)
@@ -311,7 +308,7 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loade
       duration := alarms[index].When.Sub(now)
       if lastLogSecond != now.Second() && now.Second() % 30 == 0 {
         lastLogSecond = now.Second()
-        logMessage(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration / time.Second, (duration - settings.GetDuration("countdownTime"))/time.Second))
+        log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration / time.Second, (duration - settings.GetDuration("countdownTime"))/time.Second))
       }
 
       if (duration > 0) {

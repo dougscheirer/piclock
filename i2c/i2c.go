@@ -1,8 +1,11 @@
 package i2c
 
-import "os"
-import "syscall"
-import "fmt"
+import (
+	"os"
+	"syscall"
+	"log"
+	"fmt"
+)
 
 type I2C struct {
 	fd 			*os.File
@@ -17,17 +20,17 @@ const (
 
 func (this *I2C) logWrite(buf []uint8) error {
 	if !this.debugdump { return nil }
-	fmt.Printf("Write : ")
+	log.Println("Write : ")
 	for i:=0;i<len(buf);i++ {
-		fmt.Printf("%02x ", buf[i])
+		log.Println("%02x ", buf[i])
 	}
-	fmt.Printf("\n")
+	log.Println("\n")
 	return nil
 }
 
 func (this *I2C) logMsg(msg string) error { 
 	if !this.debugdump { return nil }
-	fmt.Println(msg)
+	log.Println(msg)
 	return nil
 }
 

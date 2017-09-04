@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 	"runtime"
 	"flag"
@@ -15,12 +16,6 @@ import (
 // keep settings generic strings, type-convert on the fly
 type Settings struct {
 	settings map[string]interface{};
-}
-
-func logMessage(msg string) {
-	// TODO: better logging
-	_, fname, line, _ := runtime.Caller(1)
-	fmt.Printf("%s: %s(%d): %s\n", time.Now().Format(time.UnixDate), fname, line, msg)
 }
 
 func defaultSettings() *Settings {
@@ -37,6 +32,7 @@ func defaultSettings() *Settings {
 	s["calendar"] = "piclock"
 	s["debug_dump"] = false
 	s["button_simulated"] = ""
+	s["logFile"] = "/var/log/piclock.log"
 	s["cached_alarms"] = false	// only use the cache, pretend that gcal is down
 
 	on := true
@@ -52,7 +48,7 @@ func (this *Settings) settingsFromJSON(data []byte) (error) {
 		// ignore missing fields;
 		_, err := jsonparser.GetString(data, k)
 		if err != nil {
-			logMessage(fmt.Sprintf("Skipping key %s",k))
+			log.Printf("Skipping key %s",k)
 			continue
 		}
 
@@ -85,7 +81,6 @@ func (this *Settings) settingsFromJSON(data []byte) (error) {
 					// try true and false
 					s, _ := jsonparser.GetString(data, k)
 					s = strings.ToLower(s)
-					fmt.Printf("bool val is %s", s)
 					switch s {
 					case "true":
 						bVal = true
@@ -121,7 +116,7 @@ func (this *Settings) settingsFromJSON(data []byte) (error) {
 }
 
 func InitSettings() *Settings {
-	logMessage("initSettings")
+	log.Println("initSettings")
 
 	// defaults
 	s := defaultSettings()
@@ -135,16 +130,16 @@ func InitSettings() *Settings {
 	// try to open it
 	data, err := ioutil.ReadFile(*configFile)
 	if err != nil {
-		logMessage(fmt.Sprintf("Could not load conf file '%s', using defaults", *configFile))
+		log.Println(fmt.Sprintf("Could not load conf file '%s', using defaults", *configFile))
 		return s
 	}
 
-	logMessage(fmt.Sprintf("Reading configuration from '%s'", *configFile))
+	log.Println(fmt.Sprintf("Reading configuration from '%s'", *configFile))
 
 	// json parse it
 	if err := s.settingsFromJSON(data); err != nil {
 		// log a message about crappy JSON?
-		logMessage(err.Error())
+		log.Println(err.Error())
 	}
 
 	return s
@@ -201,17 +196,17 @@ func (this *Settings) Dump() {
 	for k, v := range this.settings {
 		switch v.(type) {
 			case uint8:
-				fmt.Printf("%s : %T: %d\n", k, v, v)
+				log.Printf("%s : %T: %d\n", k, v, v)
 			case int:
-				fmt.Printf("%s : %T: %d\n", k, v, v)
+				log.Printf("%s : %T: %d\n", k, v, v)
 			case bool:
-				fmt.Printf("%s : %T: %t\n", k, v, v)
+				log.Printf("%s : %T: %t\n", k, v, v)
 			case time.Duration:
-				fmt.Printf("%s : %T: %d\n", k, v, v)
+				log.Printf("%s : %T: %d\n", k, v, v)
 			case string:
-				fmt.Printf("%s : %T: %s\n", k, v, v)
+				log.Printf("%s : %T: %s\n", k, v, v)
 			default:
-				fmt.Printf("Bad type: %s: %T\n", k, v)
+				log.Printf("Bad type: %s: %T\n", k, v)
 		}
 	}
 }

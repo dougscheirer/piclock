@@ -5,6 +5,7 @@ import (
     "strings"
     "errors"
     "fmt"
+    "log"
     )
 
 // commands we support
@@ -180,88 +181,90 @@ func (this *Sevenseg) dumpDisplay() {
     // go one row at a time
     // TOP
     var i byte;
+    line := "\n"
     for i=0;i<4;i++ {
         if i == 2 {
-            fmt.Printf(" ")
+            line += " "
         }
         if this.display[getDisplayPos(i)] & (1 << LED_TOP) != 0 {
-            fmt.Printf("  -   ")
+            line += "  -   "
         } else {
-            fmt.Printf("      ")
+            line += "      "
         }
     }
     // TOPM
-    fmt.Println()
+    line += "\n"
     for i=0;i<4;i++ {
         if i == 2 {
             if this.display[i2c_COLON_POS] != 0 {
-                fmt.Printf(".")
+                line += "."
             } else {
-                fmt.Printf(" ")
+                line += " "
             }
         }
         if this.display[getDisplayPos(i)] & (1 << LED_TOPL) != 0  {
-            fmt.Printf(" |")
+            line += " |"
         } else {
-            fmt.Printf("  ")
+            line += "  "
         }
         if this.display[getDisplayPos(i)] & (1 << LED_TOPR) != 0  {
-            fmt.Printf(" |  ")
+            line += " |  "
         } else {
-            fmt.Printf("    ")
+            line += "    "
         }
     }
     // MID
-    fmt.Println()
+    line += "\n"
     for i=0;i<4;i++ {
         if i == 2 {
-            fmt.Printf(" ")
+            line += " "
         }
         if this.display[getDisplayPos(i)] & (1 << LED_MID) != 0  {
-            fmt.Printf("  -   ")
+            line += "  -   "
         } else {
-            fmt.Printf("      ")
+            line += "      "
         }
     }
     // BOTM
-    fmt.Println()
+    line += "\n"
     for i=0;i<4;i++ {
         if i == 2 {
             if this.display[i2c_COLON_POS] != 0  {
-                fmt.Printf(".")
+                line += "."
             } else {
-                fmt.Printf(" ")
+                line += " "
             }
         }
         if this.display[getDisplayPos(i)] & (1 << LED_BOTL) != 0  {
-            fmt.Printf(" |")
+            line += " |"
         } else {
-            fmt.Printf("  ")
+            line += "  "
         }
         if this.display[getDisplayPos(i)] & (1 << LED_BOTR) != 0  {
-            fmt.Printf(" |  ")
+            line += " |  "
         } else {
-            fmt.Printf("    ")
+            line += "    "
         }
     }
     // BOT
-    fmt.Println()
+    line += "\n"
     for i=0;i<4;i++ {
         if i == 2 {
-            fmt.Printf(" ")
+            line += " "
         }
         if this.display[getDisplayPos(i)] & (1 << LED_BOT) != 0  {
-            fmt.Printf("  -  ")
+            line += "  -  "
         } else {
-            fmt.Printf("     ")
+            line += "     "
         }
         if this.display[getDisplayPos(i)] & (1 << LED_DECIMAL) != 0  {
-            fmt.Printf(".")
+            line += "."
         } else {
-            fmt.Printf(" ")
+            line += " "
         }
     }
-    fmt.Println()
+    line += "\n"
+    log.Println(line)
 }
 
 func (this *Sevenseg) refresh_display() error {
