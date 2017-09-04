@@ -215,7 +215,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
             handledAlarms[msg.alarm.Id] = msg.alarm
           case "reload":
             reload = true
-            cE  <- printEffect("Rld")
+            cE  <- printEffect("rLd")
             time.Sleep(time.Second)
           default:
             logMessage(fmt.Sprintf("Unknown msg id: %s", msg.msg))

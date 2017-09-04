@@ -62,13 +62,17 @@ var digitValues = map[byte]byte {
     'A': 0x77,
     'B': 0x7C,
     'C': 0x39,
+    'c': 0x98,
     'D': 0x5E,
+    'd': 0x5E,
     'E': 0x79,
     'F': 0x71,
     'R': 0x50,
     'r': 0x50,
     'H': 0x76,
-    'h': 0x74 }
+    'h': 0x74,
+    'l': 0x06,
+    'L': 0x38 }
 
 // TODO: support inverse
 var inverseDigitValues = map[byte]byte {
@@ -88,14 +92,17 @@ var inverseDigitValues = map[byte]byte {
     'A': 0x7E,
     'B': 0x67,
     'C': 0x0F,
+    'c': 0x43,
     'D': 0x73,
+    'd': 0x73,
     'E': 0x4F,
     'F': 0x4E,
     'R': 0x42,
     'r': 0x42,
     'H': 0x76,
-    'h': 0x66 }
-
+    'h': 0x66,
+    'l': 0x30,
+    'L': 0x70 }
 
 // one address byte, plus 7-seg skips bytes for each display element
 const displaySize = 1 + 5*2

@@ -191,6 +191,7 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
           return
         case "print":
           v, _ := toString(e.val)
+          logMessage(fmt.Sprintf("Print: %s", v))
           display.Print(v)
           time.Sleep(time.Second)
         case "alarm":

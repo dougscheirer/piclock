@@ -120,7 +120,6 @@ func GetCalenderService(settings *Settings) *calendar.Service {
 func confirm_calendar_auth(settings *Settings, c chan Effect) {
   defer func(){ c <- toggleDebugDump(settings.GetBool("debug_dump")) }()
 
-
   c <- toggleDebugDump(false)
   c <- printEffect(" . . . .") // spaces required
 
