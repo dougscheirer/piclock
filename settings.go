@@ -9,6 +9,7 @@ import (
 	"github.com/buger/jsonparser"
 	"errors"
 	"strconv"
+	"strings"
 )
 
 // keep settings generic strings, type-convert on the fly
@@ -78,7 +79,25 @@ func (this *Settings) settingsFromJSON(data []byte) (error) {
 			case int64:
 				this.settings[k], err = jsonparser.GetInt(data, k)
 			case bool:
-				this.settings[k], err = jsonparser.GetBoolean(data, k)
+				var bVal bool
+				bVal, err = jsonparser.GetBoolean(data, k)
+				if err != nil {
+					// try true and false
+					s, _ := jsonparser.GetString(data, k)
+					s = strings.ToLower(s)
+					fmt.Printf("bool val is %s", s)
+					switch s {
+					case "true":
+						bVal = true
+					case "false":
+						bVal = false
+					default:
+						// nothing, fail
+						return err
+					}
+				}
+				this.settings[k] = bVal
+				err = nil
 			case time.Duration:
 				var dur string
 				dur, err = jsonparser.GetString(data, k)
