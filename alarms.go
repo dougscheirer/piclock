@@ -179,11 +179,16 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
   if err != nil {
     return alarms, err
   }
-  // remove any that are in the "handled" map
+  // remove any that are in the "handled" map or the time has passed
   for i:=len(alarms)-1;i>=0;i-- {
     if handledAlarm(alarms[i], handled) {
       // remove is append two slices without the part we don't want
       logMessage(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
+      alarms = append(alarms[:i], alarms[i+1:]...)
+    }
+    if alarms[i].When.Sub(time.Now()) < 0 {
+      // remove is append two slices without the part we don't want
+      logMessage(fmt.Sprintf("Discard expired alarm: %s", alarms[i].Id))
       alarms = append(alarms[:i], alarms[i+1:]...)
     }
   }
@@ -218,8 +223,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
             reload = true
           case "reload":
             reload = true
-            cE  <- printEffect("rLd")
-            time.Sleep(time.Second)
+            cE  <- printEffect("rLd", 2*time.Second)
           default:
             logMessage(fmt.Sprintf("Unknown msg id: %s", msg.msg))
           }
@@ -265,6 +269,8 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loade
   alarms := make([]Alarm, 0)
   var lastLogSecond = -1
 
+  var lastAlarm Alarm
+
   for true {
     // try reading from our channel
     keepReading := true
@@ -290,6 +296,15 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loade
     for index:=0;index<len(alarms);index++ {
       if alarms[index].disabled {
         continue // skip processed alarms
+      }
+
+      // if alarms[index] != lastAlarm, run some effects
+      if lastAlarm.When != alarms[index].When {
+        lastAlarm = alarms[index]
+        cE <- printEffect("AL:", 2*time.Second)
+        cE <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
+        cE <- printEffect(lastAlarm.When.Format("01.02"), 3*time.Second)
+        cE <- printEffect(lastAlarm.When.Format("15:04"), 3*time.Second)
       }
 
       now := time.Now()

@@ -12,6 +12,11 @@ type Effect struct {
   val interface{}
 }
 
+type Print struct {
+  s string
+  d time.Duration
+}
+
 // channel messagimng functions
 func mainButtonPressed(d time.Duration) Effect {
   return Effect{ id:"mainButton", val : ButtonInfo{pressed: true, duration: d}  }
@@ -37,8 +42,8 @@ func toggleDebugDump(on bool) Effect {
   return Effect{ id: "debug", val: on }
 }
 
-func printEffect(s string) Effect {
-  return Effect{ id: "print", val: s }
+func printEffect(s string, d time.Duration) Effect {
+  return Effect{ id: "print", val: Print{s:s, d:d} }
 }
 
 func replaceAtIndex(in string, r rune, i int) string {
@@ -98,6 +103,15 @@ func toDuration(val interface{}) (time.Duration, error) {
     return v, nil
   default:
     return 0, errors.New(fmt.Sprintf("Bad type: %T", v))
+  }
+}
+
+func toPrint(val interface{}) (*Print, error) {
+  switch v := val.(type) {
+  case Print:
+    return &v, nil
+  default:
+    return nil, errors.New(fmt.Sprintf("Bad type: %T", v))
   }
 }
 
@@ -176,6 +190,8 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
   for true {
     var e Effect
 
+    skip := false
+
     select {
     case e = <- cE:
       switch e.id {
@@ -197,10 +213,11 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
           fmt.Printf("terminate")
           return
         case "print":
-          v, _ := toString(e.val)
-          logMessage(fmt.Sprintf("Print: %s", v))
-          display.Print(v)
-          time.Sleep(time.Second)
+          v, _ := toPrint(e.val)
+          logMessage(fmt.Sprintf("Print: %s (%d)", v.s, v.d))
+          display.Print(v.s)
+          time.Sleep(v.d)
+          skip = true // don't immediately print the clock in clock mode
         case "alarm":
           mode = e.id
           alm, _ := toAlarm(e.val)
@@ -246,6 +263,11 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
     default:
       // nothing?
       time.Sleep(time.Duration(sleepTime))
+    }
+
+    // skip the mode stuff?
+    if skip {
+      continue
     }
 
     switch mode {
