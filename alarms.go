@@ -299,7 +299,7 @@ func checkAlarm(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loade
       if (duration > 0) {
         // start a countdown?
         countdown := settings.GetDuration("countdownTime")
-        if (duration < countdown) {
+        if duration < countdown && !alarms[index].countdown {
           cE <- setCountdownMode(alarms[0])
           alarms[index].countdown = true
         }
