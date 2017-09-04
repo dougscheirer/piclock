@@ -156,6 +156,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
       // has this one been handled?
       if handledAlarm(alm, handled) {
         logMessage(fmt.Sprintf("Skipping handled alarm: %s", alm.Id))
+        continue
       }
 
       alarms = append(alarms, alm)

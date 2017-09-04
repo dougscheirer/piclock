@@ -171,10 +171,10 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
   DEFAULT_SLEEP := settings.GetDuration("sleepTime")
   sleepTime := DEFAULT_SLEEP
   buttonPressActed := false
+  buttonDot := false
 
   for true {
     var e Effect
-    buttonDot := false
 
     select {
     case e = <- cE:
