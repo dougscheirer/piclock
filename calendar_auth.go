@@ -10,7 +10,7 @@ import (
   "os"
   "os/user"
   "path/filepath"
-
+  "time"
   "golang.org/x/net/context"
   "golang.org/x/oauth2"
   "golang.org/x/oauth2/google"
@@ -121,7 +121,7 @@ func confirm_calendar_auth(settings *Settings, c chan Effect) {
   defer func(){ c <- toggleDebugDump(settings.GetBool("debug_dump")) }()
 
   c <- toggleDebugDump(false)
-  c <- printEffect(" . . . .") // spaces required
+  c <- printEffect(" . . . .", 2*time.Second) // spaces required
 
   // if' we're pretending, skip the check
   if settings.GetBool("cached_alarms") { return }
