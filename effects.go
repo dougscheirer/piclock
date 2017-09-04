@@ -101,7 +101,7 @@ func toDuration(val interface{}) (time.Duration, error) {
   }
 }
 
-func displayClock(display *sevenseg_backpack.Sevenseg) {
+func displayClock(display *sevenseg_backpack.Sevenseg, dot bool) {
   // standard time display
   colon := "15:04"
   now := time.Now()
@@ -114,14 +114,16 @@ func displayClock(display *sevenseg_backpack.Sevenseg) {
   if timeString[0] == '0' {
     timeString = replaceAtIndex(timeString, ' ', 0)
   }
-
+  if dot {
+    timeString+="."
+  }
   err := display.Print(timeString)
   if err != nil {
     fmt.Printf("Error: %s\n", err.Error())
   }
 }
 
-func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm) bool {
+func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot bool) bool {
   // calculate 10ths of secs to alarm time
   count := alarm.When.Sub(time.Now()) / (time.Second/10)
   if count > 9999 {
@@ -130,6 +132,9 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm) bool {
     return false
   }
   s := fmt.Sprintf("%d.%d", count / 10, count % 10)
+  if dot {
+    s+="."
+  }
   var blinkRate uint8 = sevenseg_backpack.BLINK_OFF
   if count < 100 {
     blinkRate = sevenseg_backpack.BLINK_2HZ
@@ -169,6 +174,8 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
 
   for true {
     var e Effect
+    buttonDot := false
+
     select {
     case e = <- cE:
       switch e.id {
@@ -202,6 +209,7 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
         case "mainButton":
           info, _ := toButtonInfo(e.val)
           if info.pressed {
+            buttonDot = true
             if buttonPressActed {
               logMessage("Ignore button hold")
             } else {
@@ -228,6 +236,7 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
               }
             }
           } else {
+            buttonDot = false
             buttonPressActed = false
             logMessage(fmt.Sprintf("Main button released: %dms", info.duration / time.Millisecond))
           }
@@ -241,9 +250,9 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
 
     switch mode {
       case "clock":
-        displayClock(display)
+        displayClock(display, buttonDot)
       case "countdown":
-        if !displayCountdown(display, countdown) {
+        if !displayCountdown(display, countdown, buttonDot) {
           mode = "clock"
           sleepTime = DEFAULT_SLEEP
         }
