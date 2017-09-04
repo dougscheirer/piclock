@@ -213,6 +213,8 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
           switch (msg.msg) {
           case "handled":
             handledAlarms[msg.alarm.Id] = msg.alarm
+            // reload sends a new list without the ones that are handled
+            reload = true
           case "reload":
             reload = true
             cE  <- printEffect("rLd")
@@ -244,7 +246,7 @@ func getAlarms(settings *Settings, cA chan Alarm, cE chan Effect, cL chan Loader
 
       lastRefresh = time.Now()
 
-      // tell cA that we have some alarms
+      // tell cA that we have some alarms?
       cA <- Alarm{} // reset hack
       for i:=0;i<len(alarms);i++ {
         cA <- alarms[i]
