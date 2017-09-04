@@ -23,7 +23,7 @@ func main() {
 	*/
 
 	// TODO: move these into a struct?
-  alarmChannel := make(chan Alarm, 1)
+  alarmChannel := make(chan CheckMsg, 1)
   effectChannel := make(chan Effect, 1)
   loaderChannel := make(chan LoaderMsg, 1)
 
