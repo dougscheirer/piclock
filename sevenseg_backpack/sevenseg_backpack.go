@@ -63,7 +63,7 @@ var digitValues = map[byte]byte {
     'A': 0x77,
     'B': 0x7C,
     'C': 0x39,
-    'c': 0x98,
+    'c': 0x58,
     'D': 0x5E,
     'd': 0x5E,
     'E': 0x79,
@@ -114,6 +114,12 @@ type Sevenseg struct {
     inverted bool
     dump bool
     blink byte
+    sim  bool
+}
+
+func (this *Sevenseg) simLog(v string, args ...interface{}) {
+    if !this.sim { return }
+    log.Printf(v, args...)
 }
 
 func getClearDisplay() [displaySize]uint8 {
@@ -136,7 +142,8 @@ func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
         inverted: false,
         blink: BLINK_OFF,
 	    dump: false,
-        display: getClearDisplay() }
+        display: getClearDisplay(),
+        sim: simulated }
     // turn on the oscillator, set default brightness
     this.i2c_dev.WriteByte(i2c_OSC_ON)
     this.i2c_dev.WriteByte(i2c_BRIGHTNESS_MAX)
@@ -150,10 +157,12 @@ func (this *Sevenseg) DebugDump(on bool) {
 }
 
 func (this *Sevenseg) SetInverted(inverted bool) {
+    this.simLog("Inverted: %t", inverted)
     this.inverted = inverted
 }
 
 func (this *Sevenseg) DisplayOn(on bool) error {
+    this.simLog("Display: %t", on)
     // blink rate is bits 2 and 1 of the display command
     var val byte = i2c_DISPLAY_ON | (this.blink << 1)
     if !on { val = i2c_DISPLAY_OFF }
@@ -162,11 +171,13 @@ func (this *Sevenseg) DisplayOn(on bool) error {
 }
 
 func (this *Sevenseg) ClearDisplay() {
+    this.simLog("ClearDisplay")
     this.display=getClearDisplay()
     this.refresh_display()
 }
 
 func (this *Sevenseg) RefreshOn(on bool) error {
+    this.simLog("Refresh: %t", on)
     this.refresh = !this.refresh
     return this.refresh_display()
 }
@@ -283,12 +294,14 @@ func getDisplayPos(digit byte) byte {
 }
 
 func (this *Sevenseg) ColonOn(on bool) error {
+    this.simLog("Colon: %t", on)
     // I forget which one, so set them all
     this.display[i2c_COLON_POS] = 0xff
     return this.refresh_display()
 }
 
 func (this *Sevenseg) DecimalOn(position byte, on bool) error {
+    this.simLog("Decimal %d: %t", position, on)
     position = getDisplayPos(position)
     if on {
         this.display[position] |= LED_DECIMAL_MASK
@@ -299,6 +312,7 @@ func (this *Sevenseg) DecimalOn(position byte, on bool) error {
 }
 
 func (this *Sevenseg) SegmentOn(position byte, segment byte, on bool) error {
+    this.simLog("Segment %d/%d: %t", position, segment, on)
     position = getDisplayPos(position)
     if on {
         this.display[position] |= (1 << segment)
@@ -467,6 +481,7 @@ func (this *Sevenseg) PrintOffset(msg string, position int) error {
 
 func (this *Sevenseg) SetBlinkRate(rate uint8) error {
     if rate > 3 { return errors.New(fmt.Sprintf("Bad blink rate: ", rate)) }
+    this.simLog("Blink rate %d", rate)
     this.blink = rate
     // one assumes you want the display on now?
     return this.DisplayOn(true)
@@ -474,6 +489,7 @@ func (this *Sevenseg) SetBlinkRate(rate uint8) error {
 
 func (this *Sevenseg) SetBrightness(level uint8) error {
     if level > 15 { return errors.New(fmt.Sprintf("Bad brightness level: %d", level)) }
+    this.simLog("Brightness %d", level)
     _, err := this.i2c_dev.WriteByte(i2c_BRIGHTNESS_CMD | level)
     return err
 }

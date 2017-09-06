@@ -1,30 +1,32 @@
 package main
 
 import (
-	"testing"
 	"runtime"
 	"time"
 	"fmt"
+	"log"
 	"piclock/sevenseg_backpack"
 )
 
-func TestRun(t *testing.T) {
+func main() {
 	simulated := true
 	if runtime.GOARCH == "arm" {
 		simulated = false
 	}
 
 	display, err := sevenseg_backpack.Open(0x70, 0, simulated)	// set to false when on a PI
+	display.DebugDump(simulated)
+
 	if err != nil {
-		t.Errorf("Failed to open: %s\n", err.Error())
+		log.Printf("Failed to open: %s\n", err.Error())
 		return
 	}
 
-	runTests(t, display, true)
-	runTests(t, display, false)
+	runTests(display, false)
+	runTests(display, true)
 }
 
-func runTests(t *testing.T, display *sevenseg_backpack.Sevenseg, inverted bool) {
+func runTests(display *sevenseg_backpack.Sevenseg, inverted bool) {
 	display.ClearDisplay()
 	display.SetInverted(inverted)
 
@@ -69,11 +71,13 @@ func runTests(t *testing.T, display *sevenseg_backpack.Sevenseg, inverted bool) 
 
 	// run the print offset tests
 	for i:=0;i<len(knownChars);i++ {
+		log.Printf("print '%c'", knownChars[i])
 		display.PrintOffset(fmt.Sprintf("%c", knownChars[i]), i % 4)
 		time.Sleep(450*time.Millisecond)
 	}
 	// now in reverse
 	for i:=len(knownChars)-1;i>=0;i-- {
+		log.Printf("print '%c'", knownChars[i])
 		display.PrintOffset(fmt.Sprintf("%c", knownChars[i]), i % 4)
 		time.Sleep(450*time.Millisecond)
 	}
@@ -82,7 +86,7 @@ func runTests(t *testing.T, display *sevenseg_backpack.Sevenseg, inverted bool) 
 	for i:=0;i<len(knownChars);i++ {
 		c := knownChars[i];
 		s := fmt.Sprintf("%c.%c.:%c.%c.", c,c,c,c)
-		fmt.Println(s)
+		log.Println(s)
 		display.Print(s)
 		time.Sleep(450 * time.Millisecond)
 	}
