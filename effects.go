@@ -233,7 +233,7 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
             if buttonPressActed {
               log.Println("Ignore button hold")
             } else {
-              log.Println("Main button pressed")
+              log.Printf("Main button pressed: %dms", info.duration)
               switch mode {
                 case "alarm":
                   // TODO: cancel the alarm
@@ -247,7 +247,8 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
                   countdown = nil
                   buttonPressActed = true
                 case "clock":
-                  if info.duration > 5 * time.Second {
+                  // more than 5 seconds is "reload"
+                  if info.duration > 4 * time.Second {
                     cL <- reloadMessage()
                     buttonPressActed = true
                   }

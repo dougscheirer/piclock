@@ -31,16 +31,17 @@ const (
 
 func simSetupButtons(pins []int, buttonMap string) []Button {
   // return a list of buttons with the char as the "pin num"
-  ret := make([]Button, len(buttonMap))
+  ret := make([]Button, len(pins))
   now := time.Now()
 
   for i:=0;i<len(ret);i++ {
     if i >= len(buttonMap) {
       log.Printf("No key map for %v", pins[i])
-      ret[i].pinNum = 0
+      ret[i].pinNum = -1
       ret[i].state = PressState{pressed: false, start: now, count: 0, changed: false}
       continue
     }
+    log.Printf("Key map for pin %d is %c", pins[i], buttonMap[i])
     ret[i].pinNum = int(buttonMap[i])
     ret[i].state = PressState{pressed: false, start: now, count: 0, changed: false}
   }
@@ -222,7 +223,6 @@ func watchButtons(settings *Settings, cE chan Effect) {
 
   if sim {
     buttons = simSetupButtons(pins, simulated)
-    log.Printf("Buttons: %+v", buttons)
   } else {
     var err error
     buttons, err = setupButtons(pins)
