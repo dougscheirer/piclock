@@ -194,19 +194,6 @@ func (this *Settings) GetInt(key string) int {
 
 func (this *Settings) Dump() {
 	for k, v := range this.settings {
-		switch v.(type) {
-			case uint8:
-				log.Printf("%s : %T: %d\n", k, v, v)
-			case int:
-				log.Printf("%s : %T: %d\n", k, v, v)
-			case bool:
-				log.Printf("%s : %T: %t\n", k, v, v)
-			case time.Duration:
-				log.Printf("%s : %T: %d\n", k, v, v)
-			case string:
-				log.Printf("%s : %T: %s\n", k, v, v)
-			default:
-				log.Printf("Bad type: %s: %T\n", k, v)
-		}
+		log.Printf("%s : %T: %v\n", k, v, v)
 	}
 }
