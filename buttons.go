@@ -89,23 +89,29 @@ func checkButtons(btns []Button) ([]Button) {
         ret[i].state.count = int(now.Sub(ret[i].state.start) / time.Second)
         if btns[i].state.count != ret[i].state.count {
           ret[i].state.changed = true
+	  log.Printf("Button changed state: %+v", ret[i])
         }
       } else {
         // just noticed it was pressed
-        ret[i].state=PressState{pressed: true, start: now, count: 0, changed: true}
+       ret[i].state=PressState{pressed: true, start: now, count: 0, changed: true}
+       log.Printf("Button changed state: %+v", ret[i])
       }
     } else {
       // not pressed, is that a state change?
       if !ret[i].state.pressed {
-        // no button state change, update the duration count
-        ret[i].state.count = int(now.Sub(ret[i].state.start) / time.Second)
+        // no button state change, update the duration count?
+	// keep this less chatty, a button that is continually not pressed is not a state change
+	/* 
+	ret[i].state.count = int(now.Sub(ret[i].state.start) / time.Second)
         if btns[i].state.count != ret[i].state.count {
-          ret[i].state.changed = true
-        }
+		ret[i].state.changed = true
+        log.Printf("Button changed state: %+v", ret[i])
+        }*/
       } else {
         // just noticed the release
         ret[i].state=PressState{pressed: false, start: now, count: 0, changed: true}
-      }
+         log.Printf("Button changed state: %+v", ret[i])
+     }
     }
   }
 
@@ -134,14 +140,12 @@ func watchButtons(settings *Settings, cE chan Effect) {
       for i:=0;i<len(newButtons);i++ {
         if newButtons[i].state.changed {
           diff := time.Duration(newButtons[i].state.count) * time.Second
-          if newButtons[i].state.pressed {
-            switch pins[i] {
+          switch pins[i] {
               case 25:
                 cE <- mainButton(newButtons[i].state.pressed, diff)
               default:
                 log.Printf("Unhandled button %d", pins[i])
             }
-          }
         }
       }
 
