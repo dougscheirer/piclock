@@ -1,22 +1,36 @@
 package main
 
 import (
-	"fmt"
 	"sync"
+	"log"
+	"os"
 )
 
-var wg sync.WaitGroup
-
 // piclock -config={config file}
+
+var wg sync.WaitGroup
 
 func main() {
 	// read config information
 	settings := InitSettings()
 
+	// first try to set up the log
+	f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  //defer to close when you're done with it, not because you think it's idiomatic!
+  defer f.Close()
+
+  //set output of logs to f
+  log.SetOutput(f)
+  log.SetFlags(log.Ldate|log.Ltime|log.Lmicroseconds)
+
 	// dump them (debugging)
-	fmt.Println("\n>>> Settings <<<\n")
+	log.Println("\n>>> Settings <<<\n")
 	settings.Dump()
-	fmt.Println("\n>>> Settings <<<\n")
+	log.Println("\n>>> Settings <<<\n")
 
 	/*
 		Main app

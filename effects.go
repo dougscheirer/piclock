@@ -4,7 +4,9 @@ import (
   "piclock/sevenseg_backpack"
   "time"
   "fmt"
+
   "errors"
+  "log"
 )
 
 type Effect struct {
@@ -17,13 +19,14 @@ type Print struct {
   d time.Duration
 }
 
-// channel messagimng functions
-func mainButtonPressed(d time.Duration) Effect {
-  return Effect{ id:"mainButton", val : ButtonInfo{pressed: true, duration: d}  }
+type ButtonInfo struct {
+  pressed   bool
+  duration  time.Duration
 }
 
-func mainButtonReleased(d time.Duration) Effect {
-  return Effect{ id:"mainButton", val : ButtonInfo{pressed: false, duration: d} }
+// channel messagimng functions
+func mainButton(p bool, d time.Duration) Effect {
+  return Effect{ id:"mainButton", val : ButtonInfo{pressed: p, duration: d}  }
 }
 
 func setCountdownMode(alarm Alarm) Effect {
@@ -133,7 +136,7 @@ func displayClock(display *sevenseg_backpack.Sevenseg, dot bool) {
   }
   err := display.Print(timeString)
   if err != nil {
-    fmt.Printf("Error: %s\n", err.Error())
+    log.Printf("Error: %s\n", err.Error())
   }
 }
 
@@ -167,7 +170,7 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
     settings.GetBool("i2c_simulated"))
 
   if err != nil {
-    fmt.Printf("Error: %s", err.Error())
+    log.Printf("Error: %s", err.Error())
     return
   }
 
@@ -210,11 +213,11 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
           d, _ := toDuration(e.val)
           time.Sleep(d)
         case "terminate":
-          fmt.Printf("terminate")
+          log.Println("terminate")
           return
         case "print":
           v, _ := toPrint(e.val)
-          logMessage(fmt.Sprintf("Print: %s (%d)", v.s, v.d))
+          log.Printf("Print: %s (%d)", v.s, v.d)
           display.Print(v.s)
           time.Sleep(v.d)
           skip = true // don't immediately print the clock in clock mode
@@ -222,15 +225,15 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
           mode = e.id
           alm, _ := toAlarm(e.val)
           sleepTime = 10*time.Millisecond
-          fmt.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
+          log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
         case "mainButton":
           info, _ := toButtonInfo(e.val)
           if info.pressed {
             buttonDot = true
             if buttonPressActed {
-              logMessage("Ignore button hold")
+              log.Println("Ignore button hold")
             } else {
-              logMessage("Main button pressed")
+              log.Println("Main button pressed")
               switch mode {
                 case "alarm":
                   // TODO: cancel the alarm
@@ -249,16 +252,16 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
                     buttonPressActed = true
                   }
                 default:
-                  logMessage(fmt.Sprintf("No action for mode %s", mode))
+                  log.Printf("No action for mode %s", mode)
               }
             }
           } else {
             buttonDot = false
             buttonPressActed = false
-            logMessage(fmt.Sprintf("Main button released: %dms", info.duration / time.Millisecond))
+            log.Printf("Main button released: %dms", info.duration / time.Millisecond)
           }
         default:
-          fmt.Printf("Unhandled %s\n", e.id)
+          log.Printf("Unhandled %s\n", e.id)
       }
     default:
       // nothing?
@@ -294,7 +297,7 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
         display.RefreshOn(true)
         alarmSegment = (alarmSegment + 1) % 6
       default:
-        logMessage(fmt.Sprintf("Unknown mode: '%s'\n", mode))
+        log.Printf("Unknown mode: '%s'\n", mode)
     }
   }
 

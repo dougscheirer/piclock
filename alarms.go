@@ -8,6 +8,7 @@ import (
   "encoding/json"
   "io/ioutil"
   "os"
+  "log"
 )
 
 type Alarm struct {
@@ -40,7 +41,7 @@ func reloadMessage() LoaderMsg {
 
 func writeAlarms(alarms []Alarm, fname string) error {
   output, err := json.Marshal(alarms)
-  logMessage(string(output))
+  log.Println(string(output))
   if err != nil {
     return err
   }
@@ -73,10 +74,10 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
   calName := settings.GetString("calendar")
   var id string
   {
-    logMessage("get calendar list")
+    log.Println("get calendar list")
     list, err := srv.CalendarList.List().Do()
     if err != nil {
-      logMessage(err.Error())
+      log.Println(err.Error())
       return alarms, err
     }
     for _, i := range list.Items {
@@ -110,7 +111,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
     // an error here is a system config issue
     if err != nil {
       // TODO: severe error effect
-      logMessage(fmt.Sprintf("Error: %s", err.Error()))
+      log.Printf("Error: %s", err.Error())
       return alarms, err
     }
   }
@@ -121,19 +122,19 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
       // If the DateTime is an empty string the Event is an all-day Event.
       // So only Date is available.
       if i.Start.DateTime == "" {
-        logMessage(fmt.Sprintf("Not a time based alarm: %s @ %s", i.Summary, i.Start.Date))
+        log.Println(fmt.Sprintf("Not a time based alarm: %s @ %s", i.Summary, i.Start.Date))
         continue
       }
       var when time.Time
       when, err = time.Parse(time.RFC3339, i.Start.DateTime)
       if err != nil {
         // skip bad formats
-        logMessage(err.Error())
+        log.Println(err.Error())
         continue
       }
 
       if when.Sub(time.Now()) < 0 {
-        logMessage(fmt.Sprintf("Skipping old alarm: %s", i.Id))
+        log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
         continue
       }
 
@@ -160,7 +161,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 
       // has this one been handled?
       if handledAlarm(alm, handled) {
-        logMessage(fmt.Sprintf("Skipping handled alarm: %s", alm.Id))
+        log.Println(fmt.Sprintf("Skipping handled alarm: %s", alm.Id))
         continue
       }
 
@@ -188,12 +189,12 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
   for i:=len(alarms)-1;i>=0;i-- {
     if handledAlarm(alarms[i], handled) {
       // remove is append two slices without the part we don't want
-      logMessage(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
+      log.Println(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
       alarms = append(alarms[:i], alarms[i+1:]...)
     }
     if alarms[i].When.Sub(time.Now()) < 0 {
       // remove is append two slices without the part we don't want
-      logMessage(fmt.Sprintf("Discard expired alarm: %s", alarms[i].Id))
+      log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].Id))
       alarms = append(alarms[:i], alarms[i+1:]...)
     }
   }
@@ -233,7 +234,7 @@ func getAlarms(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan Loa
             reload = true
             cE  <- printEffect("rLd", 2*time.Second)
           default:
-            logMessage(fmt.Sprintf("Unknown msg id: %s", msg.msg))
+            log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
           }
         default:
           keepReading = false
@@ -244,14 +245,14 @@ func getAlarms(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan Loa
       alarms, err := getAlarmsFromService(settings, handledAlarms)
       if err != nil {
         cE <- alarmError(5 * time.Second)
-        logMessage(err.Error())
+        log.Println(err.Error())
         // try the backup
         alarms, err = getAlarmsFromCache(settings, handledAlarms)
         if err != nil {
           // very bad, so...delete and try again later?
           // TODO: more effects
           cE <- alarmError(5 * time.Second)
-          fmt.Printf("Error reading alarm cache: %s\n", err.Error())
+          log.Printf("Error reading alarm cache: %s\n", err.Error())
           time.Sleep(time.Second)
           continue
         }
@@ -307,7 +308,7 @@ func checkAlarm(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan Lo
       duration := alarms[index].When.Sub(now)
       if lastLogSecond != now.Second() && now.Second() % 30 == 0 {
         lastLogSecond = now.Second()
-        logMessage(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration / time.Second, (duration - settings.GetDuration("countdownTime"))/time.Second))
+        log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration / time.Second, (duration - settings.GetDuration("countdownTime"))/time.Second))
       }
 
       if (duration > 0) {

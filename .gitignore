@@ -4,3 +4,4 @@
 /main
 /client_secret.json
 /alarms/*
+/*.log
