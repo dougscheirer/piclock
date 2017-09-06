@@ -141,10 +141,10 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
       alm := Alarm{Id: i.Id, Name: i.Summary, When: when, disabled: false}
 
       // look for hastags (does not work ATM, the gAPI is broken I think)
-      music := strings.Contains(i.Summary, "#music")
-      random := strings.Contains(i.Summary, "#random")
-      file := strings.Contains(i.Summary, "#file")
-      tones := strings.Contains(i.Summary, "#tone") // tone or tones
+      music := strings.Contains(i.Summary, "music")
+      random := strings.Contains(i.Summary, "random")
+      file := strings.Contains(i.Summary, "file")
+      tones := strings.Contains(i.Summary, "tone") // tone or tones
 
       // priority is arbitrary except for random (default)
       if music {
