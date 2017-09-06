@@ -228,8 +228,8 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
           log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
         case "mainButton":
           info, _ := toButtonInfo(e.val)
+          buttonDot = info.pressed
           if info.pressed {
-            buttonDot = true
             if buttonPressActed {
               log.Println("Ignore button hold")
             } else {
@@ -256,7 +256,6 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
               }
             }
           } else {
-            buttonDot = false
             buttonPressActed = false
             log.Printf("Main button released: %dms", info.duration / time.Millisecond)
           }

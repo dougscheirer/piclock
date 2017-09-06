@@ -177,6 +177,9 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 
 func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
   alarms := make([]Alarm, 0)
+  if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
+    return alarms, nil
+  }
   data, err := ioutil.ReadFile(cacheFilename(settings))
   if err != nil {
     return alarms, err

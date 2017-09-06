@@ -87,7 +87,7 @@ func checkButtons(btns []Button) ([]Button) {
       if ret[i].state.pressed {
         // no button state change, update the duration count
         ret[i].state.count = int(now.Sub(ret[i].state.start) / time.Second)
-        if ret[i].state.count != ret[i].state.count {
+        if btns[i].state.count != ret[i].state.count {
           ret[i].state.changed = true
         }
       } else {
@@ -99,7 +99,7 @@ func checkButtons(btns []Button) ([]Button) {
       if !ret[i].state.pressed {
         // no button state change, update the duration count
         ret[i].state.count = int(now.Sub(ret[i].state.start) / time.Second)
-        if ret[i].state.count != ret[i].state.count {
+        if btns[i].state.count != ret[i].state.count {
           ret[i].state.changed = true
         }
       } else {
