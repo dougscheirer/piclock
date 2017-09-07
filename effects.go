@@ -161,7 +161,7 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot boo
   return true
 }
 
-func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
+func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   display, err := sevenseg_backpack.Open(
@@ -196,6 +196,9 @@ func runEffects(settings *Settings, cE chan Effect, cL chan LoaderMsg) {
     skip := false
 
     select {
+    case <- quit:
+      log.Println("quit from runEffects")
+      return
     case e = <- cE:
       switch e.id {
         case "debug":

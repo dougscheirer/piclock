@@ -37,6 +37,7 @@ func main() {
 	*/
 
 	// TODO: move these into a struct?
+	quit := make(chan struct{}, 1)
   alarmChannel := make(chan CheckMsg, 1)
   effectChannel := make(chan Effect, 1)
   loaderChannel := make(chan LoaderMsg, 1)
@@ -49,15 +50,15 @@ func main() {
   wg.Add(4)
 
   // start the effect thread so we can update the LEDs
-	go runEffects(settings, effectChannel, loaderChannel)
+	go runEffects(settings, quit, effectChannel, loaderChannel)
 
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop
 	confirm_calendar_auth(settings, effectChannel)
 
-	go getAlarms(settings, alarmChannel, effectChannel, loaderChannel)
-	go checkAlarm(settings, alarmChannel, effectChannel, loaderChannel)
-	go watchButtons(settings, effectChannel)
+	go runGetAlarms(settings, quit, alarmChannel, effectChannel, loaderChannel)
+	go runCheckAlarm(settings, quit, alarmChannel, effectChannel, loaderChannel)
+	go runWatchButtons(settings, quit, effectChannel)
 
 	wg.Wait()
 }

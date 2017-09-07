@@ -109,9 +109,6 @@ func checkKeyboard(btns []Button) ([]rpio.State, error) {
   // neither letter is "do not change"
   for i:=0;i<len(ret);i++ {
     match := btns[i].pinNum == int(ev.Ch)
-    if match {
-      log.Printf("Toggle %t", btns[i].state.pressed)
-    }
     if btns[i].state.pressed {
       // orig state is down
       if match {
@@ -195,7 +192,7 @@ func checkButtons(btns []Button, sim bool) ([]Button, error) {
   return ret, nil
 }
 
-func watchButtons(settings *Settings, cE chan Effect) {
+func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
   defer wg.Done()
 
   simulated := settings.GetString("button_simulated")
@@ -233,10 +230,19 @@ func watchButtons(settings *Settings, cE chan Effect) {
   }
 
   for true {
+    select {
+    case <- quit:
+      // we shouldn't get here ATM
+      log.Println("quit from runWatchButtons")
+      return
+    default:
+    }
+
     newButtons, err := checkButtons(buttons, sim)
     if err != nil {
       // we're done
-      log.Println(err.Error())
+      log.Println("quit from runWatchButtons")
+      close(quit)
       return
     }
 

@@ -205,7 +205,7 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
   return alarms, nil
 }
 
-func getAlarms(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
+func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   // keep a list of things that we have done
@@ -226,6 +226,9 @@ func getAlarms(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan Loa
 
     for keepReading {
       select {
+        case <- quit:
+          log.Println("quit from runGetAlarms")
+          return
         case msg := <- cL:
           switch (msg.msg) {
           case "handled":
@@ -272,7 +275,7 @@ func getAlarms(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan Loa
   }
 }
 
-func checkAlarm(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
+func runCheckAlarm(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
   alarms := make([]Alarm, 0)
@@ -283,6 +286,9 @@ func checkAlarm(settings *Settings, cA chan CheckMsg, cE chan Effect, cL chan Lo
   for true {
     // try reading from our channel
     select {
+      case <- quit:
+        log.Println("quit from runCheckAlarm")
+        return
       case checkMsg := <- cA :
         alarms = checkMsg.alarms
         if checkMsg.displayCurrent {

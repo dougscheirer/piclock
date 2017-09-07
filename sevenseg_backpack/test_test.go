@@ -1,4 +1,4 @@
-package main
+package sevenseg_backpack
 
 import (
 	"runtime"
@@ -8,7 +8,7 @@ import (
 	"piclock/sevenseg_backpack"
 )
 
-func main() {
+func main2() {
 	simulated := true
 	if runtime.GOARCH == "arm" {
 		simulated = false
