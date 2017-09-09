@@ -4,6 +4,7 @@ import (
 	"sync"
 	"log"
 	"os"
+  "time"
 )
 
 // piclock -config={config file}
@@ -51,6 +52,14 @@ func main() {
 
   // start the effect thread so we can update the LEDs
 	go runEffects(settings, quit, effectChannel, loaderChannel)
+  // print the date and time of this build
+  info, err := os.Stat(os.Args[0])
+  if err == nil {
+    effectChannel <- printEffect("bLd", 2*time.Second)
+    effectChannel <- printEffect(info.ModTime().Format("15.04"), 2*time.Second)
+    effectChannel <- printEffect(info.ModTime().Format("01.02"), 2*time.Second)
+    effectChannel <- printEffect(info.ModTime().Format("2006"), 2*time.Second)
+  }
 
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop

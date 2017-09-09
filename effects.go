@@ -43,7 +43,7 @@ const (
   eCountdown
 )
 
-// channel messagimng functions
+// channel messaging functions
 func mainButton(p bool, d time.Duration) Effect {
   return Effect{ id: eMainButton, val : ButtonInfo{pressed: p, duration: d}  }
 }
