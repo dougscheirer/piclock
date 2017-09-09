@@ -10,7 +10,7 @@ import (
 )
 
 type Effect struct {
-  id string  // TODO: a struct to tell the effects generator what to do
+  id int
   val interface{}
 }
 
@@ -24,29 +24,48 @@ type ButtonInfo struct {
   duration  time.Duration
 }
 
+const (
+  modeClock = iota
+  modeAlarm
+  modeAlarmError
+  modeCountdown
+  modeOutput
+)
+
+const (
+  eClock = iota
+  eDebug
+  eMainButton
+  eAlarmError
+  eTerminate
+  ePrint
+  eAlarm
+  eCountdown
+)
+
 // channel messagimng functions
 func mainButton(p bool, d time.Duration) Effect {
-  return Effect{ id:"mainButton", val : ButtonInfo{pressed: p, duration: d}  }
+  return Effect{ id: eMainButton, val : ButtonInfo{pressed: p, duration: d}  }
 }
 
 func setCountdownMode(alarm Alarm) Effect {
-  return Effect{id:"countdown", val: alarm}
+  return Effect{id: eCountdown, val: alarm}
 }
 
 func setAlarmMode(alarm Alarm) Effect {
-  return Effect{id:"alarm", val: alarm}
+  return Effect{id:eAlarm, val: alarm}
 }
 
 func alarmError(d time.Duration) Effect {
-  return Effect{ id: "alarmError", val: d }
+  return Effect{ id: eAlarmError, val: d }
 }
 
 func toggleDebugDump(on bool) Effect {
-  return Effect{ id: "debug", val: on }
+  return Effect{ id: eDebug, val: on }
 }
 
 func printEffect(s string, d time.Duration) Effect {
-  return Effect{ id: "print", val: Print{s:s, d:d} }
+  return Effect{ id: ePrint, val: Print{s:s, d:d} }
 }
 
 func replaceAtIndex(in string, r rune, i int) string {
@@ -161,6 +180,28 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot boo
   return true
 }
 
+func playAlarmEffect(alm *Alarm, stop chan bool) {
+  e := alm.Effect
+  if e == "random" {
+    e = "tones"
+  }
+
+  switch e {
+  case "music":
+    // pick a random mp3
+  case "file":
+    // get this specific file and play it
+  case "tones":
+    playIt([]string{"250","340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+  default:
+    playIt([]string{"350"}, []string{}, stop)
+  }
+}
+
+func stopAlarmEffect(stop chan bool) {
+  stop <- true
+}
+
 func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
@@ -181,7 +222,7 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
   // ready to rock
   display.DisplayOn(true)
 
-  var mode string = "clock"
+  mode := modeClock
   var countdown *Alarm
   var error_id = 0
   alarmSegment := 0
@@ -189,6 +230,8 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
   sleepTime := DEFAULT_SLEEP
   buttonPressActed := false
   buttonDot := false
+
+  stopAlarm := make(chan bool, 1)
 
   for true {
     var e Effect
@@ -201,35 +244,36 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
       return
     case e = <- cE:
       switch e.id {
-        case "debug":
+        case eDebug:
           v, _ := toBool(e.val)
           display.DebugDump(v)
-        case "clock":
-          mode = e.id
-        case "countdown":
-          mode = e.id
+        case eClock:
+          mode = modeClock
+        case eCountdown:
+          mode = modeCountdown
           countdown, _ = toAlarm(e.val)
           sleepTime = 10 * time.Millisecond
-        case "alarmError":
+        case eAlarmError:
           // TODO: alarm error LED
           display.Print("Err")
           d, _ := toDuration(e.val)
           time.Sleep(d)
-        case "terminate":
+        case eTerminate:
           log.Println("terminate")
           return
-        case "print":
+        case ePrint:
           v, _ := toPrint(e.val)
           log.Printf("Print: %s (%d)", v.s, v.d)
           display.Print(v.s)
           time.Sleep(v.d)
           skip = true // don't immediately print the clock in clock mode
-        case "alarm":
-          mode = e.id
+        case eAlarm:
+          mode = modeAlarm
           alm, _ := toAlarm(e.val)
           sleepTime = 10*time.Millisecond
           log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
-        case "mainButton":
+          playAlarmEffect(alm, stopAlarm)
+        case eMainButton:
           info, _ := toButtonInfo(e.val)
           buttonDot = info.pressed
           if info.pressed {
@@ -238,18 +282,19 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
             } else {
               log.Printf("Main button pressed: %dms", info.duration)
               switch mode {
-                case "alarm":
-                  // TODO: cancel the alarm
-                  mode = "clock"
+                case modeAlarm:
+                  // cancel the alarm
+                  mode = modeClock
                   sleepTime = DEFAULT_SLEEP
                   buttonPressActed = true
-                case "countdown":
+                  stopAlarmEffect(stopAlarm)
+                case modeCountdown:
                   // cancel the alarm
-                  mode = "clock"
+                  mode = modeClock
                   cL <- handledMessage(*countdown)
                   countdown = nil
                   buttonPressActed = true
-                case "clock":
+                case modeClock:
                   // more than 5 seconds is "reload"
                   if info.duration > 4 * time.Second {
                     cL <- reloadMessage()
@@ -277,19 +322,19 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
     }
 
     switch mode {
-      case "clock":
+      case modeClock:
         displayClock(display, buttonDot)
-      case "countdown":
+      case modeCountdown:
         if !displayCountdown(display, countdown, buttonDot) {
-          mode = "clock"
+          mode = modeClock
           sleepTime = DEFAULT_SLEEP
         }
-      case "alarmError":
+      case modeAlarmError:
         fmt.Sprintf("Error: %d\n", error_id)
         display.Print("Err")
-      case "output":
+      case modeOutput:
         // do nothing
-      case "alarm":
+      case modeAlarm:
         // do a strobing 0, light up segments 0 - 5
         display.RefreshOn(false)
         display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
