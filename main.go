@@ -55,10 +55,14 @@ func main() {
   // print the date and time of this build
   info, err := os.Stat(os.Args[0])
   if err == nil {
-    effectChannel <- printEffect("bLd", 2*time.Second)
-    effectChannel <- printEffect(info.ModTime().Format("15.04"), 2*time.Second)
-    effectChannel <- printEffect(info.ModTime().Format("01.02"), 2*time.Second)
-    effectChannel <- printEffect(info.ModTime().Format("2006"), 2*time.Second)
+    effectChannel <- printEffect("bLd.", 1500*time.Millisecond)
+    effectChannel <- printEffect("----", 500*time.Millisecond)
+    effectChannel <- printEffect(info.ModTime().Format("15.04"), 1500*time.Millisecond)
+    effectChannel <- printEffect("----", 500*time.Millisecond)
+    effectChannel <- printEffect(info.ModTime().Format("01.02"), 1500*time.Millisecond)
+    effectChannel <- printEffect("----", 500*time.Millisecond)
+    effectChannel <- printEffect(info.ModTime().Format("2006"), 1500*time.Millisecond)
+    effectChannel <- printEffect("----", 500*time.Millisecond)
   }
 
 	// google calendar requires OAuth access, so make sure we get it
