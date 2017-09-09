@@ -57,7 +57,7 @@ func main() {
   if err == nil {
     effectChannel <- printEffect("bLd.", 1500*time.Millisecond)
     effectChannel <- printEffect("----", 500*time.Millisecond)
-    effectChannel <- printEffect(info.ModTime().Format("15.04"), 1500*time.Millisecond)
+    effectChannel <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
     effectChannel <- printEffect("----", 500*time.Millisecond)
     effectChannel <- printEffect(info.ModTime().Format("01.02"), 1500*time.Millisecond)
     effectChannel <- printEffect("----", 500*time.Millisecond)
