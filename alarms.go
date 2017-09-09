@@ -15,7 +15,7 @@ type Alarm struct {
   Id      string
   Name    string
   When    time.Time
-  Effect  string
+  Effect  int
   disabled bool   // set to true when we're checking alarms and it fired
   countdown bool  // set to true when we're checking alarms and we signaled countdown
 }
@@ -30,6 +30,15 @@ type CheckMsg struct {
   displayCurrent  bool
   alarms          []Alarm
 }
+
+const (
+  almTones = iota
+  almMusic
+  almRandom
+  almFile
+  // to pick randomly, provide a max
+  almMax
+)
 
 func handledMessage(alm Alarm) LoaderMsg {
   return LoaderMsg{msg:"handled", alarm: alm}
@@ -148,15 +157,15 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 
       // priority is arbitrary except for random (default)
       if music {
-        alm.Effect = "music"
+        alm.Effect = almMusic
       } else if file {
-        alm.Effect = "file" // TODO: figure out the filename
+        alm.Effect = almFile // TODO: figure out the filename
       } else if tones {
-        alm.Effect = "tones" // TODO: tone options
+        alm.Effect = almTones // TODO: tone options
       } else if random {
-        alm.Effect = "random"
+        alm.Effect = almRandom
       } else {
-        alm.Effect = "random"
+        alm.Effect = almRandom
       }
 
       // has this one been handled?

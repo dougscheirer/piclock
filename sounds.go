@@ -3,7 +3,6 @@ package main
 import (
   "bytes"
   "encoding/binary"
-  "fmt"
   "os"
   "log"
   "math"
@@ -101,7 +100,7 @@ func (g *playbackPattern) segmentInit(seg *playSegment) {
 }
 
 func (g *playbackPattern) dumpInfo() {
-  fmt.Printf("curSeg: %d, remaining: %d\n", g.curSegment, g.segmentRemaining)
+  log.Printf("curSeg: %d, remaining: %d\n", g.curSegment, g.segmentRemaining)
 }
 
 func (g *playbackPattern) processAudio(out [][]float32) {

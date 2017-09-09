@@ -4,7 +4,7 @@ import (
   "piclock/sevenseg_backpack"
   "time"
   "fmt"
-
+  "math/rand"
   "errors"
   "log"
 )
@@ -182,16 +182,16 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot boo
 
 func playAlarmEffect(alm *Alarm, stop chan bool) {
   e := alm.Effect
-  if e == "random" {
-    e = "tones"
+  if e == almRandom {
+    e = rand.Int() % almMax
   }
 
   switch e {
-  case "music":
+  case almMusic:
     // pick a random mp3
-  case "file":
+  case almFile:
     // get this specific file and play it
-  case "tones":
+  case almTones:
     playIt([]string{"250","340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
   default:
     playIt([]string{"350"}, []string{}, stop)
