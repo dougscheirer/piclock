@@ -18,6 +18,8 @@ func main() {
 	// first try to set up the log
 	f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
   if err != nil {
+  	wd, _ := os.Getwd()
+  	log.Printf("CWD: %s", wd)
     log.Fatal(err)
   }
 

@@ -1,0 +1,8 @@
+README
+
+required packages
+	portaudio19-dev (linux, different on mac)
+	libmpg123-dev   (linux, different on mac)
+
+running as a service
+	not working great yet, directories are tricky, simulations are hard, etc.
