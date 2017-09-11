@@ -9,6 +9,7 @@ import (
   "io/ioutil"
   "os"
   "log"
+  "regexp"
 )
 
 type Alarm struct {
@@ -16,6 +17,7 @@ type Alarm struct {
   Name    string
   When    time.Time
   Effect  int
+  Extra   string
   disabled bool   // set to true when we're checking alarms and it fired
   countdown bool  // set to true when we're checking alarms and we signaled countdown
 }
@@ -150,20 +152,23 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
       alm := Alarm{Id: i.Id, Name: i.Summary, When: when, disabled: false}
 
       // look for hastags (does not work ATM, the gAPI is broken I think)
-      music := strings.Contains(i.Summary, "music")
-      random := strings.Contains(i.Summary, "random")
-      file := strings.Contains(i.Summary, "file")
+      rMusic := regexp.MustCompile("music (.*)$")
+      rFile := regexp.MustCompile("file (.*)$")
+      music := rMusic.FindStringSubmatch(i.Summary)
+      file := rFile.FindStringSubmatch(i.Summary)
       tones := strings.Contains(i.Summary, "tone") // tone or tones
 
       // priority is arbitrary except for random (default)
-      if music {
+      if len(music) > 0 {
         alm.Effect = almMusic
-      } else if file {
-        alm.Effect = almFile // TODO: figure out the filename
+        if (len(music) > 1) {
+          alm.Extra = music[1]
+        }
+      } else if len(file) > 1 {
+        alm.Effect = almFile
+        alm.Extra = file[1]
       } else if tones {
-        alm.Effect = almTones // TODO: tone options
-      } else if random {
-        alm.Effect = almRandom
+        alm.Effect = almTones // TODO: tone options?
       } else {
         alm.Effect = almRandom
       }
@@ -317,9 +322,9 @@ func runCheckAlarm(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE 
       if lastAlarm == nil || lastAlarm.When != alarms[index].When {
         lastAlarm = &alarms[index]
         cE <- printEffect("AL:", 2*time.Second)
-        cE <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
-        cE <- printEffect(lastAlarm.When.Format("01.02"), 3*time.Second)
         cE <- printEffect(lastAlarm.When.Format("15:04"), 3*time.Second)
+        cE <- printEffect(lastAlarm.When.Format("01.02"), 3*time.Second)
+        cE <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
       }
 
       now := time.Now()
