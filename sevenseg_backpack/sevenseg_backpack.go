@@ -117,6 +117,7 @@ type Sevenseg struct {
     dump bool
     blink byte
     sim  bool
+    currentDisplay [displaySize]uint8
 }
 
 func (this *Sevenseg) simLog(v string, args ...interface{}) {
@@ -145,11 +146,11 @@ func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
         blink: BLINK_OFF,
 	    dump: false,
         display: getClearDisplay(),
-        sim: simulated }
+        sim: simulated,
+        currentDisplay: getClearDisplay() }
     // turn on the oscillator, set default brightness
     this.i2c_dev.WriteByte(i2c_OSC_ON)
     this.i2c_dev.WriteByte(i2c_BRIGHTNESS_MAX)
-
     // you still need to call DisplayOn(true) to turn on the display
 	return this, nil
 }
@@ -282,9 +283,15 @@ func (this *Sevenseg) dumpDisplay() {
 
 func (this *Sevenseg) refresh_display() error {
     if !this.refresh { return nil }
+    // refreshing on the same thing?
+    if this.currentDisplay == this.display { return nil }
+    // set the display buffer
+    this.currentDisplay = this.display
+
     // display has the address 0 embedded in it
     // for debugging, dump out twhat we think we're putting on the display
     if this.dump { this.dumpDisplay() }
+
 	_, err := this.i2c_dev.Write(this.display[:])
     return err
 }
