@@ -4,7 +4,6 @@ import (
   "fmt"
   "time"
   "errors"
-  "strings"
   "encoding/json"
   "io/ioutil"
   "os"
@@ -152,11 +151,13 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
       alm := Alarm{Id: i.Id, Name: i.Summary, When: when, disabled: false}
 
       // look for hastags (does not work ATM, the gAPI is broken I think)
-      rMusic := regexp.MustCompile("music (.*)$")
-      rFile := regexp.MustCompile("file (.*)$")
+      log.Println(i.Summary)
+      rMusic := regexp.MustCompile("[Mm]usic (.*)$")
+      rFile := regexp.MustCompile("[Ff]ile (.*)$")
+      rTone := regexp.MustCompile("[Tt]one")
       music := rMusic.FindStringSubmatch(i.Summary)
       file := rFile.FindStringSubmatch(i.Summary)
-      tones := strings.Contains(i.Summary, "tone") // tone or tones
+      tones := rTone.FindStringSubmatch(i.Summary) // tone or tones
 
       // priority is arbitrary except for random (default)
       if len(music) > 0 {
@@ -167,7 +168,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
       } else if len(file) > 1 {
         alm.Effect = almFile
         alm.Extra = file[1]
-      } else if tones {
+      } else if len(tones) > 0 {
         alm.Effect = almTones // TODO: tone options?
       } else {
         alm.Effect = almRandom
