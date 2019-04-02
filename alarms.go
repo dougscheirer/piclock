@@ -156,25 +156,16 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 
       alm := Alarm{Id: i.Id, Name: i.Summary, When: when, disabled: false}
 
-      // look for hastags (does not work ATM, the gAPI is broken I think)
+      // look for hashtags (does not work ATM, the gAPI is broken I think)
       log.Println(i.Summary)
-      rMusic := regexp.MustCompile("[Mm]usic (.*)$")
-      rFile := regexp.MustCompile("[Ff]ile (.*)$")
-      rTone := regexp.MustCompile("[Tt]one")
-      music := rMusic.FindStringSubmatch(i.Summary)
-      file := rFile.FindStringSubmatch(i.Summary)
-      tones := rTone.FindStringSubmatch(i.Summary) // tone or tones
-
       // priority is arbitrary except for random (default)
-      if len(music) > 0 {
+      if m,_ := regexp.MatchString("[Mm]usic .*", i.Summary); m {
         alm.Effect = almMusic
-        if (len(music) > 1) {
-          alm.Extra = music[1]
-        }
-      } else if len(file) > 1 {
+        alm.Extra = i.Summary[6:]
+      } else if m, _ := regexp.MatchString("[Ff]ile .*", i.Summary); m {
         alm.Effect = almFile
-        alm.Extra = file[1]
-      } else if len(tones) > 0 {
+        alm.Extra = i.Summary[5:]
+      } else if m, _ := regexp.MatchString("[Tt]one.*", i.Summary); m {
         alm.Effect = almTones // TODO: tone options?
       } else {
         alm.Effect = almRandom
@@ -190,6 +181,13 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
     }
 
     // cache in a file for later if we go offline
+    writeAlarms(alarms, cacheFile)
+  }
+
+  // if we're developing, make an alarm 1 minute in the future
+  if settings.GetBool("fake_alarm") {
+    alm := Alarm{Id: "thisistotallyfake", Name: "who cares", When: time.Now().Add(time.Duration(1)*time.Minute), disabled: false, Effect: almRandom}
+    alarms = append(alarms, alm)
     writeAlarms(alarms, cacheFile)
   }
 
@@ -254,7 +252,7 @@ func downloadMusicFiles(settings *Settings, cE chan Effect) {
     return
   }
   musicPath := settings.GetString("musicPath")
-  log.Printf(fmt.Sprintf("Received a list of %d files", len(files)))
+  log.Printf("Received a list of %d files", len(files))
   for i:=len(files)-1;i>=0;i-- {
     // do we already have that file cached
     savePath := musicPath + "/" + files[i].Name

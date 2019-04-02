@@ -3,7 +3,6 @@ package main
 import (
   "bytes"
   "encoding/binary"
-  "os"
   "log"
   "math"
   "time"
@@ -190,7 +189,7 @@ func PlayMP3(fName string, loop bool, stop chan bool) {
       }
       decoder.Close()
 
-      decoder = getDecoder(os.Args[1])
+      decoder = getDecoder(fName)
       defer decoder.Close()
       continue
     }

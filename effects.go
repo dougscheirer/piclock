@@ -7,6 +7,7 @@ import (
   "math/rand"
   "errors"
   "log"
+  "path/filepath"
 )
 
 type Effect struct {
@@ -180,24 +181,30 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot boo
   return true
 }
 
-func playAlarmEffect(alm *Alarm, stop chan bool) {
-  e := alm.Effect
-  if e == almRandom {
-    e = rand.Int() % almMax
-  }
-
-  switch e {
+func playAlarmEffect(settings *Settings, alm *Alarm, stop chan bool) {
+  switch alm.Effect {
   case almMusic:
-    PlayMP3(alm.Extra, false, stop)
+    PlayMP3(alm.Extra, true, stop)
     break
   case almFile:
-    PlayMP3(alm.Extra, false, stop)
+    PlayMP3(alm.Extra, true, stop)
     break
   case almTones:
     playIt([]string{"250","340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
     break
   default:
-    // play a random mp3
+    // play a random mp3 in the cache
+    s1 := rand.NewSource(time.Now().UnixNano())
+    r1 := rand.New(s1)
+
+    files, err := filepath.Glob(settings.GetString("musicPath") + "/*")
+    if err != nil {
+        log.Fatal(err)
+        break
+    }
+    fname := files[r1.Intn(len(files))]
+    log.Printf("Playing %s", fname)
+    PlayMP3(fname, true, stop)
     break
   }
 }
@@ -275,8 +282,9 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
           mode = modeAlarm
           alm, _ := toAlarm(e.val)
           sleepTime = 10*time.Millisecond
-          log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %d\n", alm.Name, alm.When, alm.Effect)
-          playAlarmEffect(alm, stopAlarm)
+          log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
+          log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
+          playAlarmEffect(settings, alm, stopAlarm)
         case eMainButton:
           info, _ := toButtonInfo(e.val)
           buttonDot = info.pressed

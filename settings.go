@@ -38,6 +38,8 @@ func defaultSettings() *Settings {
 	s["musicPath"] = "/etc/default/piclock/music"
 	s["blinkTime"] = true
 	s["strobe"] = true
+	s["skiploader"] = false
+	s["fake_alarm"]  =false
 
 	on := true
 	if runtime.GOARCH == "arm" { on = false }
