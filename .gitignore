@@ -4,4 +4,6 @@
 /main
 /client_secret.json
 /alarms/*
+/music/*
 /*.log
+/pimusic

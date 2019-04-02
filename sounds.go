@@ -143,12 +143,10 @@ func getDecoder(fname string) *mpg123.Decoder {
     return nil
   }
 
-  fileName := os.Args[1]
-  if err = decoder.Open(fileName); err != nil {
+  if err = decoder.Open(fname); err != nil {
     log.Println(err.Error())
     return nil
   }
-
 
   // get audio format information
   rate, channels, _ := decoder.GetFormat()

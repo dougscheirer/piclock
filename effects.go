@@ -137,11 +137,11 @@ func toPrint(val interface{}) (*Print, error) {
   }
 }
 
-func displayClock(display *sevenseg_backpack.Sevenseg, dot bool) {
+func displayClock(display *sevenseg_backpack.Sevenseg, blinkColon bool, dot bool) {
   // standard time display
   colon := "15:04"
   now := time.Now()
-  if now.Second() % 2 == 0 {
+  if blinkColon && now.Second() % 2 == 0 {
     // no space required for the colon
     colon = "1504"
   }
@@ -188,13 +188,17 @@ func playAlarmEffect(alm *Alarm, stop chan bool) {
 
   switch e {
   case almMusic:
-    // pick a random mp3
+    PlayMP3(alm.Extra, false, stop)
+    break
   case almFile:
-    // get this specific file and play it
+    PlayMP3(alm.Extra, false, stop)
+    break
   case almTones:
     playIt([]string{"250","340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+    break
   default:
-    playIt([]string{"350"}, []string{}, stop)
+    // play a random mp3
+    break
   }
 }
 
@@ -271,7 +275,7 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
           mode = modeAlarm
           alm, _ := toAlarm(e.val)
           sleepTime = 10*time.Millisecond
-          log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %s\n", alm.Name, alm.When, alm.Effect)
+          log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<\n%s %s %d\n", alm.Name, alm.When, alm.Effect)
           playAlarmEffect(alm, stopAlarm)
         case eMainButton:
           info, _ := toButtonInfo(e.val)
@@ -301,7 +305,7 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
                     buttonPressActed = true
                   }
                 default:
-                  log.Printf("No action for mode %s", mode)
+                  log.Printf("No action for mode %d", mode)
               }
             }
           } else {
@@ -309,7 +313,7 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
             log.Printf("Main button released: %dms", info.duration / time.Millisecond)
           }
         default:
-          log.Printf("Unhandled %s\n", e.id)
+          log.Printf("Unhandled %d\n", e.id)
       }
     default:
       // nothing?
@@ -323,29 +327,31 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
 
     switch mode {
       case modeClock:
-        displayClock(display, buttonDot)
+        displayClock(display, settings.GetBool("blinkTime"), buttonDot)
       case modeCountdown:
         if !displayCountdown(display, countdown, buttonDot) {
           mode = modeClock
           sleepTime = DEFAULT_SLEEP
         }
       case modeAlarmError:
-        fmt.Sprintf("Error: %d\n", error_id)
+        log.Printf("Error: %d\n", error_id)
         display.Print("Err")
       case modeOutput:
         // do nothing
       case modeAlarm:
         // do a strobing 0, light up segments 0 - 5
-        display.RefreshOn(false)
-        display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
-        display.ClearDisplay()
-        for i:=0;i<4;i++ {
-          display.SegmentOn(byte(i), byte(alarmSegment), true)
+        if settings.GetBool("strobe") == true {
+          display.RefreshOn(false)
+          display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
+          display.ClearDisplay()
+          for i:=0;i<4;i++ {
+            display.SegmentOn(byte(i), byte(alarmSegment), true)
+          }
+          display.RefreshOn(true)
+          alarmSegment = (alarmSegment + 1) % 6
         }
-        display.RefreshOn(true)
-        alarmSegment = (alarmSegment + 1) % 6
       default:
-        log.Printf("Unknown mode: '%s'\n", mode)
+        log.Printf("Unknown mode: '%d'\n", mode)
     }
   }
 

@@ -9,6 +9,7 @@ import (
   "os"
   "log"
   "regexp"
+  "net/http"
 )
 
 type Alarm struct {
@@ -30,6 +31,11 @@ type LoaderMsg struct {
 type CheckMsg struct {
   displayCurrent  bool
   alarms          []Alarm
+}
+
+type MusicFile struct {
+  Name            string
+  Path            string
 }
 
 const (
@@ -220,6 +226,65 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
   return alarms, nil
 }
 
+func downloadMusicFiles(settings *Settings, cE chan Effect) {
+  // this is currently dumb, it just uses a list from musicDownloads (music.json)
+  // and walks through it, downloading to the music dir
+  jsonPath := settings.GetString("musicDownloads") + "/music.json"
+  log.Printf("Downloading list from " + jsonPath)
+  resp, err := http.Get(jsonPath)
+  if err != nil {
+    log.Println("Error fetching music.json: " + err.Error())
+    // cE <- printEffect("Err", 2*time.Second )
+    return
+  }
+  if resp.StatusCode != 200 {
+    body,_ := ioutil.ReadAll(resp.Body)
+    log.Println("Error fetching music.json: " + string(body))
+    // cE <- printEffect("Err", 2*time.Second )
+    return
+  }
+
+  defer resp.Body.Close()
+  body, err := ioutil.ReadAll(resp.Body)
+
+  files := make([]MusicFile, 0)
+  err = json.Unmarshal(body, &files)
+  if err != nil {
+    log.Printf("Error unmarshalling files: " + err.Error())
+    return
+  }
+  musicPath := settings.GetString("musicPath")
+  log.Printf(fmt.Sprintf("Received a list of %d files", len(files)))
+  for i:=len(files)-1;i>=0;i-- {
+    // do we already have that file cached
+    savePath := musicPath + "/" + files[i].Name
+    // log.Printf("Checking for " + savePath)
+    if _, err := os.Stat(savePath); os.IsNotExist(err) {
+      // download it
+      log.Println(fmt.Sprintf("Downloading %s [%s]", files[i].Name, files[i].Path))
+      resp, err := http.Get(files[i].Path)
+      if err != nil {
+        // handle error
+        log.Println(fmt.Sprintf("Failed to download %s: %s", files[i].Name, err.Error()))
+        continue
+      }
+      if resp.StatusCode != 200 {
+        log.Println(fmt.Sprintf("Received bad status code: %d", resp.StatusCode))
+        continue
+      }
+      defer resp.Body.Close()
+      body, err := ioutil.ReadAll(resp.Body)
+      // write the file
+      err = ioutil.WriteFile(savePath, body, 0644)
+      if err != nil {
+        // handle error
+        log.Println(fmt.Sprintf("Failed to write %s: %s", savePath, err.Error()))
+        continue
+      }
+    }
+  }  
+}
+
 func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
   defer wg.Done()
 
@@ -278,6 +343,9 @@ func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE c
           continue
         }
       }
+
+      // launch a thread to grab all of the music we can
+      go downloadMusicFiles(settings, cE);
 
       lastRefresh = time.Now()
 

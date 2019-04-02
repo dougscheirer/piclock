@@ -35,6 +35,9 @@ func defaultSettings() *Settings {
 	s["logFile"] = "/var/log/piclock.log"
 	s["cached_alarms"] = false	// only use the cache, pretend that gcal is down
 	s["musicDownloads"] = "http://192.168.0.105/pimusic"
+	s["musicPath"] = "/etc/default/piclock/music"
+	s["blinkTime"] = true
+	s["strobe"] = true
 
 	on := true
 	if runtime.GOARCH == "arm" { on = false }

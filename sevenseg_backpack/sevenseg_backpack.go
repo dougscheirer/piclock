@@ -489,7 +489,7 @@ func (this *Sevenseg) PrintOffset(msg string, position int) error {
 }
 
 func (this *Sevenseg) SetBlinkRate(rate uint8) error {
-    if rate > 3 { return errors.New(fmt.Sprintf("Bad blink rate: ", rate)) }
+    if rate > 3 { return errors.New(fmt.Sprintf("Bad blink rate: %d", rate)) }
     this.simLog("Blink rate %d", rate)
     this.blink = rate
     // one assumes you want the display on now?
