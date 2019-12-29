@@ -1,16 +1,16 @@
 package i2c
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"syscall"
-	"log"
-	"fmt"
 )
 
 type I2C struct {
-	fd 			*os.File
-	address uint8
-	fd_sim	bool
+	fd        *os.File
+	address   uint8
+	fd_sim    bool
 	debugdump bool
 }
 
@@ -19,17 +19,21 @@ const (
 )
 
 func (this *I2C) logWrite(buf []uint8) error {
-	if !this.debugdump { return nil }
+	if !this.debugdump {
+		return nil
+	}
 	log.Println("Write : ")
-	for i:=0;i<len(buf);i++ {
+	for i := 0; i < len(buf); i++ {
 		log.Println("%02x ", buf[i])
 	}
 	log.Println("\n")
 	return nil
 }
 
-func (this *I2C) logMsg(msg string) error { 
-	if !this.debugdump { return nil }
+func (this *I2C) logMsg(msg string) error {
+	if !this.debugdump {
+		return nil
+	}
 	log.Println(msg)
 	return nil
 }
@@ -54,13 +58,15 @@ func Open(address uint8, bus int, simulated bool) (*I2C, error) {
 
 func (this *I2C) Close() error {
 	this.logMsg(fmt.Sprintf("Close: %d", this.address))
-	if this.fd_sim { return nil }
+	if this.fd_sim {
+		return nil
+	}
 	return this.fd.Close()
 }
 
 // this is to write a command-style byte
 func (this *I2C) WriteByte(single byte) (int, error) {
-	var buf [1]byte;
+	var buf [1]byte
 	buf[0] = single
 	// not MT safe for i2c
 	if err := select_line(this); err != nil {
@@ -68,7 +74,9 @@ func (this *I2C) WriteByte(single byte) (int, error) {
 	}
 
 	this.logWrite(buf[:])
-	if this.fd_sim { return 0, nil }
+	if this.fd_sim {
+		return 0, nil
+	}
 	return this.fd.Write(buf[:])
 }
 
@@ -78,13 +86,17 @@ func (this *I2C) Write(buf []uint8) (int, error) {
 		return 0, err
 	}
 	this.logWrite(buf)
-	if this.fd_sim { return 0, nil }
+	if this.fd_sim {
+		return 0, nil
+	}
 	return this.fd.Write(buf)
 }
 
 func select_line(this *I2C) error {
 	this.logMsg(fmt.Sprintf("ioctl: I2C_SLAVE @ 0x%02x", this.address))
-	if this.fd_sim { return nil }
+	if this.fd_sim {
+		return nil
+	}
 	return ioctl(this.fd.Fd(), I2C_SLAVE, uintptr(this.address))
 }
 

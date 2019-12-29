@@ -1,10 +1,10 @@
 package main
 
 import (
-	"sync"
 	"log"
 	"os"
-  "time"
+	"sync"
+	"time"
 )
 
 // piclock -config={config file}
@@ -17,18 +17,17 @@ func main() {
 
 	// first try to set up the log
 	f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-  if err != nil {
-  	wd, _ := os.Getwd()
-  	log.Printf("CWD: %s", wd)
-    log.Fatal(err)
-  }
+	if err != nil {
+		wd, _ := os.Getwd()
+		log.Printf("CWD: %s", wd)
+		log.Fatal(err)
+	}
 
-  defer f.Close()
+	defer f.Close()
 
-  // set output of logs to f
-  log.SetOutput(f)
-  log.SetFlags(log.Ldate|log.Ltime|log.Lmicroseconds)
-
+	// set output of logs to f
+	log.SetOutput(f)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
 	// dump them (debugging)
 	log.Println("\n>>> Settings <<<\n")
@@ -41,18 +40,18 @@ func main() {
 
 	// TODO: move these into a struct?
 	quit := make(chan struct{}, 1)
-  alarmChannel := make(chan CheckMsg, 1)
-  effectChannel := make(chan Effect, 1)
-  loaderChannel := make(chan LoaderMsg, 1)
+	alarmChannel := make(chan CheckMsg, 1)
+	effectChannel := make(chan Effect, 1)
+	loaderChannel := make(chan LoaderMsg, 1)
 
 	// wait on our workers:
 	// alarm fetcher
 	// clock runner
 	// alarm checker
 	// button checker
-  wg.Add(4)
+	wg.Add(4)
 
-  // start the effect thread so we can update the LEDs
+	// start the effect thread so we can update the LEDs
 	go runEffects(settings, quit, effectChannel, loaderChannel)
 	if !settings.GetBool("skiploader") {
 		// print the date and time of this build
@@ -68,7 +67,7 @@ func main() {
 			effectChannel <- printEffect("----", 500*time.Millisecond)
 		}
 	}
-	
+
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop
 	confirm_calendar_auth(settings, effectChannel)
