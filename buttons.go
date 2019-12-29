@@ -233,7 +233,7 @@ func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
     select {
     case <- quit:
       // we shouldn't get here ATM
-      log.Println("quit from runWatchButtons")
+      log.Println("ACK! quit from runWatchButtons")
       return
     default:
     }

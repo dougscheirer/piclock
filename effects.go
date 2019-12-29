@@ -8,6 +8,10 @@ import (
   "errors"
   "log"
   "path/filepath"
+  "errors"
+  "log"
+  // audio player
+  "github.com/gordonklaus/portaudio"
 )
 
 type Effect struct {
