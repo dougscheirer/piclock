@@ -26,5 +26,7 @@ pi setup:
   go get ./... + go build
   (TODO: make a web page for configuring the gcal api)
     configure the gapi token file in ~/.credentials in the web page
+    form: run configure from web, redirect back to (here), save OAUTH token
   (TODO: service install script)
+  (TODO: scripted test setup)
   
