@@ -27,8 +27,8 @@ func getClient(ctx context.Context, config *oauth2.Config) *http.Client {
 	}
 	tok, err := tokenFromFile(cacheFile)
 	if err != nil {
-		tok = getTokenFromWeb(config)
-		saveToken(cacheFile, tok)
+		// you need to use the web setup page which will realod the app
+		return nil
 	}
 	return config.Client(ctx, tok)
 }
@@ -62,13 +62,13 @@ func tokenCacheFile() (string, error) {
 	tokenCacheDir := filepath.Join(usr.HomeDir, ".credentials")
 	os.MkdirAll(tokenCacheDir, 0700)
 	return filepath.Join(tokenCacheDir,
-		url.QueryEscape("calendar-go-quickstart.json")), err
+		url.QueryEscape("piclock.json")), err
 }
 
 // tokenFromFile retrieves a Token from a given file path.
 // It returns the retrieved Token and any read error encountered.
 func tokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
+	f, err := os.OpenFile(file, os.O_RDONLY, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func GetCalenderService(settings *Settings) *calendar.Service {
 	}
 
 	// If modifying these scopes, delete your previously saved credentials
-	// at ~/.credentials/calendar-go-quickstart.json
+	// at ~/.credentials/piclock.json
 	config, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)

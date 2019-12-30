@@ -1,0 +1,19 @@
+{
+  "countdownTime" : "0s",
+  "sleepTime" : "100ms",
+  "secretPath" : "./",
+  "blinkTime" : "false",
+  "alarmPath" : "src/piclock/alarms",
+  "alarmRefreshTime" : "15m",
+  "i2c_bus" : 1,
+  "i2c_device" : "0x71",
+  "i2c_simulated" : "true",
+  "calendar" : "piclock",
+  "debug_dump" : "true",
+  "button_simulated" : "",
+  "cached_alarms" : "false",
+  "logFile" : "./piclock.log",
+  "musicDownloads" : "http://localhost/pimusic",
+  "musicPath" : "src/piclock/music",
+  "strobe" : "false"
+}

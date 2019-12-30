@@ -10,14 +10,20 @@ running as a service
 pi setup:
   /boot/ssh to enable ssh default
   reset password
-  set TZ/keyboard/I2C
+  set TZ/keyboard/I2C/GPU to 16M
   set hostname
   ssh-keygen, copy to AU
   add local pubkey to authkeys
   (TODO: break these into git/vim and post-git clone) 
     install: vim git portaudio19-dev libmpg123-dev golang
   git clone
-  go get ./... + go build
+  (add USB as sda)
+    sudo mkswap /dev/sda
+    sudo swapon /dev/sda
+  (for git shallow clone) 
+    git clone github.com/schollz/git && go build && PATH=$GOPATH/bin:$PATH 
+    go get ./... + go build
+  (TODO: make a web page for configuring the gcal api)
+    configure the gapi token file in ~/.credentials in the web page
   (TODO: service install)
-
-
+  
