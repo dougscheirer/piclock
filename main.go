@@ -30,9 +30,9 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
 	// dump them (debugging)
-	log.Println("\n>>> Settings <<<\n")
+	log.Println("\n>>> Settings <<<")
 	settings.Dump()
-	log.Println("\n>>> Settings <<<\n")
+	log.Println("\n>>> Settings <<<")
 
 	/*
 		Main app

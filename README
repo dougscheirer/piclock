@@ -1,5 +1,8 @@
 README
 
+build:
+	go build [--tags=noaudio]
+
 required packages
 	portaudio19-dev (linux, different on mac)
 	libmpg123-dev   (linux, different on mac)
