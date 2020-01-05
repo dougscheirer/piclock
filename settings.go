@@ -41,6 +41,7 @@ func defaultSettings() *Settings {
 	s["strobe"] = true
 	s["skiploader"] = false
 	s["fake_alarm"] = false
+	s["oath"] = false
 
 	on := true
 	if runtime.GOARCH == "arm" {
@@ -132,11 +133,17 @@ func InitSettings() *Settings {
 
 	// define our flags first
 	configFile := flag.String("config", "/etc/default/piclock/piclock.conf", "config file path")
+	oauthOnly := flag.Bool("oauth", false, "connect and generate the oauth token")
 
 	// parse the flags
 	flag.Parse()
 
-	// try to open it
+	// oauth only?
+	if *oauthOnly != false {
+		s.settings["oauth"] = true
+	}
+
+	// try to open the config file
 	data, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		log.Println(fmt.Sprintf("Could not load conf file '%s', using defaults", *configFile))

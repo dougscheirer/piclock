@@ -15,6 +15,12 @@ func main() {
 	// read config information
 	settings := InitSettings()
 
+	// are we just generating the oauth token?
+	if settings.GetBool("oauth") {
+		confirm_calendar_auth(settings, nil)
+		return
+	}
+
 	// first try to set up the log
 	f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
