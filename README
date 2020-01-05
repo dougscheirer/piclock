@@ -36,3 +36,17 @@ pi setup:
 TODO:
   add simulation program for testing
   
+tests:
+  load old alarms
+    all valid
+    some expired
+    none
+  
+  simlated alarms
+    time display
+    alarm countdown
+    song play triggered
+    button cancel countdown
+    button cancel song
+  
+  reload button
