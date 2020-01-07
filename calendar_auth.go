@@ -29,6 +29,7 @@ func getClient(ctx context.Context, config *oauth2.Config, prompt bool) *http.Cl
 	if err != nil {
 		if prompt {
 			tok = getTokenFromWeb(config)
+			saveToken(cacheFile, tok)
 		} else {
 			// run with -oauth to generate the token
 			return nil

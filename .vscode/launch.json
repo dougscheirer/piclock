@@ -11,7 +11,8 @@
       "mode": "auto",
       "program": "${workspaceRoot}",
       "env": {},
-      "args": ["-config","./piclock.conf"]
+      "args": ["-config","./piclock.conf"],
+      "buildFlags": "-tags='nobuttons noaudio'"
     },
     {
       "name": "oauth",

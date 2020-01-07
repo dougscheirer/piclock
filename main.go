@@ -11,6 +11,8 @@ import (
 
 var wg sync.WaitGroup
 
+var features = []string{}
+
 func main() {
 	// read config information
 	settings := InitSettings()
@@ -21,19 +23,28 @@ func main() {
 		return
 	}
 
-	// first try to set up the log
-	f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		wd, _ := os.Getwd()
-		log.Printf("CWD: %s", wd)
-		log.Fatal(err)
+	// first try to set up the log (optional)
+	if settings.GetString("logFile") != "" {
+		f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			wd, _ := os.Getwd()
+			log.Printf("CWD: %s", wd)
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		// set output of logs to f
+		log.SetOutput(f)
 	}
 
-	defer f.Close()
-
-	// set output of logs to f
-	log.SetOutput(f)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+
+	// build features
+	var build string
+	for _, f := range features {
+		build += f + " "
+	}
+	log.Println("Build tags: " + build)
 
 	// dump them (debugging)
 	log.Println("\n>>> Settings <<<")

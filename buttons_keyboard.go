@@ -12,6 +12,10 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
+func init() {
+	features = append(features, "key-buttons")
+}
+
 func simSetupButtons(pins []int, buttonMap string) ([]Button, error) {
 	// return a list of buttons with the char as the "pin num"
 	ret := make([]Button, len(pins))

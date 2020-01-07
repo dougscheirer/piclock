@@ -11,6 +11,10 @@ import (
 	// keyboard for sim mode
 )
 
+func init() {
+	features = append(features, "rpio-buttons")
+}
+
 func setupPinButtons(pins []int) ([]Button, error) {
 	// map pins to buttons
 	err := rpio.Open()

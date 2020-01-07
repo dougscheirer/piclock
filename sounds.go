@@ -14,6 +14,10 @@ import (
 	"github.com/gordonklaus/portaudio"
 )
 
+func init() {
+	features = append(features, "audio")
+}
+
 const sampleRate = 44100
 
 // two functions exist here:
