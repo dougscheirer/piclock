@@ -38,18 +38,20 @@ func setupPinButtons(pins []int) ([]Button, error) {
 	return ret, nil
 }
 
-func setupButtons(settings *Settings) []Button {
-	pins := []int{25, 24}
-	// 25 -> main button
-	// 24 -> some other button
-	var err error
-	var buttons []Button
+func setupButtons(pins []int, settings *Settings) ([]Button, error) {
+	return setupPinButtons(pins)
+}
 
-	buttons, err = setupPinButtons(pins)
-	if err != nil {
-		log.Println(err.Error())
-		return nil
+func initButtons(settings *Settings) error {
+	// nothing to init for GPIO buttons
+	return nil
+}
+
+func readButtons(btns []Button) ([]rpio.State, error) {
+	ret := make([]rpio.State, len(btns))
+	for i := 0; i < len(btns); i++ {
+		ret[i] = btns[i].pin.Read() // Read state from pin (High / Low)
 	}
 
-	return buttons
+	return ret, nil
 }

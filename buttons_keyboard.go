@@ -12,7 +12,7 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
-func simSetupButtons(pins []int, buttonMap string) []Button {
+func simSetupButtons(pins []int, buttonMap string) ([]Button, error) {
 	// return a list of buttons with the char as the "pin num"
 	ret := make([]Button, len(pins))
 	now := time.Now()
@@ -28,7 +28,7 @@ func simSetupButtons(pins []int, buttonMap string) []Button {
 		ret[i].pinNum = int(buttonMap[i])
 		ret[i].state = PressState{pressed: false, start: now, count: 0, changed: false}
 	}
-	return ret
+	return ret, nil
 }
 
 func checkKeyboard(btns []Button) ([]rpio.State, error) {
@@ -91,12 +91,21 @@ func readButtons(btns []Button) ([]rpio.State, error) {
 	return checkKeyboard(btns)
 }
 
-func setupButtons() buttons []Button
-{
-	// terminal (keyboard)
+func setupButtons(pins []int, settings *Settings) ([]Button, error) {
+	var buttons []Button
+	var err error
+
+	simulated := settings.GetString("button_simulated")
+	buttons, err = simSetupButtons(pins, simulated)
+
+	defer wg.Done()
+	return buttons, err
+}
+
+func initButtons(settings *Settings) error {
 	err := termbox.Init()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
@@ -105,9 +114,5 @@ func setupButtons() buttons []Button
 	// close it later
 	defer termbox.Close()
 
-	var buttons []Button
-
-	buttons = simSetupButtons(pins, simulated)
-	defer wg.Done()
-	return buttons
+	return nil
 }

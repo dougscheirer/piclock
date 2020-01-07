@@ -138,7 +138,7 @@ func InitSettings() *Settings {
 	// parse the flags
 	flag.Parse()
 
-	// oauth only?
+	// oauth?
 	if *oauthOnly != false {
 		s.settings["oauth"] = true
 	}

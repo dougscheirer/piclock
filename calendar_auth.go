@@ -20,16 +20,25 @@ import (
 
 // getClient uses a Context and Config to retrieve a Token
 // then generate a Client. It returns the generated Client.
-func getClient(ctx context.Context, config *oauth2.Config) *http.Client {
+func getClient(ctx context.Context, config *oauth2.Config, prompt bool) *http.Client {
 	cacheFile, err := tokenCacheFile()
 	if err != nil {
 		log.Fatalf("Unable to get path to cached credential file. %v", err)
 	}
 	tok, err := tokenFromFile(cacheFile)
 	if err != nil {
-		// you need to use the web setup page which will realod the app
-		return nil
+		if prompt {
+			tok = getTokenFromWeb(config)
+		} else {
+			// run with -oauth to generate the token
+			return nil
+		}
+	} else {
+		if prompt != false {
+			log.Println("OAUTH has a valid token in " + cacheFile)
+		}
 	}
+
 	return config.Client(ctx, tok)
 }
 
@@ -90,7 +99,7 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func GetCalenderService(settings *Settings) *calendar.Service {
+func GetCalenderService(settings *Settings, prompt bool) *calendar.Service {
 	// if' we're pretending, skip the check
 	if settings.GetBool("cached_alarms") {
 		return nil
@@ -109,7 +118,7 @@ func GetCalenderService(settings *Settings) *calendar.Service {
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
-	client := getClient(ctx, config)
+	client := getClient(ctx, config, prompt)
 
 	srv, err := calendar.New(client)
 	if err != nil {
@@ -120,11 +129,17 @@ func GetCalenderService(settings *Settings) *calendar.Service {
 }
 
 // a looping function to get the Oauth key before anything else
-func confirm_calendar_auth(settings *Settings, c chan Effect) {
-	defer func() { c <- toggleDebugDump(settings.GetBool("debug_dump")) }()
+func confirm_calendar_auth(settings *Settings, prompt bool, c chan Effect) {
+	defer func() {
+		if c != nil {
+			c <- toggleDebugDump(settings.GetBool("debug_dump"))
+		}
+	}()
 
-	c <- toggleDebugDump(false)
-	c <- printEffect(" . . . .", 2*time.Second) // spaces required
+	if c != nil {
+		c <- toggleDebugDump(false)
+		c <- printEffect(" . . . .", 2*time.Second) // spaces required
+	}
 
 	// if we're pretending, skip the check
 	// TODO: move this logic into the test framework
@@ -133,7 +148,7 @@ func confirm_calendar_auth(settings *Settings, c chan Effect) {
 	}
 
 	for true {
-		c := GetCalenderService(settings)
+		c := GetCalenderService(settings, prompt)
 		if c != nil {
 			return
 		}

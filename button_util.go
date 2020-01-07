@@ -26,16 +26,20 @@ const (
 	BTN_UP   = 1
 )
 
-// returns new array with all of the button data
 func checkButtons(btns []Button) ([]Button, error) {
 	now := time.Now()
 	ret := make([]Button, len(btns))
 
+	var results []rpio.State
 	var err error
 
+	results, err = readButtons(btns)
+	if err != nil {
+		return ret, err
+	}
+
 	for i := 0; i < len(btns); i++ {
-		var res rpio.State
-		res = readButtons(btns)
+		var res rpio.State = results[i]
 
 		ret[i] = btns[i]
 		ret[i].state.changed = false
@@ -67,7 +71,6 @@ func checkButtons(btns []Button) ([]Button, error) {
 				ret[i].state = PressState{pressed: false, start: now, count: 0, changed: true}
 			}
 		}
-
 		if ret[i].state.changed {
 			log.Printf("Button changed state: %+v", ret[i])
 		}
@@ -79,8 +82,22 @@ func checkButtons(btns []Button) ([]Button, error) {
 func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
 	defer wg.Done()
 
+	err := initButtons(settings)
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+
 	var buttons []Button
-	buttons = setupButtons(settings)
+	pins := []int{25, 24}
+	// 25 -> main button
+	// 24 -> some other button
+
+	buttons, err = setupButtons(pins, settings)
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
 
 	for true {
 		select {
@@ -91,7 +108,7 @@ func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
 		default:
 		}
 
-		newButtons, err := checkButtons(buttons, sim)
+		newButtons, err := checkButtons(buttons)
 		if err != nil {
 			// we're done
 			log.Println("quit from runWatchButtons")

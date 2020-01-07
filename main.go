@@ -17,7 +17,7 @@ func main() {
 
 	// are we just generating the oauth token?
 	if settings.GetBool("oauth") {
-		confirm_calendar_auth(settings, nil)
+		confirm_calendar_auth(settings, true, nil)
 		return
 	}
 
@@ -76,7 +76,7 @@ func main() {
 
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop
-	confirm_calendar_auth(settings, effectChannel)
+	confirm_calendar_auth(settings, false, effectChannel)
 
 	go runGetAlarms(settings, quit, alarmChannel, effectChannel, loaderChannel)
 	go runCheckAlarm(settings, quit, alarmChannel, effectChannel, loaderChannel)

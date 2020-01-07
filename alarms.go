@@ -83,7 +83,7 @@ func cacheFilename(settings *Settings) string {
 
 func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
 	alarms := make([]Alarm, 0)
-	srv := GetCalenderService(settings)
+	srv := GetCalenderService(settings, false)
 
 	// TODO: if it wasn't available, send an Alarm message
 	if srv == nil {
