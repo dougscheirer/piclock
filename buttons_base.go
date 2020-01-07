@@ -79,7 +79,7 @@ func checkButtons(btns []Button) ([]Button, error) {
 	return ret, nil
 }
 
-func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
+func runWatchButtons(settings *Settings, comms CommChannels) {
 	defer wg.Done()
 
 	err := initButtons(settings)
@@ -101,7 +101,7 @@ func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
 
 	for true {
 		select {
-		case <-quit:
+		case <-comms.quit:
 			// we shouldn't get here ATM
 			log.Println("quit from runWatchButtons")
 			return
@@ -112,7 +112,7 @@ func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
 		if err != nil {
 			// we're done
 			log.Println("quit from runWatchButtons")
-			close(quit)
+			close(comms.quit)
 			return
 		}
 
@@ -121,7 +121,7 @@ func runWatchButtons(settings *Settings, quit chan struct{}, cE chan Effect) {
 				diff := time.Duration(newButtons[i].state.count) * time.Second
 				switch pins[i] {
 				case 25:
-					cE <- mainButton(newButtons[i].state.pressed, diff)
+					comms.effects <- mainButton(newButtons[i].state.pressed, diff)
 				default:
 					log.Printf("Unhandled button %d", pins[i])
 				}

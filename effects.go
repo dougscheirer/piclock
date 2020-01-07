@@ -213,7 +213,7 @@ func stopAlarmEffect(stop chan bool) {
 	stop <- true
 }
 
-func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan LoaderMsg) {
+func runEffects(settings *Settings, comms CommChannels) {
 	defer wg.Done()
 
 	display, err := sevenseg_backpack.Open(
@@ -250,10 +250,10 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
 		skip := false
 
 		select {
-		case <-quit:
+		case <-comms.quit:
 			log.Println("quit from runEffects")
 			return
-		case e = <-cE:
+		case e = <-comms.effects:
 			switch e.id {
 			case eDebug:
 				v, _ := toBool(e.val)
@@ -303,13 +303,13 @@ func runEffects(settings *Settings, quit chan struct{}, cE chan Effect, cL chan 
 						case modeCountdown:
 							// cancel the alarm
 							mode = modeClock
-							cL <- handledMessage(*countdown)
+							comms.loader <- handledMessage(*countdown)
 							countdown = nil
 							buttonPressActed = true
 						case modeClock:
 							// more than 5 seconds is "reload"
 							if info.duration > 4*time.Second {
-								cL <- reloadMessage()
+								comms.loader <- reloadMessage()
 								buttonPressActed = true
 							}
 						default:

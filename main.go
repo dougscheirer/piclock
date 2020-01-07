@@ -55,11 +55,7 @@ func main() {
 		Main app
 	*/
 
-	// TODO: move these into a struct?
-	quit := make(chan struct{}, 1)
-	alarmChannel := make(chan CheckMsg, 1)
-	effectChannel := make(chan Effect, 1)
-	loaderChannel := make(chan LoaderMsg, 1)
+	var comms = initCommChannels()
 
 	// wait on our workers:
 	// alarm fetcher
@@ -69,29 +65,29 @@ func main() {
 	wg.Add(4)
 
 	// start the effect thread so we can update the LEDs
-	go runEffects(settings, quit, effectChannel, loaderChannel)
+	go runEffects(settings, comms)
 	if !settings.GetBool("skiploader") {
 		// print the date and time of this build
 		info, err := os.Stat(os.Args[0])
 		if err == nil {
-			effectChannel <- printEffect("bLd.", 1500*time.Millisecond)
-			effectChannel <- printEffect("----", 500*time.Millisecond)
-			effectChannel <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
-			effectChannel <- printEffect("----", 500*time.Millisecond)
-			effectChannel <- printEffect(info.ModTime().Format("01.02"), 1500*time.Millisecond)
-			effectChannel <- printEffect("----", 500*time.Millisecond)
-			effectChannel <- printEffect(info.ModTime().Format("2006"), 1500*time.Millisecond)
-			effectChannel <- printEffect("----", 500*time.Millisecond)
+			comms.effects <- printEffect("bLd.", 1500*time.Millisecond)
+			comms.effects <- printEffect("----", 500*time.Millisecond)
+			comms.effects <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
+			comms.effects <- printEffect("----", 500*time.Millisecond)
+			comms.effects <- printEffect(info.ModTime().Format("01.02"), 1500*time.Millisecond)
+			comms.effects <- printEffect("----", 500*time.Millisecond)
+			comms.effects <- printEffect(info.ModTime().Format("2006"), 1500*time.Millisecond)
+			comms.effects <- printEffect("----", 500*time.Millisecond)
 		}
 	}
 
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop
-	confirm_calendar_auth(settings, false, effectChannel)
+	confirm_calendar_auth(settings, false, comms.effects)
 
-	go runGetAlarms(settings, quit, alarmChannel, effectChannel, loaderChannel)
-	go runCheckAlarm(settings, quit, alarmChannel, effectChannel, loaderChannel)
-	go runWatchButtons(settings, quit, effectChannel)
+	go runGetAlarms(settings, comms)
+	go runCheckAlarm(settings, comms)
+	go runWatchButtons(settings, comms)
 
 	wg.Wait()
 }

@@ -287,7 +287,7 @@ func downloadMusicFiles(settings *Settings, cE chan Effect) {
 	}
 }
 
-func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
+func runGetAlarms(settings *Settings, comms CommChannels) {
 	defer wg.Done()
 
 	// keep a list of things that we have done
@@ -308,10 +308,10 @@ func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE c
 
 		for keepReading {
 			select {
-			case <-quit:
+			case <-comms.quit:
 				log.Println("quit from runGetAlarms")
 				return
-			case msg := <-cL:
+			case msg := <-comms.loader:
 				switch msg.msg {
 				case "handled":
 					handledAlarms[msg.alarm.Id] = msg.alarm
@@ -320,7 +320,7 @@ func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE c
 				case "reload":
 					displayCurrent = true
 					reload = true
-					cE <- printEffect("rLd", 2*time.Second)
+					comms.effects <- printEffect("rLd", 2*time.Second)
 				default:
 					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
 				}
@@ -332,14 +332,14 @@ func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE c
 		if reload {
 			alarms, err := getAlarmsFromService(settings, handledAlarms)
 			if err != nil {
-				cE <- alarmError(5 * time.Second)
+				comms.effects <- alarmError(5 * time.Second)
 				log.Println(err.Error())
 				// try the backup
 				alarms, err = getAlarmsFromCache(settings, handledAlarms)
 				if err != nil {
 					// very bad, so...delete and try again later?
 					// TODO: more effects
-					cE <- alarmError(5 * time.Second)
+					comms.effects <- alarmError(5 * time.Second)
 					log.Printf("Error reading alarm cache: %s\n", err.Error())
 					time.Sleep(time.Second)
 					continue
@@ -347,12 +347,12 @@ func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE c
 			}
 
 			// launch a thread to grab all of the music we can
-			go downloadMusicFiles(settings, cE)
+			go downloadMusicFiles(settings, comms.effects)
 
 			lastRefresh = time.Now()
 
 			// tell cA that we have some alarms?
-			cA <- CheckMsg{alarms: alarms, displayCurrent: displayCurrent}
+			comms.alarms <- CheckMsg{alarms: alarms, displayCurrent: displayCurrent}
 		} else {
 			// wait a little
 			time.Sleep(100 * time.Millisecond)
@@ -360,7 +360,7 @@ func runGetAlarms(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE c
 	}
 }
 
-func runCheckAlarm(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE chan Effect, cL chan LoaderMsg) {
+func runCheckAlarm(settings *Settings, comms CommChannels) {
 	defer wg.Done()
 
 	alarms := make([]Alarm, 0)
@@ -371,10 +371,10 @@ func runCheckAlarm(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE 
 	for true {
 		// try reading from our channel
 		select {
-		case <-quit:
+		case <-comms.quit:
 			log.Println("quit from runCheckAlarm")
 			return
-		case checkMsg := <-cA:
+		case checkMsg := <-comms.alarms:
 			alarms = checkMsg.alarms
 			if checkMsg.displayCurrent {
 				lastAlarm = nil
@@ -392,10 +392,10 @@ func runCheckAlarm(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE 
 			// if alarms[index] != lastAlarm, run some effects
 			if lastAlarm == nil || lastAlarm.When != alarms[index].When {
 				lastAlarm = &alarms[index]
-				cE <- printEffect("AL:", 2*time.Second)
-				cE <- printEffect(lastAlarm.When.Format("15:04"), 3*time.Second)
-				cE <- printEffect(lastAlarm.When.Format("01.02"), 3*time.Second)
-				cE <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
+				comms.effects <- printEffect("AL:", 2*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("15:04"), 3*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("01.02"), 3*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
 			}
 
 			now := time.Now()
@@ -409,14 +409,14 @@ func runCheckAlarm(settings *Settings, quit chan struct{}, cA chan CheckMsg, cE 
 				// start a countdown?
 				countdown := settings.GetDuration("countdownTime")
 				if duration < countdown && !alarms[index].countdown {
-					cE <- setCountdownMode(alarms[0])
+					comms.effects <- setCountdownMode(alarms[0])
 					alarms[index].countdown = true
 				}
 			} else {
 				// Set alarm mode
-				cE <- setAlarmMode(alarms[index])
+				comms.effects <- setAlarmMode(alarms[index])
 				// let someone know we handled it
-				cL <- handledMessage(alarms[index])
+				comms.loader <- handledMessage(alarms[index])
 				alarms[index].disabled = true
 			}
 			break
