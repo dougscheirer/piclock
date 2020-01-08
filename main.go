@@ -55,17 +55,13 @@ func main() {
 		Main app
 	*/
 
+	// init comm channels for the go threads
 	var comms = initCommChannels()
-
-	// wait on our workers:
-	// alarm fetcher
-	// clock runner
-	// alarm checker
-	// button checker
-	wg.Add(4)
 
 	// start the effect thread so we can update the LEDs
 	go runEffects(settings, comms)
+
+	// loader messages?
 	if !settings.GetBool("skiploader") {
 		// print the date and time of this build
 		info, err := os.Stat(os.Args[0])
