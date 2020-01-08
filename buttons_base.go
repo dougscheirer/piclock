@@ -26,8 +26,8 @@ const (
 	BTN_UP   = 1
 )
 
-func checkButtons(btns []Button) ([]Button, error) {
-	now := time.Now()
+func checkButtons(btns []Button, runtime RuntimeConfig) ([]Button, error) {
+	now := runtime.rtc.now()
 	ret := make([]Button, len(btns))
 
 	var results []rpio.State
@@ -79,9 +79,10 @@ func checkButtons(btns []Button) ([]Button, error) {
 	return ret, nil
 }
 
-func runWatchButtons(settings *Settings, comms CommChannels) {
+func runWatchButtons(settings *Settings, runtime RuntimeConfig) {
 	defer wg.Done()
 
+	comms := runtime.comms
 	err := initButtons(settings)
 	if err != nil {
 		log.Println(err.Error())
@@ -96,7 +97,7 @@ func runWatchButtons(settings *Settings, comms CommChannels) {
 	// 25 -> main button
 	// 24 -> some other button
 
-	buttons, err = setupButtons(pins, settings)
+	buttons, err = setupButtons(pins, settings, runtime)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -111,7 +112,7 @@ func runWatchButtons(settings *Settings, comms CommChannels) {
 		default:
 		}
 
-		newButtons, err := checkButtons(buttons)
+		newButtons, err := checkButtons(buttons, runtime)
 		if err != nil {
 			// we're done
 			log.Println("quit from runWatchButtons")

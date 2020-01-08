@@ -4,7 +4,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	// gpio lib
 	"github.com/stianeikeland/go-rpio"
@@ -15,7 +14,7 @@ func init() {
 	features = append(features, "rpio-buttons")
 }
 
-func setupPinButtons(pins []int) ([]Button, error) {
+func setupPinButtons(pins []int, runtime RuntimeConfig) ([]Button, error) {
 	// map pins to buttons
 	err := rpio.Open()
 	if err != nil {
@@ -24,7 +23,7 @@ func setupPinButtons(pins []int) ([]Button, error) {
 	}
 
 	ret := make([]Button, len(pins))
-	now := time.Now()
+	now := runtime.rtc.now()
 
 	for i := 0; i < len(pins); i++ {
 		// TODO: configurable pin numbers and high or low
@@ -42,8 +41,8 @@ func setupPinButtons(pins []int) ([]Button, error) {
 	return ret, nil
 }
 
-func setupButtons(pins []int, settings *Settings) ([]Button, error) {
-	return setupPinButtons(pins)
+func setupButtons(pins []int, settings *Settings, runtime RuntimeConfig) ([]Button, error) {
+	return setupPinButtons(pins, runtime)
 }
 
 func initButtons(settings *Settings) error {

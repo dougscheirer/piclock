@@ -16,10 +16,10 @@ func init() {
 	features = append(features, "key-buttons")
 }
 
-func simSetupButtons(pins []int, buttonMap string) ([]Button, error) {
+func simSetupButtons(pins []int, buttonMap string, runtime RuntimeConfig) ([]Button, error) {
 	// return a list of buttons with the char as the "pin num"
 	ret := make([]Button, len(pins))
-	now := time.Now()
+	now := runtime.rtc.now()
 
 	for i := 0; i < len(ret); i++ {
 		if i >= len(buttonMap) {
@@ -95,12 +95,12 @@ func readButtons(btns []Button) ([]rpio.State, error) {
 	return checkKeyboard(btns)
 }
 
-func setupButtons(pins []int, settings *Settings) ([]Button, error) {
+func setupButtons(pins []int, settings *Settings, runtime RuntimeConfig) ([]Button, error) {
 	var buttons []Button
 	var err error
 
 	simulated := settings.GetString("button_simulated")
-	buttons, err = simSetupButtons(pins, simulated)
+	buttons, err = simSetupButtons(pins, simulated, runtime)
 
 	defer wg.Done()
 	return buttons, err
