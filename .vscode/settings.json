@@ -1,0 +1,4 @@
+{
+  "go.buildTags": "noaudio nobuttons"
+
+}
