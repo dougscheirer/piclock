@@ -1,21 +1,22 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"time"
-	"runtime"
-	"flag"
-	"io/ioutil"
-	"github.com/buger/jsonparser"
 	"errors"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/buger/jsonparser"
 )
 
 // keep settings generic strings, type-convert on the fly
 type Settings struct {
-	settings map[string]interface{};
+	settings map[string]interface{}
 }
 
 func defaultSettings() *Settings {
@@ -33,86 +34,89 @@ func defaultSettings() *Settings {
 	s["debug_dump"] = false
 	s["button_simulated"] = ""
 	s["logFile"] = "/var/log/piclock.log"
-	s["cached_alarms"] = false	// only use the cache, pretend that gcal is down
+	s["cached_alarms"] = false // only use the cache, pretend that gcal is down
 	s["musicDownloads"] = "http://192.168.0.105/pimusic"
 	s["musicPath"] = "/etc/default/piclock/music"
 	s["blinkTime"] = true
 	s["strobe"] = true
 	s["skiploader"] = false
-	s["fake_alarm"]  =false
+	s["fake_alarm"] = false
+	s["oath"] = false
 
 	on := true
-	if runtime.GOARCH == "arm" { on = false }
+	if runtime.GOARCH == "arm" {
+		on = false
+	}
 	s["i2c_simulated"] = on
 
 	return &Settings{settings: s}
 }
 
-func (this *Settings) settingsFromJSON(data []byte) (error) {
+func (this *Settings) settingsFromJSON(data []byte) error {
 	tmp := defaultSettings()
 	for k, initVal := range tmp.settings {
 		// ignore missing fields;
 		_, err := jsonparser.GetString(data, k)
 		if err != nil {
-			log.Printf("Skipping key %s",k)
+			log.Printf("Skipping key %s", k)
 			continue
 		}
 
 		switch initVal.(type) {
-			case uint8:
-				var val uint64
-				valSigned, err := jsonparser.GetInt(data, k)
-				if err != nil {
-					// try strconv ParseUint
-					valString, err2 := jsonparser.GetString(data, k)
-					if err2 == nil {
-						valSigned, err = strconv.ParseInt(valString, 0, 64)
-						val = uint64(valSigned)
-					}
-				} else {
+		case uint8:
+			var val uint64
+			valSigned, err := jsonparser.GetInt(data, k)
+			if err != nil {
+				// try strconv ParseUint
+				valString, err2 := jsonparser.GetString(data, k)
+				if err2 == nil {
+					valSigned, err = strconv.ParseInt(valString, 0, 64)
 					val = uint64(valSigned)
 				}
-				// TODO: range check
+			} else {
+				val = uint64(valSigned)
+			}
+			// TODO: range check
+			if err == nil {
+				this.settings[k] = byte(val)
+			}
+		case int:
+			this.settings[k], err = jsonparser.GetInt(data, k)
+		case int64:
+			this.settings[k], err = jsonparser.GetInt(data, k)
+		case bool:
+			var bVal bool
+			bVal, err = jsonparser.GetBoolean(data, k)
+			if err != nil {
+				// try true and false
+				s, _ := jsonparser.GetString(data, k)
+				s = strings.ToLower(s)
+				switch s {
+				case "true":
+					bVal = true
+				case "false":
+					bVal = false
+				default:
+					// nothing, fail
+					return err
+				}
+			}
+			this.settings[k] = bVal
+			err = nil
+		case time.Duration:
+			var dur string
+			dur, err = jsonparser.GetString(data, k)
+			if err == nil {
+				var dur2 time.Duration
+				dur2, err = time.ParseDuration(dur)
 				if err == nil {
-					this.settings[k] = byte(val)
+					this.settings[k] = dur2
 				}
-			case int:
-				this.settings[k], err = jsonparser.GetInt(data, k)
-			case int64:
-				this.settings[k], err = jsonparser.GetInt(data, k)
-			case bool:
-				var bVal bool
-				bVal, err = jsonparser.GetBoolean(data, k)
-				if err != nil {
-					// try true and false
-					s, _ := jsonparser.GetString(data, k)
-					s = strings.ToLower(s)
-					switch s {
-					case "true":
-						bVal = true
-					case "false":
-						bVal = false
-					default:
-						// nothing, fail
-						return err
-					}
-				}
-				this.settings[k] = bVal
-				err = nil
-			case time.Duration:
-				var dur string
-				dur, err = jsonparser.GetString(data, k)
-				if err == nil {
-					var dur2 time.Duration
-					dur2, err = time.ParseDuration(dur)
-					if err == nil {
-						this.settings[k] = dur2
-					}
-				}
-			case string:
-				this.settings[k], err = jsonparser.GetString(data, k)
-			default:
-				err = errors.New(fmt.Sprintf("Bad type: %T", initVal))
+			}
+		case string:
+			this.settings[k], err = jsonparser.GetString(data, k)
+		default:
+			err = errors.New(fmt.Sprintf("Bad type: %T", initVal))
 		}
 		if err != nil {
 			return err
@@ -129,11 +133,17 @@ func InitSettings() *Settings {
 
 	// define our flags first
 	configFile := flag.String("config", "/etc/default/piclock/piclock.conf", "config file path")
+	oauthOnly := flag.Bool("oauth", false, "connect and generate the oauth token")
 
 	// parse the flags
 	flag.Parse()
 
-	// try to open it
+	// oauth?
+	if *oauthOnly != false {
+		s.settings["oauth"] = true
+	}
+
+	// try to open the config file
 	data, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		log.Println(fmt.Sprintf("Could not load conf file '%s', using defaults", *configFile))
@@ -153,48 +163,48 @@ func InitSettings() *Settings {
 
 func (this *Settings) GetString(key string) string {
 	switch v := this.settings[key].(type) {
-		case string:
-			return v
-		default:
-			return ""
+	case string:
+		return v
+	default:
+		return ""
 	}
 }
 
 func (this *Settings) GetBool(key string) bool {
 	switch v := this.settings[key].(type) {
-		case bool:
-			return v
-		default:
-			return false
+	case bool:
+		return v
+	default:
+		return false
 	}
 }
 
 func (this *Settings) GetDuration(key string) time.Duration {
 	switch v := this.settings[key].(type) {
-		case time.Duration:
-			return v
-		default:
-			return -1
+	case time.Duration:
+		return v
+	default:
+		return -1
 	}
 }
 
 func (this *Settings) GetByte(key string) byte {
 	switch v := this.settings[key].(type) {
-		case byte:
-			return v
-		case int:	// cast to bye
-			return byte(v)
-		default:
-			return 0
+	case byte:
+		return v
+	case int: // cast to bye
+		return byte(v)
+	default:
+		return 0
 	}
 }
 
 func (this *Settings) GetInt(key string) int {
 	switch v := this.settings[key].(type) {
-		case int:
-			return v
-		default:
-			return 0
+	case int:
+		return v
+	default:
+		return 0
 	}
 }
 
