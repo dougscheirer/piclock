@@ -51,6 +51,10 @@ func initButtons(settings *Settings) error {
 	return nil
 }
 
+func closeButtons() {
+	// N/A, nothing special
+}
+
 func readButtons(btns []Button) ([]rpio.State, error) {
 	ret := make([]rpio.State, len(btns))
 	for i := 0; i < len(btns); i++ {

@@ -116,7 +116,9 @@ func initButtons(settings *Settings) error {
 	termbox.Flush()
 
 	// close it later
-	defer termbox.Close()
-
 	return nil
+}
+
+func closeButtons() {
+	termbox.Close()
 }

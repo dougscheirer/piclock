@@ -88,6 +88,9 @@ func runWatchButtons(settings *Settings, comms CommChannels) {
 		return
 	}
 
+	// we now should defer the closeButtons call to when this function exists
+	defer closeButtons()
+
 	var buttons []Button
 	pins := []int{25, 24}
 	// 25 -> main button
@@ -103,7 +106,7 @@ func runWatchButtons(settings *Settings, comms CommChannels) {
 		select {
 		case <-comms.quit:
 			// we shouldn't get here ATM
-			log.Println("quit from runWatchButtons")
+			log.Println("quit from runWatchButtons (surprise)")
 			return
 		default:
 		}
