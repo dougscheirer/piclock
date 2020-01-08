@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"piclock/sevenseg_backpack"
 	"time"
@@ -67,6 +68,22 @@ func toggleDebugDump(on bool) Effect {
 
 func printEffect(s string, d time.Duration) Effect {
 	return Effect{id: ePrint, val: Print{s: s, d: d}}
+}
+
+func showLoader(effects chan Effect) {
+	info, err := os.Stat(os.Args[0])
+	if err != nil {
+		// TODO: log error?  non-fatal
+	}
+
+	effects <- printEffect("bLd.", 1500*time.Millisecond)
+	effects <- printEffect("----", 500*time.Millisecond)
+	effects <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
+	effects <- printEffect("----", 500*time.Millisecond)
+	effects <- printEffect(info.ModTime().Format("01.02"), 1500*time.Millisecond)
+	effects <- printEffect("----", 500*time.Millisecond)
+	effects <- printEffect(info.ModTime().Format("2006"), 1500*time.Millisecond)
+	effects <- printEffect("----", 500*time.Millisecond)
 }
 
 func replaceAtIndex(in string, r rune, i int) string {
@@ -138,10 +155,10 @@ func toPrint(val interface{}) (*Print, error) {
 	}
 }
 
-func displayClock(display *sevenseg_backpack.Sevenseg, blinkColon bool, dot bool) {
+func displayClock(runtime RuntimeConfig, display *sevenseg_backpack.Sevenseg, blinkColon bool, dot bool) {
 	// standard time display
 	colon := "15:04"
-	now := time.Now()
+	now := runtime.wallClock.now()
 	if blinkColon && now.Second()%2 == 0 {
 		// no space required for the colon
 		colon = "1504"
@@ -160,9 +177,9 @@ func displayClock(display *sevenseg_backpack.Sevenseg, blinkColon bool, dot bool
 	}
 }
 
-func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot bool) bool {
+func displayCountdown(runtime RuntimeConfig, display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot bool) bool {
 	// calculate 10ths of secs to alarm time
-	count := alarm.When.Sub(time.Now()) / (time.Second / 10)
+	count := alarm.When.Sub(runtime.wallClock.now()) / (time.Second / 10)
 	if count > 9999 {
 		count = 9999
 	} else if count <= 0 {
@@ -181,7 +198,7 @@ func displayCountdown(display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot boo
 	return true
 }
 
-func playAlarmEffect(settings *Settings, alm *Alarm, stop chan bool) {
+func playAlarmEffect(settings *Settings, alm *Alarm, stop chan bool, runtime RuntimeConfig) {
 	switch alm.Effect {
 	case almMusic:
 		PlayMP3(alm.Extra, true, stop)
@@ -194,7 +211,7 @@ func playAlarmEffect(settings *Settings, alm *Alarm, stop chan bool) {
 		break
 	default:
 		// play a random mp3 in the cache
-		s1 := rand.NewSource(time.Now().UnixNano())
+		s1 := rand.NewSource(runtime.rtc.now().UnixNano())
 		r1 := rand.New(s1)
 
 		files, err := filepath.Glob(settings.GetString("musicPath") + "/*")
@@ -213,8 +230,10 @@ func stopAlarmEffect(stop chan bool) {
 	stop <- true
 }
 
-func runEffects(settings *Settings, comms CommChannels) {
+func runEffects(settings *Settings, runtime RuntimeConfig) {
 	defer wg.Done()
+
+	comms := runtime.comms
 
 	display, err := sevenseg_backpack.Open(
 		settings.GetByte("i2c_device"),
@@ -284,7 +303,7 @@ func runEffects(settings *Settings, comms CommChannels) {
 				sleepTime = 10 * time.Millisecond
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
-				playAlarmEffect(settings, alm, stopAlarm)
+				playAlarmEffect(settings, alm, stopAlarm, runtime)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed
@@ -335,9 +354,9 @@ func runEffects(settings *Settings, comms CommChannels) {
 
 		switch mode {
 		case modeClock:
-			displayClock(display, settings.GetBool("blinkTime"), buttonDot)
+			displayClock(runtime, display, settings.GetBool("blinkTime"), buttonDot)
 		case modeCountdown:
-			if !displayCountdown(display, countdown, buttonDot) {
+			if !displayCountdown(runtime, display, countdown, buttonDot) {
 				mode = modeClock
 				sleepTime = DEFAULT_SLEEP
 			}

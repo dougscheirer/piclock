@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
 )
 
 // piclock -config={config file}
@@ -55,35 +54,25 @@ func main() {
 		Main app
 	*/
 
-	// init comm channels for the go threads
-	var comms = initCommChannels()
+	// init runtime objects with a real clock
+	var runtime = initRuntime(rtc{}, rtc{})
 
 	// start the effect thread so we can update the LEDs
-	go runEffects(settings, comms)
+	go runEffects(settings, runtime)
 
 	// loader messages?
 	if !settings.GetBool("skiploader") {
 		// print the date and time of this build
-		info, err := os.Stat(os.Args[0])
-		if err == nil {
-			comms.effects <- printEffect("bLd.", 1500*time.Millisecond)
-			comms.effects <- printEffect("----", 500*time.Millisecond)
-			comms.effects <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
-			comms.effects <- printEffect("----", 500*time.Millisecond)
-			comms.effects <- printEffect(info.ModTime().Format("01.02"), 1500*time.Millisecond)
-			comms.effects <- printEffect("----", 500*time.Millisecond)
-			comms.effects <- printEffect(info.ModTime().Format("2006"), 1500*time.Millisecond)
-			comms.effects <- printEffect("----", 500*time.Millisecond)
-		}
+		showLoader(runtime.comms.effects)
 	}
 
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop
-	confirm_calendar_auth(settings, false, comms.effects)
+	confirm_calendar_auth(settings, false, runtime.comms.effects)
 
-	go runGetAlarms(settings, comms)
-	go runCheckAlarm(settings, comms)
-	go runWatchButtons(settings, comms)
+	go runGetAlarms(settings, runtime)
+	go runCheckAlarm(settings, runtime)
+	go runWatchButtons(settings, runtime)
 
 	wg.Wait()
 }

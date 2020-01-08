@@ -81,7 +81,7 @@ func cacheFilename(settings *Settings) string {
 	return settings.GetString("alarmPath") + "/alarm.json"
 }
 
-func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
+func getAlarmsFromService(settings *Settings, runtime RuntimeConfig, handled map[string]Alarm) ([]Alarm, error) {
 	alarms := make([]Alarm, 0)
 	srv := GetCalenderService(settings, false)
 
@@ -112,7 +112,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 		return alarms, errors.New(fmt.Sprintf("Could not find calendar %s", calName))
 	}
 	// get next 10 (?) alarms
-	t := time.Now().Format(time.RFC3339)
+	t := runtime.wallClock.now().Format(time.RFC3339)
 	events, err := srv.Events.List(id).
 		ShowDeleted(false).
 		SingleEvents(true).
@@ -153,7 +153,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 				continue
 			}
 
-			if when.Sub(time.Now()) < 0 {
+			if when.Sub(runtime.wallClock.now()) < 0 {
 				log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
 				continue
 			}
@@ -188,9 +188,10 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 		writeAlarms(alarms, cacheFile)
 	}
 
+	// TODO: move this to the test framework
 	// if we're developing, make an alarm 1 minute in the future
 	if settings.GetBool("fake_alarm") {
-		alm := Alarm{Id: "thisistotallyfake", Name: "who cares", When: time.Now().Add(time.Duration(1) * time.Minute), disabled: false, Effect: almRandom}
+		alm := Alarm{Id: "thisistotallyfake", Name: "who cares", When: runtime.wallClock.now().Add(time.Duration(1) * time.Minute), disabled: false, Effect: almRandom}
 		alarms = append(alarms, alm)
 		writeAlarms(alarms, cacheFile)
 	}
@@ -198,7 +199,7 @@ func getAlarmsFromService(settings *Settings, handled map[string]Alarm) ([]Alarm
 	return alarms, nil
 }
 
-func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, error) {
+func getAlarmsFromCache(settings *Settings, runtime RuntimeConfig, handled map[string]Alarm) ([]Alarm, error) {
 	alarms := make([]Alarm, 0)
 	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
 		return alarms, nil
@@ -218,7 +219,7 @@ func getAlarmsFromCache(settings *Settings, handled map[string]Alarm) ([]Alarm, 
 			log.Println(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
 			alarms = append(alarms[:i], alarms[i+1:]...)
 		}
-		if alarms[i].When.Sub(time.Now()) < 0 {
+		if alarms[i].When.Sub(runtime.wallClock.now()) < 0 {
 			// remove is append two slices without the part we don't want
 			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].Id))
 			alarms = append(alarms[:i], alarms[i+1:]...)
@@ -287,12 +288,13 @@ func downloadMusicFiles(settings *Settings, cE chan Effect) {
 	}
 }
 
-func runGetAlarms(settings *Settings, comms CommChannels) {
+func runGetAlarms(settings *Settings, runtime RuntimeConfig) {
 	defer wg.Done()
 
 	// keep a list of things that we have done
 	// TODO: GC the list occassionally
 	handledAlarms := map[string]Alarm{}
+	comms := runtime.comms
 
 	var lastRefresh time.Time
 
@@ -302,7 +304,7 @@ func runGetAlarms(settings *Settings, comms CommChannels) {
 		reload := false
 		displayCurrent := false
 
-		if time.Now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
+		if runtime.rtc.now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
 			reload = true
 		}
 
@@ -330,12 +332,12 @@ func runGetAlarms(settings *Settings, comms CommChannels) {
 		}
 
 		if reload {
-			alarms, err := getAlarmsFromService(settings, handledAlarms)
+			alarms, err := getAlarmsFromService(settings, runtime, handledAlarms)
 			if err != nil {
 				comms.effects <- alarmError(5 * time.Second)
 				log.Println(err.Error())
 				// try the backup
-				alarms, err = getAlarmsFromCache(settings, handledAlarms)
+				alarms, err = getAlarmsFromCache(settings, runtime, handledAlarms)
 				if err != nil {
 					// very bad, so...delete and try again later?
 					// TODO: more effects
@@ -349,7 +351,7 @@ func runGetAlarms(settings *Settings, comms CommChannels) {
 			// launch a thread to grab all of the music we can
 			go downloadMusicFiles(settings, comms.effects)
 
-			lastRefresh = time.Now()
+			lastRefresh = runtime.rtc.now()
 
 			// tell cA that we have some alarms?
 			comms.alarms <- CheckMsg{alarms: alarms, displayCurrent: displayCurrent}
@@ -360,10 +362,12 @@ func runGetAlarms(settings *Settings, comms CommChannels) {
 	}
 }
 
-func runCheckAlarm(settings *Settings, comms CommChannels) {
+func runCheckAlarm(settings *Settings, runtime RuntimeConfig) {
 	defer wg.Done()
 
 	alarms := make([]Alarm, 0)
+	comms := runtime.comms
+
 	var lastLogSecond = -1
 
 	var lastAlarm *Alarm
@@ -398,7 +402,7 @@ func runCheckAlarm(settings *Settings, comms CommChannels) {
 				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
 			}
 
-			now := time.Now()
+			now := runtime.wallClock.now()
 			duration := alarms[index].When.Sub(now)
 			if lastLogSecond != now.Second() && now.Second()%30 == 0 {
 				lastLogSecond = now.Second()
