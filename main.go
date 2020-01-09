@@ -61,7 +61,7 @@ func main() {
 	go runEffects(settings, runtime)
 
 	// loader messages?
-	if !settings.GetBool("skiploader") {
+	if settings.GetBool("skiploader") {
 		// print the date and time of this build
 		showLoader(runtime.comms.effects)
 	}

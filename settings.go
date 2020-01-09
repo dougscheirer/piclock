@@ -130,8 +130,7 @@ func LoadSettings(fname string, s *Settings) *Settings {
 	// try to open the config file
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
-		log.Println(fmt.Sprintf("Could not load conf file '%s', using defaults", fname))
-		return s
+		log.Fatalf("Could not load conf file '%s', aborting", fname)
 	}
 
 	log.Println(fmt.Sprintf("Reading configuration from '%s'", fname))
@@ -139,7 +138,7 @@ func LoadSettings(fname string, s *Settings) *Settings {
 	// json parse it
 	if err := s.settingsFromJSON(data); err != nil {
 		// log a message about crappy JSON?
-		log.Println(err.Error())
+		log.Fatalf(err.Error())
 	}
 	return s
 }
@@ -151,7 +150,7 @@ func InitSettings() *Settings {
 	s := defaultSettings()
 
 	// define our flags first
-	configFile := flag.String("config", "/etc/default/piclock/piclock.conf", "config file path")
+	configFile := flag.String("config", "", "config file path")
 	oauthOnly := flag.Bool("oauth", false, "connect and generate the oauth token")
 
 	// parse the flags
@@ -160,6 +159,11 @@ func InitSettings() *Settings {
 	// oauth?
 	if *oauthOnly != false {
 		s.settings["oauth"] = true
+	}
+
+	// no config file means use defaults
+	if *configFile == "" {
+		return s
 	}
 
 	return LoadSettings(*configFile, s)
