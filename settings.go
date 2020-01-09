@@ -40,7 +40,7 @@ func defaultSettings() *settings {
 	s["strobe"] = true
 	s["skiploader"] = false
 	s["fake_alarm"] = false
-	s["oath"] = false
+	s["oauth"] = false
 
 	on := true
 	if runtime.GOARCH == "arm" {
