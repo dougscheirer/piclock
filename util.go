@@ -41,13 +41,6 @@ func initCommChannels() CommChannels {
 	effectChannel := make(chan Effect, 1)
 	loaderChannel := make(chan LoaderMsg, 1)
 
-	// wait on our workers:
-	// alarm fetcher
-	// clock runner (effects)
-	// alarm checker
-	// button checker
-	wg.Add(4)
-
 	return CommChannels{quit: quit, alarms: alarmChannel, effects: effectChannel, loader: loaderChannel}
 }
 

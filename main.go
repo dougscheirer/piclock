@@ -27,7 +27,7 @@ func main() {
 		f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
 			wd, _ := os.Getwd()
-			log.Printf("CWD: %s", wd)
+			log.Printf("Error opening logfile from %s", wd)
 			log.Fatal(err)
 		}
 		defer f.Close()
@@ -74,5 +74,11 @@ func main() {
 	go runCheckAlarm(settings, runtime)
 	go runWatchButtons(settings, runtime)
 
+	// wait on our workers:
+	// alarm fetcher
+	// clock runner (effects)
+	// alarm checker
+	// button checker
+	wg.Add(4)
 	wg.Wait()
 }

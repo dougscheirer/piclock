@@ -125,6 +125,25 @@ func (this *Settings) settingsFromJSON(data []byte) error {
 	return nil
 }
 
+func LoadSettings(fname string, s *Settings) *Settings {
+	// defaults are in s
+	// try to open the config file
+	data, err := ioutil.ReadFile(fname)
+	if err != nil {
+		log.Println(fmt.Sprintf("Could not load conf file '%s', using defaults", fname))
+		return s
+	}
+
+	log.Println(fmt.Sprintf("Reading configuration from '%s'", fname))
+
+	// json parse it
+	if err := s.settingsFromJSON(data); err != nil {
+		// log a message about crappy JSON?
+		log.Println(err.Error())
+	}
+	return s
+}
+
 func InitSettings() *Settings {
 	log.Println("initSettings")
 
@@ -143,22 +162,7 @@ func InitSettings() *Settings {
 		s.settings["oauth"] = true
 	}
 
-	// try to open the config file
-	data, err := ioutil.ReadFile(*configFile)
-	if err != nil {
-		log.Println(fmt.Sprintf("Could not load conf file '%s', using defaults", *configFile))
-		return s
-	}
-
-	log.Println(fmt.Sprintf("Reading configuration from '%s'", *configFile))
-
-	// json parse it
-	if err := s.settingsFromJSON(data); err != nil {
-		// log a message about crappy JSON?
-		log.Println(err.Error())
-	}
-
-	return s
+	return LoadSettings(*configFile, s)
 }
 
 func (this *Settings) GetString(key string) string {
