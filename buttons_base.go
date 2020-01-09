@@ -8,27 +8,27 @@ import (
 )
 
 // check the press state, and return the press state
-type PressState struct {
+type pressState struct {
 	pressed bool      // is it pressed?
 	start   time.Time // when did this state start?
 	count   int       // # of whole seconds since it started
 	changed bool      // did the above data change at all?
 }
 
-type Button struct {
+type button struct {
 	pinNum int      // number of GPIO pin
 	pin    rpio.Pin // rpio pin
-	state  PressState
+	state  pressState
 }
 
 const (
-	BTN_DOWN = 0 // 0 is pressed, we're GNDing the button (pullup mode)
-	BTN_UP   = 1
+	btnDown = 0 // 0 is pressed, we're GNDing the button (pullup mode)
+	btnUp   = 1
 )
 
-func checkButtons(btns []Button, runtime RuntimeConfig) ([]Button, error) {
+func checkButtons(btns []button, runtime runtimeConfig) ([]button, error) {
 	now := runtime.rtc.now()
-	ret := make([]Button, len(btns))
+	ret := make([]button, len(btns))
 
 	var results []rpio.State
 	var err error
@@ -44,7 +44,7 @@ func checkButtons(btns []Button, runtime RuntimeConfig) ([]Button, error) {
 		ret[i] = btns[i]
 		ret[i].state.changed = false
 
-		if res == BTN_DOWN {
+		if res == btnDown {
 			// is this a change from before?
 			if ret[i].state.pressed {
 				// no button state change, update the duration count
@@ -54,7 +54,7 @@ func checkButtons(btns []Button, runtime RuntimeConfig) ([]Button, error) {
 				}
 			} else {
 				// just noticed it was pressed
-				ret[i].state = PressState{pressed: true, start: now, count: 0, changed: true}
+				ret[i].state = pressState{pressed: true, start: now, count: 0, changed: true}
 			}
 		} else {
 			// not pressed, is that a state change?
@@ -68,18 +68,18 @@ func checkButtons(btns []Button, runtime RuntimeConfig) ([]Button, error) {
 				   }*/
 			} else {
 				// just noticed the release
-				ret[i].state = PressState{pressed: false, start: now, count: 0, changed: true}
+				ret[i].state = pressState{pressed: false, start: now, count: 0, changed: true}
 			}
 		}
 		if ret[i].state.changed {
-			log.Printf("Button changed state: %+v", ret[i])
+			log.Printf("button changed state: %+v", ret[i])
 		}
 	}
 
 	return ret, nil
 }
 
-func runWatchButtons(settings *Settings, runtime RuntimeConfig) {
+func runWatchButtons(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
 
 	comms := runtime.comms
@@ -92,7 +92,7 @@ func runWatchButtons(settings *Settings, runtime RuntimeConfig) {
 	// we now should defer the closeButtons call to when this function exists
 	defer closeButtons()
 
-	var buttons []Button
+	var buttons []button
 	pins := []int{25, 24}
 	// 25 -> main button
 	// 24 -> some other button

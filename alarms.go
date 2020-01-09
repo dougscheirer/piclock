@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-type Alarm struct {
-	Id        string
+type alarm struct {
+	ID        string
 	Name      string
 	When      time.Time
 	Effect    int
@@ -22,18 +22,18 @@ type Alarm struct {
 	countdown bool // set to true when we're checking alarms and we signaled countdown
 }
 
-type LoaderMsg struct {
+type loaderMsg struct {
 	msg   string
-	alarm Alarm
+	alarm alarm
 	val   interface{}
 }
 
-type CheckMsg struct {
+type checkMsg struct {
 	displayCurrent bool
-	alarms         []Alarm
+	alarms         []alarm
 }
 
-type MusicFile struct {
+type musicFile struct {
 	Name string
 	Path string
 }
@@ -47,15 +47,15 @@ const (
 	almMax
 )
 
-func handledMessage(alm Alarm) LoaderMsg {
-	return LoaderMsg{msg: "handled", alarm: alm}
+func handledMessage(alm alarm) loaderMsg {
+	return loaderMsg{msg: "handled", alarm: alm}
 }
 
-func reloadMessage() LoaderMsg {
-	return LoaderMsg{msg: "reload"}
+func reloadMessage() loaderMsg {
+	return loaderMsg{msg: "reload"}
 }
 
-func writeAlarms(alarms []Alarm, fname string) error {
+func writeAlarms(alarms []alarm, fname string) error {
 	output, err := json.Marshal(alarms)
 	log.Println(string(output))
 	if err != nil {
@@ -64,9 +64,9 @@ func writeAlarms(alarms []Alarm, fname string) error {
 	return ioutil.WriteFile(fname, output, 0644)
 }
 
-func handledAlarm(alarm Alarm, handled map[string]Alarm) bool {
+func handledAlarm(alarm alarm, handled map[string]alarm) bool {
 	// if the time changed, consider it "unhandled"
-	v, ok := handled[alarm.Id]
+	v, ok := handled[alarm.ID]
 	if !ok {
 		return false
 	}
@@ -77,15 +77,15 @@ func handledAlarm(alarm Alarm, handled map[string]Alarm) bool {
 	return true
 }
 
-func cacheFilename(settings *Settings) string {
+func cacheFilename(settings *settings) string {
 	return settings.GetString("alarmPath") + "/alarm.json"
 }
 
-func getAlarmsFromService(settings *Settings, runtime RuntimeConfig, handled map[string]Alarm) ([]Alarm, error) {
-	alarms := make([]Alarm, 0)
-	srv := GetCalenderService(settings, false)
+func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map[string]alarm) ([]alarm, error) {
+	alarms := make([]alarm, 0)
+	srv := getCalenderService(settings, false)
 
-	// TODO: if it wasn't available, send an Alarm message
+	// TODO: if it wasn't available, send an alarm message
 	if srv == nil {
 		return alarms, errors.New("Failed to get calendar service")
 	}
@@ -109,7 +109,7 @@ func getAlarmsFromService(settings *Settings, runtime RuntimeConfig, handled map
 	}
 
 	if id == "" {
-		return alarms, errors.New(fmt.Sprintf("Could not find calendar %s", calName))
+		return alarms, fmt.Errorf("Could not find calendar %s", calName)
 	}
 	// get next 10 (?) alarms
 	t := runtime.wallClock.now().Format(time.RFC3339)
@@ -158,7 +158,7 @@ func getAlarmsFromService(settings *Settings, runtime RuntimeConfig, handled map
 				continue
 			}
 
-			alm := Alarm{Id: i.Id, Name: i.Summary, When: when, disabled: false}
+			alm := alarm{ID: i.Id, Name: i.Summary, When: when, disabled: false}
 
 			// look for hashtags (does not work ATM, the gAPI is broken I think)
 			log.Println(i.Summary)
@@ -177,7 +177,7 @@ func getAlarmsFromService(settings *Settings, runtime RuntimeConfig, handled map
 
 			// has this one been handled?
 			if handledAlarm(alm, handled) {
-				log.Println(fmt.Sprintf("Skipping handled alarm: %s", alm.Id))
+				log.Println(fmt.Sprintf("Skipping handled alarm: %s", alm.ID))
 				continue
 			}
 
@@ -191,7 +191,7 @@ func getAlarmsFromService(settings *Settings, runtime RuntimeConfig, handled map
 	// TODO: move this to the test framework
 	// if we're developing, make an alarm 1 minute in the future
 	if settings.GetBool("fake_alarm") {
-		alm := Alarm{Id: "thisistotallyfake", Name: "who cares", When: runtime.wallClock.now().Add(time.Duration(1) * time.Minute), disabled: false, Effect: almRandom}
+		alm := alarm{ID: "thisistotallyfake", Name: "who cares", When: runtime.wallClock.now().Add(time.Duration(1) * time.Minute), disabled: false, Effect: almRandom}
 		alarms = append(alarms, alm)
 		writeAlarms(alarms, cacheFile)
 	}
@@ -199,8 +199,8 @@ func getAlarmsFromService(settings *Settings, runtime RuntimeConfig, handled map
 	return alarms, nil
 }
 
-func getAlarmsFromCache(settings *Settings, runtime RuntimeConfig, handled map[string]Alarm) ([]Alarm, error) {
-	alarms := make([]Alarm, 0)
+func getAlarmsFromCache(settings *settings, runtime runtimeConfig, handled map[string]alarm) ([]alarm, error) {
+	alarms := make([]alarm, 0)
 	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
 		return alarms, nil
 	}
@@ -216,12 +216,12 @@ func getAlarmsFromCache(settings *Settings, runtime RuntimeConfig, handled map[s
 	for i := len(alarms) - 1; i >= 0; i-- {
 		if handledAlarm(alarms[i], handled) {
 			// remove is append two slices without the part we don't want
-			log.Println(fmt.Sprintf("Discard handled alarm: %s", alarms[i].Id))
+			log.Println(fmt.Sprintf("Discard handled alarm: %s", alarms[i].ID))
 			alarms = append(alarms[:i], alarms[i+1:]...)
 		}
 		if alarms[i].When.Sub(runtime.wallClock.now()) < 0 {
 			// remove is append two slices without the part we don't want
-			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].Id))
+			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
 			alarms = append(alarms[:i], alarms[i+1:]...)
 		}
 	}
@@ -229,7 +229,7 @@ func getAlarmsFromCache(settings *Settings, runtime RuntimeConfig, handled map[s
 	return alarms, nil
 }
 
-func downloadMusicFiles(settings *Settings, cE chan Effect) {
+func downloadMusicFiles(settings *settings, cE chan effect) {
 	// this is currently dumb, it just uses a list from musicDownloads (music.json)
 	// and walks through it, downloading to the music dir
 	jsonPath := settings.GetString("musicDownloads") + "/music.json"
@@ -250,7 +250,7 @@ func downloadMusicFiles(settings *Settings, cE chan Effect) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
-	files := make([]MusicFile, 0)
+	files := make([]musicFile, 0)
 	err = json.Unmarshal(body, &files)
 	if err != nil {
 		log.Printf("Error unmarshalling files: " + err.Error())
@@ -288,12 +288,12 @@ func downloadMusicFiles(settings *Settings, cE chan Effect) {
 	}
 }
 
-func runGetAlarms(settings *Settings, runtime RuntimeConfig) {
+func runGetAlarms(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
 
 	// keep a list of things that we have done
 	// TODO: GC the list occassionally
-	handledAlarms := map[string]Alarm{}
+	handledAlarms := map[string]alarm{}
 	comms := runtime.comms
 
 	var lastRefresh time.Time
@@ -316,7 +316,7 @@ func runGetAlarms(settings *Settings, runtime RuntimeConfig) {
 			case msg := <-comms.loader:
 				switch msg.msg {
 				case "handled":
-					handledAlarms[msg.alarm.Id] = msg.alarm
+					handledAlarms[msg.alarm.ID] = msg.alarm
 					// reload sends a new list without the ones that are handled
 					displayCurrent = true
 				case "reload":
@@ -354,7 +354,7 @@ func runGetAlarms(settings *Settings, runtime RuntimeConfig) {
 			lastRefresh = runtime.rtc.now()
 
 			// tell cA that we have some alarms?
-			comms.alarms <- CheckMsg{alarms: alarms, displayCurrent: displayCurrent}
+			comms.alarms <- checkMsg{alarms: alarms, displayCurrent: displayCurrent}
 		} else {
 			// wait a little
 			time.Sleep(100 * time.Millisecond)
@@ -362,15 +362,15 @@ func runGetAlarms(settings *Settings, runtime RuntimeConfig) {
 	}
 }
 
-func runCheckAlarm(settings *Settings, runtime RuntimeConfig) {
+func runCheckAlarm(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
 
-	alarms := make([]Alarm, 0)
+	alarms := make([]alarm, 0)
 	comms := runtime.comms
 
 	var lastLogSecond = -1
 
-	var lastAlarm *Alarm
+	var lastAlarm *alarm
 
 	for true {
 		// try reading from our channel

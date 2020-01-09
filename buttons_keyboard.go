@@ -16,26 +16,26 @@ func init() {
 	features = append(features, "key-buttons")
 }
 
-func simSetupButtons(pins []int, buttonMap string, runtime RuntimeConfig) ([]Button, error) {
+func simSetupButtons(pins []int, buttonMap string, runtime runtimeConfig) ([]button, error) {
 	// return a list of buttons with the char as the "pin num"
-	ret := make([]Button, len(pins))
+	ret := make([]button, len(pins))
 	now := runtime.rtc.now()
 
 	for i := 0; i < len(ret); i++ {
 		if i >= len(buttonMap) {
 			log.Printf("No key map for %v", pins[i])
 			ret[i].pinNum = -1
-			ret[i].state = PressState{pressed: false, start: now, count: 0, changed: false}
+			ret[i].state = pressState{pressed: false, start: now, count: 0, changed: false}
 			continue
 		}
 		log.Printf("Key map for pin %d is %c", pins[i], buttonMap[i])
 		ret[i].pinNum = int(buttonMap[i])
-		ret[i].state = PressState{pressed: false, start: now, count: 0, changed: false}
+		ret[i].state = pressState{pressed: false, start: now, count: 0, changed: false}
 	}
 	return ret, nil
 }
 
-func checkKeyboard(btns []Button) ([]rpio.State, error) {
+func checkKeyboard(btns []button) ([]rpio.State, error) {
 	ret := make([]rpio.State, len(btns))
 
 	// poll with quick timeout
@@ -72,17 +72,17 @@ func checkKeyboard(btns []Button) ([]rpio.State, error) {
 		if btns[i].state.pressed {
 			// orig state is down
 			if match {
-				ret[i] = BTN_UP
+				ret[i] = btnUp
 			} else {
 				// orig state is up
-				ret[i] = BTN_DOWN
+				ret[i] = btnDown
 			}
 		} else {
 			if match {
-				ret[i] = BTN_DOWN
+				ret[i] = btnDown
 			} else {
 				// orig state is up
-				ret[i] = BTN_UP
+				ret[i] = btnUp
 			}
 		}
 	}
@@ -90,13 +90,13 @@ func checkKeyboard(btns []Button) ([]rpio.State, error) {
 	return ret, nil
 }
 
-func readButtons(btns []Button) ([]rpio.State, error) {
+func readButtons(btns []button) ([]rpio.State, error) {
 	// simulated mode we check it all at once or we wait a lot
 	return checkKeyboard(btns)
 }
 
-func setupButtons(pins []int, settings *Settings, runtime RuntimeConfig) ([]Button, error) {
-	var buttons []Button
+func setupButtons(pins []int, settings *settings, runtime runtimeConfig) ([]button, error) {
+	var buttons []button
 	var err error
 
 	simulated := settings.GetString("button_simulated")
@@ -106,7 +106,7 @@ func setupButtons(pins []int, settings *Settings, runtime RuntimeConfig) ([]Butt
 	return buttons, err
 }
 
-func initButtons(settings *Settings) error {
+func initButtons(settings *settings) error {
 	err := termbox.Init()
 	if err != nil {
 		return err

@@ -14,11 +14,11 @@ var features = []string{}
 
 func main() {
 	// read config information
-	settings := InitSettings()
+	settings := initSettings()
 
 	// are we just generating the oauth token?
 	if settings.GetBool("oauth") {
-		confirm_calendar_auth(settings, true, nil)
+		confirmCalendarAuth(settings, true, nil)
 		return
 	}
 
@@ -46,9 +46,9 @@ func main() {
 	log.Println("Build tags: " + build)
 
 	// dump them (debugging)
-	log.Println("\n>>> Settings <<<")
+	log.Println("\n>>> settings <<<")
 	settings.Dump()
-	log.Println("\n>>> Settings <<<")
+	log.Println("\n>>> settings <<<")
 
 	/*
 		Main app
@@ -68,7 +68,7 @@ func main() {
 
 	// google calendar requires OAuth access, so make sure we get it
 	// before we go into the main loop
-	confirm_calendar_auth(settings, false, runtime.comms.effects)
+	confirmCalendarAuth(settings, false, runtime.comms.effects)
 
 	go runGetAlarms(settings, runtime)
 	go runCheckAlarm(settings, runtime)

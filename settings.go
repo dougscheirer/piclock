@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -15,11 +14,11 @@ import (
 )
 
 // keep settings generic strings, type-convert on the fly
-type Settings struct {
+type settings struct {
 	settings map[string]interface{}
 }
 
-func defaultSettings() *Settings {
+func defaultSettings() *settings {
 	s := make(map[string]interface{})
 
 	// setting the type here makes the conversion "automatic" later
@@ -49,10 +48,10 @@ func defaultSettings() *Settings {
 	}
 	s["i2c_simulated"] = on
 
-	return &Settings{settings: s}
+	return &settings{settings: s}
 }
 
-func (this *Settings) settingsFromJSON(data []byte) error {
+func (s *settings) settingsFromJSON(data []byte) error {
 	tmp := defaultSettings()
 	for k, initVal := range tmp.settings {
 		// ignore missing fields;
@@ -78,12 +77,12 @@ func (this *Settings) settingsFromJSON(data []byte) error {
 			}
 			// TODO: range check
 			if err == nil {
-				this.settings[k] = byte(val)
+				s.settings[k] = byte(val)
 			}
 		case int:
-			this.settings[k], err = jsonparser.GetInt(data, k)
+			s.settings[k], err = jsonparser.GetInt(data, k)
 		case int64:
-			this.settings[k], err = jsonparser.GetInt(data, k)
+			s.settings[k], err = jsonparser.GetInt(data, k)
 		case bool:
 			var bVal bool
 			bVal, err = jsonparser.GetBoolean(data, k)
@@ -101,7 +100,7 @@ func (this *Settings) settingsFromJSON(data []byte) error {
 					return err
 				}
 			}
-			this.settings[k] = bVal
+			s.settings[k] = bVal
 			err = nil
 		case time.Duration:
 			var dur string
@@ -110,13 +109,13 @@ func (this *Settings) settingsFromJSON(data []byte) error {
 				var dur2 time.Duration
 				dur2, err = time.ParseDuration(dur)
 				if err == nil {
-					this.settings[k] = dur2
+					s.settings[k] = dur2
 				}
 			}
 		case string:
-			this.settings[k], err = jsonparser.GetString(data, k)
+			s.settings[k], err = jsonparser.GetString(data, k)
 		default:
-			err = errors.New(fmt.Sprintf("Bad type: %T", initVal))
+			err = fmt.Errorf("Bad type: %T", initVal)
 		}
 		if err != nil {
 			return err
@@ -125,7 +124,7 @@ func (this *Settings) settingsFromJSON(data []byte) error {
 	return nil
 }
 
-func InitSettings() *Settings {
+func initSettings() *settings {
 	log.Println("initSettings")
 
 	// defaults
@@ -146,8 +145,7 @@ func InitSettings() *Settings {
 	// try to open the config file
 	data, err := ioutil.ReadFile(*configFile)
 	if err != nil {
-		log.Println(fmt.Sprintf("Could not load conf file '%s', using defaults", *configFile))
-		return s
+		log.Fatalf("Could not load conf file '%s', terminating", *configFile)
 	}
 
 	log.Println(fmt.Sprintf("Reading configuration from '%s'", *configFile))
@@ -155,14 +153,14 @@ func InitSettings() *Settings {
 	// json parse it
 	if err := s.settingsFromJSON(data); err != nil {
 		// log a message about crappy JSON?
-		log.Println(err.Error())
+		log.Fatal(err.Error())
 	}
 
 	return s
 }
 
-func (this *Settings) GetString(key string) string {
-	switch v := this.settings[key].(type) {
+func (s *settings) GetString(key string) string {
+	switch v := s.settings[key].(type) {
 	case string:
 		return v
 	default:
@@ -170,8 +168,8 @@ func (this *Settings) GetString(key string) string {
 	}
 }
 
-func (this *Settings) GetBool(key string) bool {
-	switch v := this.settings[key].(type) {
+func (s *settings) GetBool(key string) bool {
+	switch v := s.settings[key].(type) {
 	case bool:
 		return v
 	default:
@@ -179,8 +177,8 @@ func (this *Settings) GetBool(key string) bool {
 	}
 }
 
-func (this *Settings) GetDuration(key string) time.Duration {
-	switch v := this.settings[key].(type) {
+func (s *settings) GetDuration(key string) time.Duration {
+	switch v := s.settings[key].(type) {
 	case time.Duration:
 		return v
 	default:
@@ -188,8 +186,8 @@ func (this *Settings) GetDuration(key string) time.Duration {
 	}
 }
 
-func (this *Settings) GetByte(key string) byte {
-	switch v := this.settings[key].(type) {
+func (s *settings) GetByte(key string) byte {
+	switch v := s.settings[key].(type) {
 	case byte:
 		return v
 	case int: // cast to bye
@@ -199,8 +197,8 @@ func (this *Settings) GetByte(key string) byte {
 	}
 }
 
-func (this *Settings) GetInt(key string) int {
-	switch v := this.settings[key].(type) {
+func (s *settings) GetInt(key string) int {
+	switch v := s.settings[key].(type) {
 	case int:
 		return v
 	default:
@@ -208,8 +206,8 @@ func (this *Settings) GetInt(key string) int {
 	}
 }
 
-func (this *Settings) Dump() {
-	for k, v := range this.settings {
+func (s *settings) Dump() {
+	for k, v := range s.settings {
 		log.Printf("%s : %T: %v\n", k, v, v)
 	}
 }

@@ -21,12 +21,12 @@ func init() {
 const sampleRate = 44100
 
 // two functions exist here:
-//   PlayPattern(segments []SoundSegment, stop chan bool)
+//   PlayPattern(segments []soundSegment, stop chan bool)
 //    given a series of frequencies/level/duration, play each in a repeating pattern
-//   PlayMP3(file string, stop chan bool)
+//   playMP3(file string, stop chan bool)
 //    given an MP3 file, play it on repeat
 
-type SoundSegment struct {
+type soundSegment struct {
 	frequencies []float64
 	duration    time.Duration
 	level       float64
@@ -54,7 +54,7 @@ type playbackPattern struct {
 }
 
 // call this as 'go PlayPattern()'
-func PlayPattern(pattern []SoundSegment, stop chan bool) {
+func playPattern(pattern []soundSegment, stop chan bool) {
 	portaudio.Initialize()
 	defer portaudio.Terminate()
 	s := newPlaySegments(pattern)
@@ -69,7 +69,7 @@ func PlayPattern(pattern []SoundSegment, stop chan bool) {
 	s.Stop()
 }
 
-func newPlaySegments(pattern []SoundSegment) *playbackPattern {
+func newPlaySegments(pattern []soundSegment) *playbackPattern {
 	// turn pattern into an array of playSegment, stored in a playbackPattern
 	var pb playbackPattern
 	pb.curSegment = -1
@@ -164,7 +164,7 @@ func getDecoder(fname string) *mpg123.Decoder {
 	return decoder
 }
 
-func PlayMP3(fName string, loop bool, stop chan bool) {
+func playMP3(fName string, loop bool, stop chan bool) {
 	// create mpg123 decoder instance
 	decoder := getDecoder(fName)
 	defer decoder.Close()
@@ -244,7 +244,7 @@ func playIt(sfreqs []string, timing []string, stop chan bool) {
 	// 1s on + off for 3s
 	// .75 on, .25 off for 3s
 	// .95 on, 0.05 off for 3s
-	segs := make([]SoundSegment, len(timings))
+	segs := make([]soundSegment, len(timings))
 
 	for i := 0; i < len(segs); i++ {
 		segs[i].level = float64((i + 1) % 2)
@@ -253,5 +253,5 @@ func playIt(sfreqs []string, timing []string, stop chan bool) {
 		segs[i].rampDown = 20 * time.Millisecond
 	}
 
-	go PlayPattern(segs, stop)
+	go playPattern(segs, stop)
 }

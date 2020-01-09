@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -11,17 +10,17 @@ import (
 	"time"
 )
 
-type Effect struct {
+type effect struct {
 	id  int
 	val interface{}
 }
 
-type Print struct {
+type print struct {
 	s string
 	d time.Duration
 }
 
-type ButtonInfo struct {
+type buttonInfo struct {
 	pressed  bool
 	duration time.Duration
 }
@@ -46,31 +45,31 @@ const (
 )
 
 // channel messaging functions
-func mainButton(p bool, d time.Duration) Effect {
-	return Effect{id: eMainButton, val: ButtonInfo{pressed: p, duration: d}}
+func mainButton(p bool, d time.Duration) effect {
+	return effect{id: eMainButton, val: buttonInfo{pressed: p, duration: d}}
 }
 
-func setCountdownMode(alarm Alarm) Effect {
-	return Effect{id: eCountdown, val: alarm}
+func setCountdownMode(alarm alarm) effect {
+	return effect{id: eCountdown, val: alarm}
 }
 
-func setAlarmMode(alarm Alarm) Effect {
-	return Effect{id: eAlarm, val: alarm}
+func setAlarmMode(alarm alarm) effect {
+	return effect{id: eAlarm, val: alarm}
 }
 
-func alarmError(d time.Duration) Effect {
-	return Effect{id: eAlarmError, val: d}
+func alarmError(d time.Duration) effect {
+	return effect{id: eAlarmError, val: d}
 }
 
-func toggleDebugDump(on bool) Effect {
-	return Effect{id: eDebug, val: on}
+func toggleDebugDump(on bool) effect {
+	return effect{id: eDebug, val: on}
 }
 
-func printEffect(s string, d time.Duration) Effect {
-	return Effect{id: ePrint, val: Print{s: s, d: d}}
+func printEffect(s string, d time.Duration) effect {
+	return effect{id: ePrint, val: print{s: s, d: d}}
 }
 
-func showLoader(effects chan Effect) {
+func showLoader(effects chan effect) {
 	info, err := os.Stat(os.Args[0])
 	if err != nil {
 		// TODO: log error?  non-fatal
@@ -92,12 +91,12 @@ func replaceAtIndex(in string, r rune, i int) string {
 	return string(out)
 }
 
-func toButtonInfo(val interface{}) (*ButtonInfo, error) {
+func toButtonInfo(val interface{}) (*buttonInfo, error) {
 	switch v := val.(type) {
-	case ButtonInfo:
+	case buttonInfo:
 		return &v, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("Bad type: %T", v))
+		return nil, fmt.Errorf("Bad type: %T", v)
 	}
 }
 
@@ -106,7 +105,7 @@ func toBool(val interface{}) (bool, error) {
 	case bool:
 		return v, nil
 	default:
-		return false, errors.New(fmt.Sprintf("Bad type: %T", v))
+		return false, fmt.Errorf("Bad type: %T", v)
 	}
 }
 
@@ -115,16 +114,16 @@ func toInt(val interface{}) (int, error) {
 	case int:
 		return v, nil
 	default:
-		return -1, errors.New(fmt.Sprintf("Bad type: %T", v))
+		return -1, fmt.Errorf("Bad type: %T", v)
 	}
 }
 
-func toAlarm(val interface{}) (*Alarm, error) {
+func toAlarm(val interface{}) (*alarm, error) {
 	switch v := val.(type) {
-	case Alarm:
+	case alarm:
 		return &v, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("Bad type: %T", v))
+		return nil, fmt.Errorf("Bad type: %T", v)
 	}
 }
 
@@ -133,7 +132,7 @@ func toString(val interface{}) (string, error) {
 	case string:
 		return v, nil
 	default:
-		return "", errors.New(fmt.Sprintf("Bad type: %T", v))
+		return "", fmt.Errorf("Bad type: %T", v)
 	}
 }
 
@@ -142,20 +141,20 @@ func toDuration(val interface{}) (time.Duration, error) {
 	case time.Duration:
 		return v, nil
 	default:
-		return 0, errors.New(fmt.Sprintf("Bad type: %T", v))
+		return 0, fmt.Errorf("Bad type: %T", v)
 	}
 }
 
-func toPrint(val interface{}) (*Print, error) {
+func toPrint(val interface{}) (*print, error) {
 	switch v := val.(type) {
-	case Print:
+	case print:
 		return &v, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("Bad type: %T", v))
+		return nil, fmt.Errorf("Bad type: %T", v)
 	}
 }
 
-func displayClock(runtime RuntimeConfig, display *sevenseg_backpack.Sevenseg, blinkColon bool, dot bool) {
+func displayClock(runtime runtimeConfig, display *sevenseg_backpack.Sevenseg, blinkColon bool, dot bool) {
 	// standard time display
 	colon := "15:04"
 	now := runtime.wallClock.now()
@@ -177,7 +176,7 @@ func displayClock(runtime RuntimeConfig, display *sevenseg_backpack.Sevenseg, bl
 	}
 }
 
-func displayCountdown(runtime RuntimeConfig, display *sevenseg_backpack.Sevenseg, alarm *Alarm, dot bool) bool {
+func displayCountdown(runtime runtimeConfig, display *sevenseg_backpack.Sevenseg, alarm *alarm, dot bool) bool {
 	// calculate 10ths of secs to alarm time
 	count := alarm.When.Sub(runtime.wallClock.now()) / (time.Second / 10)
 	if count > 9999 {
@@ -198,13 +197,13 @@ func displayCountdown(runtime RuntimeConfig, display *sevenseg_backpack.Sevenseg
 	return true
 }
 
-func playAlarmEffect(settings *Settings, alm *Alarm, stop chan bool, runtime RuntimeConfig) {
+func playAlarmEffect(settings *settings, alm *alarm, stop chan bool, runtime runtimeConfig) {
 	switch alm.Effect {
 	case almMusic:
-		PlayMP3(alm.Extra, true, stop)
+		playMP3(alm.Extra, true, stop)
 		break
 	case almFile:
-		PlayMP3(alm.Extra, true, stop)
+		playMP3(alm.Extra, true, stop)
 		break
 	case almTones:
 		playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
@@ -221,7 +220,7 @@ func playAlarmEffect(settings *Settings, alm *Alarm, stop chan bool, runtime Run
 		}
 		fname := files[r1.Intn(len(files))]
 		log.Printf("Playing %s", fname)
-		PlayMP3(fname, true, stop)
+		playMP3(fname, true, stop)
 		break
 	}
 }
@@ -230,7 +229,7 @@ func stopAlarmEffect(stop chan bool) {
 	stop <- true
 }
 
-func runEffects(settings *Settings, runtime RuntimeConfig) {
+func runEffects(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
 
 	comms := runtime.comms
@@ -253,18 +252,18 @@ func runEffects(settings *Settings, runtime RuntimeConfig) {
 	display.DisplayOn(true)
 
 	mode := modeClock
-	var countdown *Alarm
-	var error_id = 0
+	var countdown *alarm
+	var errorID = 0
 	alarmSegment := 0
-	DEFAULT_SLEEP := settings.GetDuration("sleepTime")
-	sleepTime := DEFAULT_SLEEP
+	defaultSleep := settings.GetDuration("sleepTime")
+	sleepTime := defaultSleep
 	buttonPressActed := false
 	buttonDot := false
 
 	stopAlarm := make(chan bool, 1)
 
 	for true {
-		var e Effect
+		var e effect
 
 		skip := false
 
@@ -316,7 +315,7 @@ func runEffects(settings *Settings, runtime RuntimeConfig) {
 						case modeAlarm:
 							// cancel the alarm
 							mode = modeClock
-							sleepTime = DEFAULT_SLEEP
+							sleepTime = defaultSleep
 							buttonPressActed = true
 							stopAlarmEffect(stopAlarm)
 						case modeCountdown:
@@ -358,10 +357,10 @@ func runEffects(settings *Settings, runtime RuntimeConfig) {
 		case modeCountdown:
 			if !displayCountdown(runtime, display, countdown, buttonDot) {
 				mode = modeClock
-				sleepTime = DEFAULT_SLEEP
+				sleepTime = defaultSleep
 			}
 		case modeAlarmError:
-			log.Printf("Error: %d\n", error_id)
+			log.Printf("Error: %d\n", errorID)
 			display.Print("Err")
 		case modeOutput:
 			// do nothing

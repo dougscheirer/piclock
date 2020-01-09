@@ -3,11 +3,11 @@ package main
 
 import "time"
 
-type CommChannels struct {
+type commChannels struct {
 	quit    chan struct{}
-	alarms  chan CheckMsg
-	effects chan Effect
-	loader  chan LoaderMsg
+	alarms  chan checkMsg
+	effects chan effect
+	loader  chan loaderMsg
 }
 
 type clock interface {
@@ -29,17 +29,17 @@ func (w wallClock) now() time.Time {
 	return w.curTime
 }
 
-type RuntimeConfig struct {
-	comms     CommChannels
+type runtimeConfig struct {
+	comms     commChannels
 	rtc       clock
 	wallClock clock
 }
 
-func initCommChannels() CommChannels {
+func initCommChannels() commChannels {
 	quit := make(chan struct{}, 1)
-	alarmChannel := make(chan CheckMsg, 1)
-	effectChannel := make(chan Effect, 1)
-	loaderChannel := make(chan LoaderMsg, 1)
+	alarmChannel := make(chan checkMsg, 1)
+	effectChannel := make(chan effect, 1)
+	loaderChannel := make(chan loaderMsg, 1)
 
 	// wait on our workers:
 	// alarm fetcher
@@ -48,11 +48,11 @@ func initCommChannels() CommChannels {
 	// button checker
 	wg.Add(4)
 
-	return CommChannels{quit: quit, alarms: alarmChannel, effects: effectChannel, loader: loaderChannel}
+	return commChannels{quit: quit, alarms: alarmChannel, effects: effectChannel, loader: loaderChannel}
 }
 
-func initRuntime(rtc clock, wallClock clock) RuntimeConfig {
-	return RuntimeConfig{
+func initRuntime(rtc clock, wallClock clock) runtimeConfig {
+	return runtimeConfig{
 		rtc:       rtc,
 		wallClock: wallClock,
 		comms:     initCommChannels()}
