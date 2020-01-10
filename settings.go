@@ -163,7 +163,8 @@ func (s *settings) GetString(key string) string {
 	case string:
 		return v
 	default:
-		return ""
+		log.Fatalf("Could not convert %T to int", v)
+		return "noafokinstrang"
 	}
 }
 
@@ -172,6 +173,7 @@ func (s *settings) GetBool(key string) bool {
 	case bool:
 		return v
 	default:
+		log.Fatalf("Could not convert %T to bool", v)
 		return false
 	}
 }
@@ -181,6 +183,7 @@ func (s *settings) GetDuration(key string) time.Duration {
 	case time.Duration:
 		return v
 	default:
+		log.Fatalf("Could not convert %T to time.Duration", v)
 		return -1
 	}
 }
@@ -189,10 +192,11 @@ func (s *settings) GetByte(key string) byte {
 	switch v := s.settings[key].(type) {
 	case byte:
 		return v
-	case int: // cast to bye
+	case int: // cast to byte
 		return byte(v)
 	default:
-		return 0
+		log.Fatalf("Could not convert %T to byte", v)
+		return 0xff
 	}
 }
 
@@ -200,8 +204,11 @@ func (s *settings) GetInt(key string) int {
 	switch v := s.settings[key].(type) {
 	case int:
 		return v
+	case uint8:
+		return int(v)
 	default:
-		return 0
+		log.Fatalf("Could not convert %T to int", v)
+		return -1
 	}
 }
 
