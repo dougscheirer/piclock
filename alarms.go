@@ -188,14 +188,6 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map
 		writeAlarms(alarms, cacheFile)
 	}
 
-	// TODO: move this to the test framework
-	// if we're developing, make an alarm 1 minute in the future
-	if settings.GetBool("fake_alarm") {
-		alm := alarm{ID: "thisistotallyfake", Name: "who cares", When: runtime.wallClock.now().Add(time.Duration(1) * time.Minute), disabled: false, Effect: almRandom}
-		alarms = append(alarms, alm)
-		writeAlarms(alarms, cacheFile)
-	}
-
 	return alarms, nil
 }
 

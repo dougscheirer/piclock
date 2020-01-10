@@ -215,12 +215,16 @@ func playAlarmEffect(settings *settings, alm *alarm, stop chan bool, runtime run
 
 		files, err := filepath.Glob(settings.GetString("musicPath") + "/*")
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			break
 		}
-		fname := files[r1.Intn(len(files))]
-		log.Printf("Playing %s", fname)
-		playMP3(fname, true, stop)
+		if len(files) < 1 {
+			playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+		} else {
+			fname := files[r1.Intn(len(files))]
+			log.Printf("Playing %s", fname)
+			playMP3(fname, true, stop)
+		}
 		break
 	}
 }

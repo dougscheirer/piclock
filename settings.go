@@ -39,7 +39,6 @@ func defaultSettings() *settings {
 	s["blinkTime"] = true
 	s["strobe"] = true
 	s["skiploader"] = false
-	s["fake_alarm"] = false
 	s["oauth"] = false
 
 	on := true

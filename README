@@ -1,11 +1,13 @@
 README
 
 build:
-	go build [--tags=noaudio]
+	go build [--tags='noaudio nobuttons']
 
 required packages
-	portaudio19-dev (linux, different on mac)
-	libmpg123-dev   (linux, different on mac)
+	portaudio19-dev
+	libmpg123-dev
+  python-smbus
+  i2c-tools
 
 running as a service
 	not working great yet, directories are tricky, simulations are hard, etc.
