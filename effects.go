@@ -379,7 +379,9 @@ func runEffects(settings *settings, runtime runtimeConfig) {
 				}
 				display.RefreshOn(true)
 				alarmSegment = (alarmSegment + 1) % 6
-			}
+			} else {
+			       display.Print("_-_-")
+		       }
 		default:
 			log.Printf("Unknown mode: '%d'\n", mode)
 		}
