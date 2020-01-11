@@ -73,6 +73,8 @@ func showLoader(effects chan effect) {
 	info, err := os.Stat(os.Args[0])
 	if err != nil {
 		// TODO: log error?  non-fatal
+		log.Printf("%v", err)
+		return
 	}
 
 	effects <- printEffect("bLd.", 1500*time.Millisecond)
@@ -380,8 +382,8 @@ func runEffects(settings *settings, runtime runtimeConfig) {
 				display.RefreshOn(true)
 				alarmSegment = (alarmSegment + 1) % 6
 			} else {
-			       display.Print("_-_-")
-		       }
+				display.Print("_-_-")
+			}
 		default:
 			log.Printf("Unknown mode: '%d'\n", mode)
 		}

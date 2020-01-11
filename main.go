@@ -66,8 +66,7 @@ func main() {
 		showLoader(runtime.comms.effects)
 	}
 
-	// google calendar requires OAuth access, so make sure we get it
-	// before we go into the main loop
+	// init the calendar auth, if it doesn't work we are just a clock
 	confirmCalendarAuth(settings, false, runtime.comms.effects)
 
 	go runGetAlarms(settings, runtime)

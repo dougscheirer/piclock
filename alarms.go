@@ -34,8 +34,8 @@ type checkMsg struct {
 }
 
 type musicFile struct {
-	Name string
-	Path string
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 const (
@@ -221,61 +221,75 @@ func getAlarmsFromCache(settings *settings, runtime runtimeConfig, handled map[s
 	return alarms, nil
 }
 
+func OOBFetch(url string) []byte {
+	resp, err := http.Get(url)
+	body, err2 := ioutil.ReadAll(resp.Body)
+
+	if err != nil || resp.StatusCode != 200 || err2 != nil {
+		return nil
+	}
+
+	// fmt.Println(string(body))
+	return body
+}
+
 func downloadMusicFiles(settings *settings, cE chan effect) {
-	// this is currently dumb, it just uses a list from musicDownloads (music.json)
+	// this is currently dumb, it just uses a list from musicDownloads
 	// and walks through it, downloading to the music dir
-	jsonPath := settings.GetString("musicDownloads") + "/music.json"
+	jsonPath := settings.GetString("musicDownloads")
 	log.Printf("Downloading list from " + jsonPath)
-	resp, err := http.Get(jsonPath)
-	if err != nil {
-		log.Println("Error fetching music.json: " + err.Error())
-		// cE <- printEffect("Err", 2*time.Second )
-		return
-	}
-	if resp.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		log.Println("Error fetching music.json: " + string(body))
-		// cE <- printEffect("Err", 2*time.Second )
-		return
-	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	results := make(chan []byte, 1)
 
-	files := make([]musicFile, 0)
-	err = json.Unmarshal(body, &files)
+	go func() {
+		results <- OOBFetch(jsonPath)
+	}()
+
+	var files []musicFile
+	err := json.Unmarshal(<-results, &files)
+
 	if err != nil {
 		log.Printf("Error unmarshalling files: " + err.Error())
 		return
 	}
+
 	musicPath := settings.GetString("musicPath")
 	log.Printf("Received a list of %d files", len(files))
+
+	mp3Files := make([]chan []byte, len(files))
+	savePaths := make([]string, len(files))
+
 	for i := len(files) - 1; i >= 0; i-- {
 		// do we already have that file cached
-		savePath := musicPath + "/" + files[i].Name
+		savePaths[i] = musicPath + "/" + files[i].Name
 		// log.Printf("Checking for " + savePath)
-		if _, err := os.Stat(savePath); os.IsNotExist(err) {
-			// download it
-			log.Println(fmt.Sprintf("Downloading %s [%s]", files[i].Name, files[i].Path))
-			resp, err := http.Get(files[i].Path)
-			if err != nil {
-				// handle error
-				log.Println(fmt.Sprintf("Failed to download %s: %s", files[i].Name, err.Error()))
-				continue
-			}
-			if resp.StatusCode != 200 {
-				log.Println(fmt.Sprintf("Received bad status code: %d", resp.StatusCode))
-				continue
-			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			// write the file
-			err = ioutil.WriteFile(savePath, body, 0644)
-			if err != nil {
-				// handle error
-				log.Println(fmt.Sprintf("Failed to write %s: %s", savePath, err.Error()))
-				continue
-			}
+		if _, err := os.Stat(savePaths[i]); os.IsNotExist(err) {
+			mp3Files[i] = make(chan []byte, 1)
+			go func(i int) {
+				log.Println(fmt.Sprintf("Downloading %s [%s]", files[i].Name, files[i].Path))
+				mp3Files[i] <- OOBFetch(files[i].Path)
+			}(i)
+		}
+	}
+
+	for i := len(files) - 1; i >= 0; i-- {
+		if mp3Files[i] == nil {
+			continue
+		}
+
+		// write the file
+		data := <-mp3Files[i]
+		if data == nil || len(data) == 0 {
+			log.Printf("Skipping nil data for %s", savePaths[i])
+			continue
+		}
+
+		log.Printf("Saving %s", savePaths[i])
+		err = ioutil.WriteFile(savePaths[i], data, 0644)
+		if err != nil {
+			// handle error
+			log.Println(fmt.Sprintf("Failed to write %s: %s", savePaths[i], err.Error()))
+			continue
 		}
 	}
 }
@@ -324,6 +338,9 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 		}
 
 		if reload {
+			// launch a thread to grab all of the music we can
+			go downloadMusicFiles(settings, comms.effects)
+
 			alarms, err := getAlarmsFromService(settings, runtime, handledAlarms)
 			if err != nil {
 				comms.effects <- alarmError(5 * time.Second)
@@ -339,9 +356,6 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 					continue
 				}
 			}
-
-			// launch a thread to grab all of the music we can
-			go downloadMusicFiles(settings, comms.effects)
 
 			lastRefresh = runtime.rtc.now()
 
