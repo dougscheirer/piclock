@@ -3,10 +3,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"log"
 	"math"
+	"os/exec"
 	"strconv"
 	"time"
 
@@ -165,58 +164,29 @@ func getDecoder(fname string) *mpg123.Decoder {
 }
 
 func playMP3(fName string, loop bool, stop chan bool) {
-	// create mpg123 decoder instance
-	decoder := getDecoder(fName)
-	defer decoder.Close()
+	// just run mpg123 or the pi fails to play
+	cmd := exec.Command("mpg123", fName)
 
-	rate, channels, _ := decoder.GetFormat()
+	completed := make(chan error, 1)
 
-	portaudio.Initialize()
-	defer portaudio.Terminate()
-	out := make([]int16, 8192)
-	stream, err := portaudio.OpenDefaultStream(0, channels, float64(rate), len(out), &out)
-	if err != nil {
-		log.Println(err.Error())
-		return
-	}
-	defer stream.Close()
+	go func() {
+		completed <- cmd.Run()
+	}()
 
-	if err = stream.Start(); err != nil {
-		log.Println(err.Error())
-		return
-	}
-
-	defer stream.Stop()
 	for {
-		audio := make([]byte, 2*len(out))
-		_, err = decoder.Read(audio)
-		if err == mpg123.EOF {
-			if !loop {
-				return
-			}
-			decoder.Close()
-
-			decoder = getDecoder(fName)
-			defer decoder.Close()
-			continue
-		}
-		if err != nil {
-			log.Printf("Error reading audio decoder: %v", err.Error())
-			return
-		}
-
-		if err = binary.Read(bytes.NewBuffer(audio), binary.LittleEndian, out); err != nil {
-			log.Printf("Error reading binary stream: %v", err.Error())
-			return
-		}
-		if err = stream.Write(); err != nil {
-			log.Printf("Error writing audio stream: %v", err.Error())
-			return
-		}
+		time.Sleep(100 * time.Millisecond)
 		select {
 		case <-stop:
 			log.Println("Stopping playback")
+			cmd.Process.Kill()
 			return
+		case <-completed:
+			if !loop {
+				return
+			}
+			go func() {
+				completed <- cmd.Run()
+			}()
 		default:
 		}
 	}

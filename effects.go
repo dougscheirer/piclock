@@ -308,7 +308,7 @@ func runEffects(settings *settings, runtime runtimeConfig) {
 				sleepTime = 10 * time.Millisecond
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
-				playAlarmEffect(settings, alm, stopAlarm, runtime)
+				go playAlarmEffect(settings, alm, stopAlarm, runtime)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed
