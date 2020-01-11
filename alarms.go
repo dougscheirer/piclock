@@ -358,6 +358,8 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 				}
 			}
 
+			comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(alarms)), 2*time.Second)
+
 			lastRefresh = runtime.rtc.now()
 
 			// tell cA that we have some alarms?
@@ -403,10 +405,10 @@ func runCheckAlarm(settings *settings, runtime runtimeConfig) {
 			// if alarms[index] != lastAlarm, run some effects
 			if lastAlarm == nil || lastAlarm.When != alarms[index].When {
 				lastAlarm = &alarms[index]
-				comms.effects <- printEffect("AL:", 2*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("15:04"), 3*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("01.02"), 3*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 3*time.Second)
+				comms.effects <- printEffect(fmt.Sprintf("AL:%d", index+1), 1*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("15:04"), 2*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("01.02"), 2*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 2*time.Second)
 			}
 
 			now := runtime.wallClock.now()
