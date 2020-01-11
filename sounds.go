@@ -201,20 +201,21 @@ func playMP3(fName string, loop bool, stop chan bool) {
 			continue
 		}
 		if err != nil {
-			log.Println(err.Error())
+			log.Printf("Error reading audio decoder: %v", err.Error())
 			return
 		}
 
 		if err = binary.Read(bytes.NewBuffer(audio), binary.LittleEndian, out); err != nil {
-			log.Println(err.Error())
+			log.Printf("Error reading binary stream: %v", err.Error())
 			return
 		}
 		if err = stream.Write(); err != nil {
-			log.Println(err.Error())
+			log.Printf("Error writing audio stream: %v", err.Error())
 			return
 		}
 		select {
 		case <-stop:
+			log.Println("Stopping playback")
 			return
 		default:
 		}
