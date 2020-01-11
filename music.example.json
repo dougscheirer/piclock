@@ -1,7 +1,7 @@
 [
   {
     "name" : "lost",
-    "path": "http://dscheirer.com/piclock/music/lost.mp3",
+    "path": "http://dscheirer.com/piclock/music/lost.mp3"
   },
   {
     "name" : "bowie",
@@ -10,5 +10,9 @@
   {
     "name" : "getup",
     "path" : "http://dscheirer.com/piclock/music/gotta_get_up.mp3"
+  },
+  {
+    "name" : "easy",
+    "path" : "http://dscheirer.com/piclock/music/easy_street.mp3"
   }
 ]

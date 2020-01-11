@@ -229,7 +229,7 @@ func OOBFetch(url string) []byte {
 		return nil
 	}
 
-	fmt.Println(string(body))
+	// fmt.Println(string(body))
 	return body
 }
 
@@ -278,7 +278,14 @@ func downloadMusicFiles(settings *settings, cE chan effect) {
 		}
 
 		// write the file
-		err = ioutil.WriteFile(savePaths[i], <-mp3Files[i], 0644)
+		data := <-mp3Files[i]
+		if data == nil || len(data) == 0 {
+			log.Printf("Skipping nil data for %s", savePaths[i])
+			continue
+		}
+
+		log.Printf("Saving %s", savePaths[i])
+		err = ioutil.WriteFile(savePaths[i], data, 0644)
 		if err != nil {
 			// handle error
 			log.Println(fmt.Sprintf("Failed to write %s: %s", savePaths[i], err.Error()))
