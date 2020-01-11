@@ -1,0 +1,14 @@
+[
+  {
+    "name" : "lost",
+    "path": "http://dscheirer.com/piclock/music/lost.mp3",
+  },
+  {
+    "name" : "bowie",
+    "path" : "http://dscheirer.com/piclock/music/major_tom.mp3"
+  },
+  {
+    "name" : "getup",
+    "path" : "http://dscheirer.com/piclock/music/gotta_get_up.mp3"
+  }
+]
