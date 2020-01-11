@@ -27,7 +27,7 @@ func defaultSettings() *settings {
 	s["secretPath"] = "/etc/default/piclock"
 	s["alarmPath"] = "/etc/default/piclock/alarms"
 	s["alarmRefreshTime"], _ = time.ParseDuration("1m")
-	s["i2c_bus"] = 0
+	s["i2c_bus"] = byte(0)
 	s["i2c_device"] = byte(0x70)
 	s["calendar"] = "piclock"
 	s["debug_dump"] = false
