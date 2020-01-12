@@ -310,6 +310,7 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 		keepReading := true
 		reload := false
 		displayCurrent := false
+		forceReload := false
 
 		if runtime.rtc.now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
 			reload = true
@@ -329,6 +330,7 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 				case "reload":
 					displayCurrent = true
 					reload = true
+					forceReload = true
 					comms.effects <- printEffect("rLd", 2*time.Second)
 				default:
 					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
@@ -358,7 +360,11 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 				}
 			}
 
-			comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(alarms)), 2*time.Second)
+			// force reload -> show alarm count
+			// normal reload -> only show if > 0
+			if forceReload || len(alarms) > 0 {
+				comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(alarms)), 2*time.Second)
+			}
 
 			lastRefresh = runtime.rtc.now()
 

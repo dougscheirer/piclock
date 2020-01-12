@@ -166,8 +166,8 @@ func getDecoder(fname string) *mpg123.Decoder {
 func playMP3(fName string, loop bool, stop chan bool) {
 	// just run mpg123 or the pi fails to play
 	cmd := exec.Command("mpg123", fName)
-
 	completed := make(chan error, 1)
+	replayMax := 5
 
 	go func() {
 		completed <- cmd.Run()
@@ -181,9 +181,11 @@ func playMP3(fName string, loop bool, stop chan bool) {
 			cmd.Process.Kill()
 			return
 		case <-completed:
-			if !loop {
+			if !loop && replayMax > 0 {
 				return
 			}
+			replayMax--
+			log.Println("Replay")
 			go func() {
 				completed <- cmd.Run()
 			}()
