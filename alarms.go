@@ -344,6 +344,8 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 			// launch a thread to grab all of the music we can
 			go downloadMusicFiles(settings, comms.effects)
 
+			errorLED(false)
+
 			alarms, err := getAlarmsFromService(settings, runtime, handledAlarms)
 			if err != nil {
 				errorLED(true)
@@ -360,8 +362,6 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 					continue
 				}
 			}
-
-			errorLED(false)
 
 			// force reload -> show alarm count
 			// normal reload -> only show if > 0
