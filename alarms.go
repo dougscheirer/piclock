@@ -346,6 +346,7 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 
 			alarms, err := getAlarmsFromService(settings, runtime, handledAlarms)
 			if err != nil {
+				errorLED(true)
 				comms.effects <- alarmError(5 * time.Second)
 				log.Println(err.Error())
 				// try the backup
@@ -359,6 +360,8 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 					continue
 				}
 			}
+
+			errorLED(false)
 
 			// force reload -> show alarm count
 			// normal reload -> only show if > 0
