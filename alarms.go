@@ -224,9 +224,13 @@ func getAlarmsFromCache(settings *settings, runtime runtimeConfig, handled map[s
 // OOBFetch helper for grabbing http files
 func OOBFetch(url string) []byte {
 	resp, err := http.Get(url)
+	if resp == nil || err != nil || resp.StatusCode != 200 {
+		return nil
+	}
+
 	body, err2 := ioutil.ReadAll(resp.Body)
 
-	if err != nil || resp.StatusCode != 200 || err2 != nil {
+	if err2 != nil {
 		return nil
 	}
 
