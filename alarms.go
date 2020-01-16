@@ -301,6 +301,9 @@ func downloadMusicFiles(settings *settings, cE chan effect) {
 
 func runGetAlarms(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
+	defer func() {
+		log.Println("exiting runGetAlarms")
+	}()
 
 	// keep a list of things that we have done
 	// TODO: GC the list occassionally
@@ -386,6 +389,9 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 
 func runCheckAlarm(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
+	defer func() {
+		log.Println("exiting runCheckAlarms")
+	}()
 
 	alarms := make([]alarm, 0)
 	comms := runtime.comms

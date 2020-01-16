@@ -237,6 +237,9 @@ func stopAlarmEffect(stop chan bool) {
 
 func runEffects(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
+	defer func() {
+		log.Println("exiting runEffects")
+	}()
 
 	comms := runtime.comms
 
