@@ -96,6 +96,7 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map
 	{
 		log.Println("get calendar list")
 		list, err := srv.CalendarList.List().Do()
+		log.Println("process calendar result")
 		if err != nil {
 			log.Println(err.Error())
 			return alarms, err
