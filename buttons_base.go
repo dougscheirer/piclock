@@ -128,6 +128,7 @@ func runWatchButtons(settings *settings, runtime runtimeConfig) {
 				diff := time.Duration(newButtons[i].state.count) * time.Second
 				switch pins[i] {
 				case 25:
+					log.Println("sending main button to effects")
 					comms.effects <- mainButton(newButtons[i].state.pressed, diff)
 				default:
 					log.Printf("Unhandled button %d", pins[i])
