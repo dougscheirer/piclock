@@ -392,6 +392,8 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 						if loaderPayload.report || len(loaderPayload.alarms) > 0 {
 							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loaderPayload.alarms)), 2*time.Second)
 						}
+					} else {
+						log.Printf("Skipping old loadID %v", loaderPayload.loadID)
 					}
 				default:
 					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
