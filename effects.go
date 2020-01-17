@@ -340,6 +340,7 @@ func runEffects(settings *settings, runtime runtimeConfig) {
 							mode = modeClock
 							sleepTime = defaultSleep
 							buttonPressActed = true
+							display.SetBlinkRate(0)
 							stopAlarmEffect(stopAlarm)
 						case modeCountdown:
 							// cancel the alarm
