@@ -238,6 +238,7 @@ func playAlarmEffect(settings *settings, alm *alarm, stop chan bool, runtime run
 	}
 
 	if playTones {
+		log.Printf("Playing tones")
 		playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
 	} else {
 		log.Printf("Playing %s", musicFile)
