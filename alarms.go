@@ -22,15 +22,28 @@ type alarm struct {
 	countdown bool // set to true when we're checking alarms and we signaled countdown
 }
 
+type loadedPayload struct {
+	alarms []alarm
+	loadID int
+	report bool
+}
+
+func toLoadedPayload(val interface{}) (loadedPayload, error) {
+	switch v := val.(type) {
+	case loadedPayload:
+		return v, nil
+	default:
+		return loadedPayload{}, fmt.Errorf("Bad type: %T", v)
+	}
+}
+
 type loaderMsg struct {
-	msg   string
-	alarm alarm
-	val   interface{}
+	msg string
+	val interface{}
 }
 
 type checkMsg struct {
-	displayCurrent bool
-	alarms         []alarm
+	alarms []alarm
 }
 
 type musicFile struct {
@@ -48,11 +61,15 @@ const (
 )
 
 func handledMessage(alm alarm) loaderMsg {
-	return loaderMsg{msg: "handled", alarm: alm}
+	return loaderMsg{msg: "handled", val: alm}
 }
 
 func reloadMessage() loaderMsg {
 	return loaderMsg{msg: "reload"}
+}
+
+func alarmsLoadedMsg(loadID int, alarms []alarm, report bool) loaderMsg {
+	return loaderMsg{msg: "loaded", val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {
@@ -81,7 +98,7 @@ func cacheFilename(settings *settings) string {
 	return settings.GetString("alarmPath") + "/alarm.json"
 }
 
-func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map[string]alarm) ([]alarm, error) {
+func getAlarmsFromService(settings *settings, runtime runtimeConfig) ([]alarm, error) {
 	alarms := make([]alarm, 0)
 	srv := getCalenderService(settings, false)
 
@@ -156,6 +173,7 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map
 				continue
 			}
 
+			// TODO: account for countdown time
 			if when.Sub(runtime.wallClock.now()) < 0 {
 				log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
 				continue
@@ -178,12 +196,6 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map
 				alm.Effect = almRandom
 			}
 
-			// has this one been handled?
-			if handledAlarm(alm, handled) {
-				log.Println(fmt.Sprintf("Skipping handled alarm: %s", alm.ID))
-				continue
-			}
-
 			alarms = append(alarms, alm)
 		}
 
@@ -194,7 +206,7 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map
 	return alarms, nil
 }
 
-func getAlarmsFromCache(settings *settings, runtime runtimeConfig, handled map[string]alarm) ([]alarm, error) {
+func getAlarmsFromCache(settings *settings, runtime runtimeConfig) ([]alarm, error) {
 	alarms := make([]alarm, 0)
 	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
 		return alarms, nil
@@ -209,11 +221,7 @@ func getAlarmsFromCache(settings *settings, runtime runtimeConfig, handled map[s
 	}
 	// remove any that are in the "handled" map or the time has passed
 	for i := len(alarms) - 1; i >= 0; i-- {
-		if handledAlarm(alarms[i], handled) {
-			// remove is append two slices without the part we don't want
-			log.Println(fmt.Sprintf("Discard handled alarm: %s", alarms[i].ID))
-			alarms = append(alarms[:i], alarms[i+1:]...)
-		}
+		// TODO: account for countdown time
 		if alarms[i].When.Sub(runtime.wallClock.now()) < 0 {
 			// remove is append two slices without the part we don't want
 			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
@@ -302,6 +310,40 @@ func downloadMusicFiles(settings *settings, cE chan effect) {
 	}
 }
 
+// the calendar thing is a little flaky, so we load in another thread
+func loadAlarms(settings *settings, runtime runtimeConfig, loadID int, report bool) {
+	defer func() {
+		log.Println("returning from loadAlarms")
+	}()
+
+	comms := runtime.comms
+
+	// also launch a thread to grab all of the music we can
+	go downloadMusicFiles(settings, comms.effects)
+
+	// set it now, it should go out almost right away
+	errorLED(true)
+	alarms, err := getAlarmsFromService(settings, runtime)
+	if err != nil {
+		comms.effects <- alarmError(5 * time.Second)
+		log.Println(err.Error())
+		// try the backup
+		alarms, err = getAlarmsFromCache(settings, runtime)
+		if err != nil {
+			// very bad, so...delete and try again later?
+			// TODO: more effects
+			comms.effects <- alarmError(5 * time.Second)
+			log.Printf("Error reading alarm cache: %s\n", err.Error())
+			return
+		}
+	}
+	errorLED(false)
+
+	comms.loader <- alarmsLoadedMsg(loadID, alarms, report)
+	// tell cA that we have some alarms
+	comms.alarms <- checkMsg{alarms: alarms}
+}
+
 func runGetAlarms(settings *settings, runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -313,13 +355,13 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 	handledAlarms := map[string]alarm{}
 	comms := runtime.comms
 
+	var curReloadID int = 0
 	var lastRefresh time.Time
 
 	for true {
 		// read any messages alarms first
 		keepReading := true
 		reload := false
-		displayCurrent := false
 		forceReload := false
 
 		if runtime.rtc.now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
@@ -334,14 +376,25 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 			case msg := <-comms.loader:
 				switch msg.msg {
 				case "handled":
-					handledAlarms[msg.alarm.ID] = msg.alarm
-					// reload sends a new list without the ones that are handled
-					displayCurrent = true
+					alarm, _ := toAlarm(msg.val)
+					handledAlarms[alarm.ID] = *alarm
 				case "reload":
-					displayCurrent = true
 					reload = true
 					forceReload = true
 					comms.effects <- printEffect("rLd", 2*time.Second)
+				case "loaded":
+					// decide if we display a message or not
+					// it's possible we launched a bunch of loadAlarms threads
+					// and they all eventually unblock. to prevent a bunch of
+					// noise, just respond to the one that matches our current ID
+					loaderPayload, _ := toLoadedPayload(msg.val)
+					if loaderPayload.loadID == curReloadID {
+						// force reload -> show alarm count
+						// normal reload -> only show if > 0
+						if loaderPayload.report || len(loaderPayload.alarms) > 0 {
+							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loaderPayload.alarms)), 2*time.Second)
+						}
+					}
 				default:
 					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
 				}
@@ -351,38 +404,11 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 		}
 
 		if reload {
-			// launch a thread to grab all of the music we can
-			go downloadMusicFiles(settings, comms.effects)
-
-			errorLED(false)
-
-			alarms, err := getAlarmsFromService(settings, runtime, handledAlarms)
-			if err != nil {
-				errorLED(true)
-				comms.effects <- alarmError(5 * time.Second)
-				log.Println(err.Error())
-				// try the backup
-				alarms, err = getAlarmsFromCache(settings, runtime, handledAlarms)
-				if err != nil {
-					// very bad, so...delete and try again later?
-					// TODO: more effects
-					comms.effects <- alarmError(5 * time.Second)
-					log.Printf("Error reading alarm cache: %s\n", err.Error())
-					time.Sleep(time.Second)
-					continue
-				}
-			}
-
-			// force reload -> show alarm count
-			// normal reload -> only show if > 0
-			if forceReload || len(alarms) > 0 {
-				comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(alarms)), 2*time.Second)
-			}
-
-			lastRefresh = runtime.rtc.now()
-
-			// tell cA that we have some alarms?
-			comms.alarms <- checkMsg{alarms: alarms, displayCurrent: displayCurrent}
+			// launch a thing, it could hang
+			loadID := curReloadID + 1
+			curReloadID++
+			go loadAlarms(settings, runtime, loadID, forceReload)
+			lastRefresh = time.Now()
 		} else {
 			// wait a little
 			time.Sleep(100 * time.Millisecond)
@@ -411,9 +437,7 @@ func runCheckAlarm(settings *settings, runtime runtimeConfig) {
 			return
 		case checkMsg := <-comms.alarms:
 			alarms = checkMsg.alarms
-			if checkMsg.displayCurrent {
-				lastAlarm = nil
-			}
+			lastAlarm = nil
 		default:
 			// continue
 		}
