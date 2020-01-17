@@ -200,34 +200,48 @@ func displayCountdown(runtime runtimeConfig, display *sevenseg_backpack.Sevenseg
 }
 
 func playAlarmEffect(settings *settings, alm *alarm, stop chan bool, runtime runtimeConfig) {
+	musicPath := settings.GetString("musicPath")
+	var musicFile string
+	playTones := false
+
 	switch alm.Effect {
 	case almMusic:
-		playMP3(alm.Extra, true, stop)
-		break
+		musicFile = musicPath + "/" + alm.Extra
 	case almFile:
-		playMP3(alm.Extra, true, stop)
-		break
+		musicFile = musicPath + "/" + alm.Extra
 	case almTones:
-		playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
-		break
+		playTones = true
+		return
 	default:
 		// play a random mp3 in the cache
 		s1 := rand.NewSource(runtime.rtc.now().UnixNano())
 		r1 := rand.New(s1)
 
-		files, err := filepath.Glob(settings.GetString("musicPath") + "/*")
+		files, err := filepath.Glob(musicPath + "/*")
 		if err != nil {
 			log.Println(err)
 			break
 		}
-		if len(files) < 1 {
-			playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+		if len(files) > 0 {
+			musicFile = files[r1.Intn(len(files))]
 		} else {
-			fname := files[r1.Intn(len(files))]
-			log.Printf("Playing %s", fname)
-			playMP3(fname, true, stop)
+			playTones = true
 		}
-		break
+	}
+
+	if !playTones {
+		// make sure the file exists
+		fstat, err := os.Stat(musicFile)
+		if err != nil || fstat == nil {
+			playTones = true
+		}
+	}
+
+	if playTones {
+		playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+	} else {
+		log.Printf("Playing %s", musicFile)
+		playMP3(musicFile, true, stop)
 	}
 }
 

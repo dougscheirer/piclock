@@ -173,15 +173,16 @@ func playMP3(fName string, loop bool, stop chan bool) {
 		completed <- cmd.Run()
 	}()
 
+	stopPlayback := false
+
 	for {
 		time.Sleep(100 * time.Millisecond)
 		select {
 		case <-stop:
-			log.Println("Stopping playback")
-			cmd.Process.Kill()
-			return
-		case <-completed:
-			if !loop && replayMax > 0 {
+			stopPlayback = true
+		case done := <-completed:
+			log.Printf("%v", done)
+			if !loop || replayMax < 0 {
 				return
 			}
 			replayMax--
@@ -190,6 +191,11 @@ func playMP3(fName string, loop bool, stop chan bool) {
 				completed <- cmd.Run()
 			}()
 		default:
+		}
+		if stopPlayback {
+			log.Println("Stopping playback")
+			cmd.Process.Kill()
+			return
 		}
 	}
 }
