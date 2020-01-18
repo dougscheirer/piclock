@@ -325,8 +325,9 @@ func loadAlarms(settings *settings, runtime runtimeConfig, loadID int, report bo
 	// also launch a thread to grab all of the music we can
 	go downloadMusicFiles(settings, comms.effects)
 
-	// set it now, it should go out almost right away
-	errorLED(true)
+	// set error LED now, it should go out almost right away
+	comms.leds <- ledMessage(16, modeBlink75, 0)
+
 	// TODO: handled alarms are not longer considered, need testing
 	alarms, err := getAlarmsFromService(settings, runtime)
 	if err != nil {
@@ -342,7 +343,8 @@ func loadAlarms(settings *settings, runtime runtimeConfig, loadID int, report bo
 			return
 		}
 	}
-	errorLED(false)
+
+	comms.leds <- ledMessage(16, modeOff, 0)
 
 	comms.loader <- alarmsLoadedMsg(loadID, alarms, report)
 	// tell runCheckAlarms that we have some alarms
@@ -415,7 +417,7 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 			loadID := curReloadID + 1
 			curReloadID++
 			go loadAlarms(settings, runtime, loadID, forceReload)
-			lastRefresh = time.Now()
+			lastRefresh = runtime.rtc.now()
 		} else {
 			// wait a little
 			time.Sleep(100 * time.Millisecond)

@@ -71,24 +71,73 @@ func runLEDController(settings *settings, runtime runtimeConfig) {
 		}
 		// for anything that we're doing blink on, see if it's time to toggle
 		// also anything that is modeUnset needs to be initiated
-		for k, v := range leds {
+		for _, v := range leds {
+			// negative duration is "ignore"
+			if v.duration < 0 {
+				continue
+			}
+
 			if v.curMode == modeUnset {
 				// transform broader categories of mode to on/off
-				mode := modeOn
 				if v.mode == modeOff {
-					mode = modeOff
+					setLED(v.pin, false)
+					v.curMode = modeOff
+				} else {
+					setLED(v.pin, true)
+					v.curMode = modeOn
 				}
-				setLED(v.pin, v.mode)
-				v.curMode = mode
-				v.lastUpdate = time.Now()
-			} else if time.Now()-v.lastUpdate > v.duration {
-				// duration timeout, turn it off
+				v.lastUpdate = runtime.rtc.now()
+				continue
+			}
+
+			if v.duration == 0 {
+				// 0 duration means "forever"
+				continue
+			}
+
+			// duration expired means turn it off
+			if runtime.rtc.now().Sub(v.lastUpdate) > v.duration {
 				if v.curMode != modeOff {
-					setLED(v.pin, modeOff)
+					setLED(v.pin, false)
 					// negative duration is expired
 					v.duration = -1
-					v.curMode := modeOff
-					v.lastUpdate = time.Now()
+					v.curMode = modeOff
+					v.lastUpdate = runtime.rtc.now()
+					continue
+				}
+			}
+
+			timeInState := runtime.rtc.now().Sub(v.lastUpdate)
+			var upTime, downTime time.Duration
+
+			switch v.mode {
+			case modeBlink50:
+				upTime = 50
+				downTime = 50
+			case modeBlink75:
+				upTime = 25
+				downTime = 75
+			case modeBlink90:
+				upTime = 10
+				downTime = 90
+			case modeOn:
+			case modeOff:
+			default:
+				// nothing to do
+				continue
+			}
+
+			if v.curMode == modeOff {
+				if timeInState > downTime*time.Microsecond {
+					setLED(v.pin, true)
+					v.curMode = modeOn
+					v.lastUpdate = runtime.rtc.now()
+				}
+			} else {
+				if timeInState > upTime*time.Millisecond {
+					setLED(v.pin, false)
+					v.curMode = modeOff
+					v.lastUpdate = runtime.rtc.now()
 				}
 			}
 		}

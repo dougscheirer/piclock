@@ -57,7 +57,8 @@ func main() {
 	// init runtime objects with a real clock
 	var runtime = initRuntime(rtc{}, rtc{})
 
-	// start the effect thread so we can update the LEDs
+	// start the effect threads so we can update the LEDs
+	go runLEDController(settings, runtime)
 	go runEffects(settings, runtime)
 
 	// loader messages?
