@@ -10,6 +10,11 @@ import (
 
 func init() {
 	features = append(features, "leds")
+
+	err := rpio.Open()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 }
 
 func setLED(pinNum int, on bool) {
