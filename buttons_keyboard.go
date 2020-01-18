@@ -102,7 +102,6 @@ func setupButtons(pins []int, settings *settings, runtime runtimeConfig) ([]butt
 	simulated := settings.GetString("button_simulated")
 	buttons, err = simSetupButtons(pins, simulated, runtime)
 
-	defer wg.Done()
 	return buttons, err
 }
 

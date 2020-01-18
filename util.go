@@ -8,6 +8,7 @@ type commChannels struct {
 	alarms  chan checkMsg
 	effects chan effect
 	loader  chan loaderMsg
+	leds    chan ledEffect
 }
 
 type clock interface {
@@ -40,15 +41,14 @@ func initCommChannels() commChannels {
 	alarmChannel := make(chan checkMsg, 1)
 	effectChannel := make(chan effect, 1)
 	loaderChannel := make(chan loaderMsg, 1)
+	leds := make(chan ledEffect, 1)
 
-	// wait on our workers:
-	// alarm fetcher
-	// clock runner (effects)
-	// alarm checker
-	// button checker
-	wg.Add(4)
-
-	return commChannels{quit: quit, alarms: alarmChannel, effects: effectChannel, loader: loaderChannel}
+	return commChannels{
+		quit:    quit,
+		alarms:  alarmChannel,
+		effects: effectChannel,
+		loader:  loaderChannel,
+		leds:    leds}
 }
 
 func initRuntime(rtc clock, wallClock clock) runtimeConfig {

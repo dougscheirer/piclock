@@ -26,6 +26,10 @@ const (
 	btnUp   = 1
 )
 
+func init() {
+	// for runWatchButtons
+	wg.Add(1)
+}
 func checkButtons(btns []button, runtime runtimeConfig) ([]button, error) {
 	now := runtime.rtc.now()
 	ret := make([]button, len(btns))

@@ -44,6 +44,11 @@ const (
 	eCountdown
 )
 
+func init() {
+	// runEffects wg
+	wg.Add(1)
+}
+
 // channel messaging functions
 func mainButton(p bool, d time.Duration) effect {
 	return effect{id: eMainButton, val: buttonInfo{pressed: p, duration: d}}

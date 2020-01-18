@@ -62,19 +62,21 @@ func (s *settings) settingsFromJSON(data []byte) error {
 
 		switch initVal.(type) {
 		case uint8:
-			var val uint64
+			var val int64
 			valSigned, err := jsonparser.GetInt(data, k)
 			if err != nil {
 				// try strconv ParseUint
 				valString, err2 := jsonparser.GetString(data, k)
 				if err2 == nil {
 					valSigned, err = strconv.ParseInt(valString, 0, 64)
-					val = uint64(valSigned)
+					val = int64(valSigned)
 				}
 			} else {
-				val = uint64(valSigned)
+				val = int64(valSigned)
 			}
-			// TODO: range check
+			if val > 255 || val < 0 {
+				err = fmt.Errorf("Value %v is out of range for %v", val, k)
+			}
 			if err == nil {
 				s.settings[k] = byte(val)
 			}

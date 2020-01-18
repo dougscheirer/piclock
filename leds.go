@@ -8,6 +8,10 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
+func init() {
+	features = append(features, "leds")
+}
+
 func errorLED(on bool) {
 	log.Printf("Set pin 16 to %v", on)
 	pin := rpio.Pin(16)
