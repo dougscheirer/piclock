@@ -1,4 +1,5 @@
 // +build !nobuttons
+// +build !keybuttons
 
 package main
 
