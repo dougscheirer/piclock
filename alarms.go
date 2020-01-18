@@ -60,6 +60,11 @@ const (
 	almMax
 )
 
+func init() {
+	// 2 waits, one for runGetAlarams, one for runCheckAlarms
+	wg.Add(2)
+}
+
 func handledMessage(alm alarm) loaderMsg {
 	return loaderMsg{msg: "handled", val: alm}
 }
@@ -102,7 +107,6 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig) ([]alarm, e
 	alarms := make([]alarm, 0)
 	srv := getCalenderService(settings, false)
 
-	// TODO: if it wasn't available, send an alarm message
 	if srv == nil {
 		return alarms, errors.New("Failed to get calendar service")
 	}
@@ -162,7 +166,7 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig) ([]alarm, e
 			// If the DateTime is an empty string the Event is an all-day Event.
 			// So only Date is available.
 			if i.Start.DateTime == "" {
-				log.Println(fmt.Sprintf("Not a time based alarm: %s @ %s", i.Summary, i.Start.Date))
+				log.Println(fmt.Sprintf("Not a time based alarm, ignoring: %s @ %s", i.Summary, i.Start.Date))
 				continue
 			}
 			var when time.Time
@@ -323,6 +327,7 @@ func loadAlarms(settings *settings, runtime runtimeConfig, loadID int, report bo
 
 	// set it now, it should go out almost right away
 	errorLED(true)
+	// TODO: handled alarms are not longer considered, need testing
 	alarms, err := getAlarmsFromService(settings, runtime)
 	if err != nil {
 		comms.effects <- alarmError(5 * time.Second)
@@ -340,7 +345,7 @@ func loadAlarms(settings *settings, runtime runtimeConfig, loadID int, report bo
 	errorLED(false)
 
 	comms.loader <- alarmsLoadedMsg(loadID, alarms, report)
-	// tell cA that we have some alarms
+	// tell runCheckAlarms that we have some alarms
 	comms.alarms <- checkMsg{alarms: alarms}
 }
 
@@ -387,15 +392,15 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 					// it's possible we launched a bunch of loadAlarms threads
 					// and they all eventually unblock. to prevent a bunch of
 					// noise, just respond to the one that matches our current ID
-					loaderPayload, _ := toLoadedPayload(msg.val)
-					if loaderPayload.loadID == curReloadID {
+					loadedPayload, _ := toLoadedPayload(msg.val)
+					if loadedPayload.loadID == curReloadID {
 						// force reload -> show alarm count
 						// normal reload -> only show if > 0
-						if loaderPayload.report || len(loaderPayload.alarms) > 0 {
-							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loaderPayload.alarms)), 2*time.Second)
+						if loadedPayload.report || len(loadedPayload.alarms) > 0 {
+							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), 2*time.Second)
 						}
 					} else {
-						log.Printf("Skipping old loadID %v", loaderPayload.loadID)
+						log.Printf("Skipping old loadID %v", loadedPayload.loadID)
 					}
 				default:
 					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
