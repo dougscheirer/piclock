@@ -124,6 +124,8 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig, handled map
 		return alarms, err
 	}
 
+	log.Printf("calendar fetch complete")
+
 	// remove the cached alarms if they are present
 	cacheFile := cacheFilename(settings)
 	if _, err := os.Stat(cacheFile); !os.IsNotExist(err) {
