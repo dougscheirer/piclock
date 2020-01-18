@@ -20,7 +20,10 @@ type ledEffect struct {
 	duration   time.Duration
 	curMode    int       // runtime setting, on or off
 	lastUpdate time.Time // runtime setting, last time we changed the state
+<<<<<<< HEAD
 	startTime  time.Time // runtime setting, when we initiated
+=======
+>>>>>>> d9838022f2481ff2dc55479298935ecea483d41a
 }
 
 func init() {
@@ -29,12 +32,20 @@ func init() {
 }
 
 func ledMessage(pin int, mode int, duration time.Duration) ledEffect {
+<<<<<<< HEAD
 	return ledEffect{pin: pin, mode: mode, duration: duration, startTime: time.Time{}}
+=======
+	return ledEffect{pin: pin, mode: mode, duration: duration}
+>>>>>>> d9838022f2481ff2dc55479298935ecea483d41a
 }
 
 func diffLEDEffect(effect1 ledEffect, effect2 ledEffect) bool {
 	return effect1.mode != effect2.mode || effect1.duration != effect2.duration ||
+<<<<<<< HEAD
 		effect1.pin != effect2.pin || effect1.startTime != effect2.startTime
+=======
+		effect1.pin != effect2.pin
+>>>>>>> d9838022f2481ff2dc55479298935ecea483d41a
 }
 
 func setLEDEffect(effect ledEffect) ledEffect {
