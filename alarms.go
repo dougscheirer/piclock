@@ -416,11 +416,7 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 			loadID := curReloadID + 1
 			curReloadID++
 			go loadAlarms(settings, runtime, loadID, forceReload)
-<<<<<<< HEAD
 			lastRefresh = runtime.rtc.now()
-=======
-			lastRefresh = time.Now()
->>>>>>> d9838022f2481ff2dc55479298935ecea483d41a
 		} else {
 			// wait a little
 			time.Sleep(100 * time.Millisecond)
