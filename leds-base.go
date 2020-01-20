@@ -44,6 +44,14 @@ func setLEDEffect(effect ledEffect) ledEffect {
 	return effect
 }
 
+func ledOn(pinNum int) {
+	setLED(pinNum, true)
+}
+
+func ledOff(pinNum int) {
+	setLED(pinNum, false)
+}
+
 func runLEDController(settings *configSettings, runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -60,11 +68,14 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 			log.Printf("Got a quit signal in runLEDController")
 			return
 		case msg := <-comms.leds:
+			log.Printf("Received led message: %v", msg)
 			// TODO: find in leds, determine if we need to change the state
 			if val, ok := leds[msg.pin]; ok {
 				// if the state is changed, set the new effect state
 				if diffLEDEffect(val, msg) {
 					leds[msg.pin] = setLEDEffect(msg)
+				} else {
+					log.Println("Duplicate message")
 				}
 			} else {
 				// it's new, add to the leds map

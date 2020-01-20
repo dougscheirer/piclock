@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -37,7 +36,7 @@ func toLoadedPayload(val interface{}) (loadedPayload, error) {
 	}
 }
 
-type loaderMsg struct {
+type almStateMsg struct {
 	msg string
 	val interface{}
 }
@@ -65,16 +64,16 @@ func init() {
 	wg.Add(2)
 }
 
-func handledMessage(alm alarm) loaderMsg {
-	return loaderMsg{msg: "handled", val: alm}
+func handledMessage(alm alarm) almStateMsg {
+	return almStateMsg{msg: "handled", val: alm}
 }
 
-func reloadMessage() loaderMsg {
-	return loaderMsg{msg: "reload"}
+func reloadMessage() almStateMsg {
+	return almStateMsg{msg: "reload"}
 }
 
-func alarmsLoadedMsg(loadID int, alarms []alarm, report bool) loaderMsg {
-	return loaderMsg{msg: "loaded", val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
+func alarmsLoadedMsg(loadID int, alarms []alarm, report bool) almStateMsg {
+	return almStateMsg{msg: "loaded", val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {
@@ -105,10 +104,11 @@ func cacheFilename(settings *configSettings) string {
 
 func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]alarm, error) {
 	alarms := make([]alarm, 0)
-	srv := getCalenderService(settings, false)
+	srv, err := getCalenderService(settings, false)
 
-	if srv == nil {
-		return alarms, errors.New("Failed to get calendar service")
+	if err != nil {
+		log.Printf("Failed to get calendar service")
+		return alarms, err
 	}
 
 	// map the calendar to an ID
@@ -342,10 +342,11 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 			log.Printf("Error reading alarm cache: %s\n", err.Error())
 			return
 		}
+		return
 	}
 	comms.leds <- ledMessage(16, modeOff, 0)
 
-	comms.loader <- alarmsLoadedMsg(loadID, alarms, report)
+	comms.almState <- alarmsLoadedMsg(loadID, alarms, report)
 	// tell runCheckAlarms that we have some alarms
 	comms.alarms <- checkMsg{alarms: alarms}
 }
@@ -379,7 +380,7 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 			case <-comms.quit:
 				log.Println("quit from runGetAlarms")
 				return
-			case msg := <-comms.loader:
+			case msg := <-comms.almState:
 				switch msg.msg {
 				case "handled":
 					alarm, _ := toAlarm(msg.val)
@@ -483,7 +484,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 				// Set alarm mode
 				comms.effects <- setAlarmMode(alarms[index])
 				// let someone know we handled it
-				comms.loader <- handledMessage(alarms[index])
+				comms.almState <- handledMessage(alarms[index])
 				alarms[index].disabled = true
 			}
 			break

@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"time"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -100,10 +99,10 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func getCalenderService(settings *configSettings, prompt bool) *calendar.Service {
+func getCalenderService(settings *configSettings, prompt bool) (*calendar.Service, error) {
 	// if' we're pretending, skip the check
 	if settings.GetBool("cached_alarms") {
-		return nil
+		return nil, nil
 	}
 
 	ctx := context.Background()
@@ -111,7 +110,7 @@ func getCalenderService(settings *configSettings, prompt bool) *calendar.Service
 	b, err := ioutil.ReadFile(settings.GetString("secretPath") + "/client_secret.json")
 	if err != nil {
 		log.Printf("Unable to read client secret file: %v", err)
-		return nil
+		return nil, err
 	}
 
 	// If modifying these scopes, delete your previously saved credentials
@@ -119,29 +118,23 @@ func getCalenderService(settings *configSettings, prompt bool) *calendar.Service
 	config, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
 	if err != nil {
 		log.Printf("Unable to parse client secret file to config: %v", err)
+		return nil, err
 	}
 	client := getClient(ctx, config, prompt)
 
 	srv, err := calendar.New(client)
 	if err != nil {
 		log.Printf("Unable to retrieve calendar Client %v", err)
+		return nil, err
 	}
 
-	return srv
+	return srv, nil
 }
 
 // a looping function to get the Oauth key before anything else
-func confirmCalendarAuth(settings *configSettings, prompt bool, c chan displayEffect) {
+func confirmCalendarAuth(settings *configSettings) {
 	defer func() {
-		if c != nil {
-			c <- toggleDebugDump(settings.GetBool("debug_dump"))
-		}
 	}()
-
-	if c != nil {
-		c <- toggleDebugDump(false)
-		c <- printEffect(" . . . .", 2*time.Second) // spaces required
-	}
 
 	// if we're pretending, skip the check
 	// TODO: move this logic into the test framework
@@ -149,11 +142,11 @@ func confirmCalendarAuth(settings *configSettings, prompt bool, c chan displayEf
 		return
 	}
 
-	for prompt {
-		c := getCalenderService(settings, prompt)
-		if c != nil {
-			return
-		}
-		// TODO: set some error indicators
+	_, err := getCalenderService(settings, true)
+	if err == nil {
+		// success!
+		return
 	}
+
+	log.Println(err)
 }

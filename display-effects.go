@@ -352,13 +352,13 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 						case modeCountdown:
 							// cancel the alarm
 							mode = modeClock
-							comms.loader <- handledMessage(*countdown)
+							comms.almState <- handledMessage(*countdown)
 							countdown = nil
 							buttonPressActed = true
 						case modeClock:
 							// more than 5 seconds is "reload"
 							if info.duration > 4*time.Second {
-								comms.loader <- reloadMessage()
+								comms.almState <- reloadMessage()
 								buttonPressActed = true
 							}
 						default:

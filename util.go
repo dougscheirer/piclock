@@ -4,11 +4,11 @@ package main
 import "time"
 
 type commChannels struct {
-	quit    chan struct{}
-	alarms  chan checkMsg
-	effects chan displayEffect
-	loader  chan loaderMsg
-	leds    chan ledEffect
+	quit     chan struct{}
+	alarms   chan checkMsg
+	effects  chan displayEffect
+	almState chan almStateMsg
+	leds     chan ledEffect
 }
 
 type clock interface {
@@ -40,15 +40,15 @@ func initCommChannels() commChannels {
 	quit := make(chan struct{}, 1)
 	alarmChannel := make(chan checkMsg, 1)
 	effectChannel := make(chan displayEffect, 1)
-	loaderChannel := make(chan loaderMsg, 1)
+	loaderChannel := make(chan almStateMsg, 1)
 	leds := make(chan ledEffect, 1)
 
 	return commChannels{
-		quit:    quit,
-		alarms:  alarmChannel,
-		effects: effectChannel,
-		loader:  loaderChannel,
-		leds:    leds}
+		quit:     quit,
+		alarms:   alarmChannel,
+		effects:  effectChannel,
+		almState: loaderChannel,
+		leds:     leds}
 }
 
 func initRuntime(rtc clock, wallClock clock) runtimeConfig {

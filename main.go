@@ -19,7 +19,7 @@ func main() {
 
 	// are we just generating the oauth token?
 	if settings.GetBool("oauth") {
-		confirmCalendarAuth(settings, true, nil)
+		confirmCalendarAuth(settings)
 		return
 	}
 
@@ -69,9 +69,7 @@ func main() {
 		showLoader(runtime.comms.effects)
 	}
 
-	// init the calendar auth, if it doesn't work we are just a clock
-	confirmCalendarAuth(settings, false, runtime.comms.effects)
-
+	// launch the rest of the threads
 	go runGetAlarms(settings, runtime)
 	go runCheckAlarm(settings, runtime)
 	go runWatchButtons(settings, runtime)

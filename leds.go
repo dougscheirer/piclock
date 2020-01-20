@@ -27,11 +27,3 @@ func setLED(pinNum int, on bool) {
 		pin.Low()
 	}
 }
-
-func ledOn(pinNum int) {
-	setLED(pinNum, true)
-}
-
-func ledOff(pinNum int) {
-	setLED(pinNum, false)
-}
