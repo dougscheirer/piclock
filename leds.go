@@ -18,7 +18,7 @@ func init() {
 }
 
 func setLED(pinNum int, on bool) {
-	log.Printf("Set pin 16 to %v", on)
+	log.Printf("Set pin %v to %v", pinNum, on)
 	pin := rpio.Pin(pinNum)
 	pin.Output()
 	if on {
@@ -26,4 +26,12 @@ func setLED(pinNum int, on bool) {
 	} else {
 		pin.Low()
 	}
+}
+
+func ledOn(pinNum int) {
+	setLED(pinNum, true)
+}
+
+func ledOff(pinNum int) {
+	setLED(pinNum, false)
 }

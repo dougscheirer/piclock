@@ -83,10 +83,10 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 			if v.curMode == modeUnset {
 				// transform broader categories of mode to on/off
 				if v.mode == modeOff {
-					setLED(v.pin, false)
+					ledOff(v.pin)
 					v.curMode = modeOff
 				} else {
-					setLED(v.pin, true)
+					ledOn(v.pin)
 					v.curMode = modeOn
 				}
 				v.lastUpdate = runtime.rtc.now()
@@ -102,7 +102,7 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 			// duration expired means turn it off
 			if v.duration > 0 && runtime.rtc.now().Sub(v.startTime) > v.duration {
 				if v.curMode != modeOff {
-					setLED(v.pin, false)
+					ledOff(v.pin)
 					// negative duration is expired
 					// TODO: remove from the map to make processing faster
 					v.duration = -1
@@ -136,14 +136,14 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 
 			if v.curMode == modeOff {
 				if timeInState > downTime*time.Millisecond {
-					setLED(v.pin, true)
+					ledOn(v.pin)
 					v.curMode = modeOn
 					v.lastUpdate = runtime.rtc.now()
 					leds[i] = v
 				}
 			} else {
 				if timeInState > upTime*time.Millisecond {
-					setLED(v.pin, false)
+					ledOff(v.pin)
 					v.curMode = modeOff
 					v.lastUpdate = runtime.rtc.now()
 					leds[i] = v
