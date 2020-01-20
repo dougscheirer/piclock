@@ -8,6 +8,8 @@ import (
 const (
 	modeOff = iota
 	modeOn
+	modeBlink10 // 10% off/sec
+	modeBlink25 // 25% off/sec
 	modeBlink50 // 50% cycle/sec
 	modeBlink75 // 75% off/sec
 	modeBlink90 // 90% off/sec
@@ -58,9 +60,8 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 		log.Printf("Exitings runLEDController")
 	}()
 
-	leds := make(map[int]ledEffect)
-
 	comms := runtime.comms
+	leds := make(map[int]ledEffect)
 
 	for true {
 		select {
@@ -129,21 +130,24 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 			var upTime, downTime time.Duration
 
 			switch v.mode {
+			case modeBlink10:
+				upTime = 900
+			case modeBlink25:
+				downTime = 250
 			case modeBlink50:
 				upTime = 500
-				downTime = 500
 			case modeBlink75:
 				upTime = 250
-				downTime = 750
 			case modeBlink90:
 				upTime = 100
-				downTime = 900
 			case modeOn:
 			case modeOff:
 			default:
 				// nothing to do
 				continue
 			}
+
+			downTime = 1000 - upTime
 
 			if v.curMode == modeOff {
 				if timeInState > downTime*time.Millisecond {
