@@ -19,11 +19,11 @@ func readButtons(btns []button) ([]rpio.State, error) {
 	return ret, nil
 }
 
-func setupButtons(pins []int, settings *settings, runtime runtimeConfig) ([]button, error) {
+func setupButtons(pins []int, settings *configSettings, runtime runtimeConfig) ([]button, error) {
 	return make([]button, len(pins)), nil
 }
 
-func initButtons(settings *settings) error {
+func initButtons(settings *configSettings) error {
 	return nil
 }
 

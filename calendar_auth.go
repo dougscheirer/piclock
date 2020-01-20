@@ -100,7 +100,7 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func getCalenderService(settings *settings, prompt bool) *calendar.Service {
+func getCalenderService(settings *configSettings, prompt bool) *calendar.Service {
 	// if' we're pretending, skip the check
 	if settings.GetBool("cached_alarms") {
 		return nil
@@ -131,7 +131,7 @@ func getCalenderService(settings *settings, prompt bool) *calendar.Service {
 }
 
 // a looping function to get the Oauth key before anything else
-func confirmCalendarAuth(settings *settings, prompt bool, c chan effect) {
+func confirmCalendarAuth(settings *configSettings, prompt bool, c chan displayEffect) {
 	defer func() {
 		if c != nil {
 			c <- toggleDebugDump(settings.GetBool("debug_dump"))

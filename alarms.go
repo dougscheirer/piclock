@@ -99,11 +99,11 @@ func handledAlarm(alarm alarm, handled map[string]alarm) bool {
 	return true
 }
 
-func cacheFilename(settings *settings) string {
+func cacheFilename(settings *configSettings) string {
 	return settings.GetString("alarmPath") + "/alarm.json"
 }
 
-func getAlarmsFromService(settings *settings, runtime runtimeConfig) ([]alarm, error) {
+func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]alarm, error) {
 	alarms := make([]alarm, 0)
 	srv := getCalenderService(settings, false)
 
@@ -210,7 +210,7 @@ func getAlarmsFromService(settings *settings, runtime runtimeConfig) ([]alarm, e
 	return alarms, nil
 }
 
-func getAlarmsFromCache(settings *settings, runtime runtimeConfig) ([]alarm, error) {
+func getAlarmsFromCache(settings *configSettings, runtime runtimeConfig) ([]alarm, error) {
 	alarms := make([]alarm, 0)
 	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
 		return alarms, nil
@@ -253,7 +253,7 @@ func OOBFetch(url string) []byte {
 	return body
 }
 
-func downloadMusicFiles(settings *settings, cE chan effect) {
+func downloadMusicFiles(settings *configSettings, cE chan displayEffect) {
 	// this is currently dumb, it just uses a list from musicDownloads
 	// and walks through it, downloading to the music dir
 	jsonPath := settings.GetString("musicDownloads")
@@ -315,7 +315,7 @@ func downloadMusicFiles(settings *settings, cE chan effect) {
 }
 
 // the calendar thing is a little flaky, so we load in another thread
-func loadAlarms(settings *settings, runtime runtimeConfig, loadID int, report bool) {
+func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, report bool) {
 	defer func() {
 		log.Println("returning from loadAlarms")
 	}()
@@ -350,7 +350,7 @@ func loadAlarms(settings *settings, runtime runtimeConfig, loadID int, report bo
 	comms.alarms <- checkMsg{alarms: alarms}
 }
 
-func runGetAlarms(settings *settings, runtime runtimeConfig) {
+func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runGetAlarms")
@@ -424,7 +424,7 @@ func runGetAlarms(settings *settings, runtime runtimeConfig) {
 	}
 }
 
-func runCheckAlarm(settings *settings, runtime runtimeConfig) {
+func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runCheckAlarms")

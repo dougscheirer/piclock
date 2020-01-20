@@ -84,7 +84,7 @@ func checkButtons(btns []button, runtime runtimeConfig) ([]button, error) {
 	return ret, nil
 }
 
-func runWatchButtons(settings *settings, runtime runtimeConfig) {
+func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runWatchButtons")

@@ -6,7 +6,7 @@ import "time"
 type commChannels struct {
 	quit    chan struct{}
 	alarms  chan checkMsg
-	effects chan effect
+	effects chan displayEffect
 	loader  chan loaderMsg
 	leds    chan ledEffect
 }
@@ -39,7 +39,7 @@ type runtimeConfig struct {
 func initCommChannels() commChannels {
 	quit := make(chan struct{}, 1)
 	alarmChannel := make(chan checkMsg, 1)
-	effectChannel := make(chan effect, 1)
+	effectChannel := make(chan displayEffect, 1)
 	loaderChannel := make(chan loaderMsg, 1)
 	leds := make(chan ledEffect, 1)
 

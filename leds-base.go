@@ -44,7 +44,7 @@ func setLEDEffect(effect ledEffect) ledEffect {
 	return effect
 }
 
-func runLEDController(settings *settings, runtime runtimeConfig) {
+func runLEDController(settings *configSettings, runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Printf("Exitings runLEDController")

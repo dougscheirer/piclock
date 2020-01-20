@@ -13,12 +13,12 @@ import (
 	"github.com/buger/jsonparser"
 )
 
-// keep settings generic strings, type-convert on the fly
-type settings struct {
+// keep configSettings generic strings, type-convert on the fly
+type configSettings struct {
 	settings map[string]interface{}
 }
 
-func defaultSettings() *settings {
+func defaultSettings() *configSettings {
 	s := make(map[string]interface{})
 
 	// setting the type here makes the conversion "automatic" later
@@ -47,10 +47,10 @@ func defaultSettings() *settings {
 	}
 	s["i2c_simulated"] = on
 
-	return &settings{settings: s}
+	return &configSettings{settings: s}
 }
 
-func (s *settings) settingsFromJSON(data []byte) error {
+func (s *configSettings) settingsFromJSON(data []byte) error {
 	tmp := defaultSettings()
 	for k, initVal := range tmp.settings {
 		// ignore missing fields;
@@ -125,7 +125,7 @@ func (s *settings) settingsFromJSON(data []byte) error {
 	return nil
 }
 
-func initSettings() *settings {
+func initSettings() *configSettings {
 	log.Println("initSettings")
 
 	// defaults
@@ -160,7 +160,7 @@ func initSettings() *settings {
 	return s
 }
 
-func (s *settings) GetString(key string) string {
+func (s *configSettings) GetString(key string) string {
 	switch v := s.settings[key].(type) {
 	case string:
 		return v
@@ -170,7 +170,7 @@ func (s *settings) GetString(key string) string {
 	}
 }
 
-func (s *settings) GetBool(key string) bool {
+func (s *configSettings) GetBool(key string) bool {
 	switch v := s.settings[key].(type) {
 	case bool:
 		return v
@@ -180,7 +180,7 @@ func (s *settings) GetBool(key string) bool {
 	}
 }
 
-func (s *settings) GetDuration(key string) time.Duration {
+func (s *configSettings) GetDuration(key string) time.Duration {
 	switch v := s.settings[key].(type) {
 	case time.Duration:
 		return v
@@ -190,7 +190,7 @@ func (s *settings) GetDuration(key string) time.Duration {
 	}
 }
 
-func (s *settings) GetByte(key string) byte {
+func (s *configSettings) GetByte(key string) byte {
 	switch v := s.settings[key].(type) {
 	case byte:
 		return v
@@ -202,7 +202,7 @@ func (s *settings) GetByte(key string) byte {
 	}
 }
 
-func (s *settings) GetInt(key string) int {
+func (s *configSettings) GetInt(key string) int {
 	switch v := s.settings[key].(type) {
 	case int:
 		return v
@@ -214,7 +214,7 @@ func (s *settings) GetInt(key string) int {
 	}
 }
 
-func (s *settings) Dump() {
+func (s *configSettings) Dump() {
 	for k, v := range s.settings {
 		log.Printf("%s : %T: %v\n", k, v, v)
 	}
