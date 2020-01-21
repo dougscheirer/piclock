@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -40,10 +41,11 @@ func defaultSettings() *configSettings {
 	s["strobe"] = true
 	s["skiploader"] = false
 	s["oauth"] = false
+	s["button_pins"] = []uint8{24, 25}
 
 	on := true
 	if runtime.GOARCH == "arm" {
-		on = false
+		on = false // default to IRL i2c on the Pi
 	}
 	s["i2c_simulated"] = on
 
@@ -53,13 +55,8 @@ func defaultSettings() *configSettings {
 func (s *configSettings) settingsFromJSON(data []byte) error {
 	tmp := defaultSettings()
 	for k, initVal := range tmp.settings {
-		// ignore missing fields;
-		_, err := jsonparser.GetString(data, k)
-		if err != nil {
-			log.Printf("Skipping key %s", k)
-			continue
-		}
-
+		var err error
+		// we walk through known keys and convert to the target value type
 		switch initVal.(type) {
 		case uint8:
 			var val int64
@@ -115,6 +112,15 @@ func (s *configSettings) settingsFromJSON(data []byte) error {
 			}
 		case string:
 			s.settings[k], err = jsonparser.GetString(data, k)
+		case []uint8:
+			// unmarshal the string value
+			var array []uint8
+			err = json.Unmarshal(data, &array)
+			if err == nil {
+				s.settings[k] = array
+			} else {
+				log.Println(err)
+			}
 		default:
 			err = fmt.Errorf("Bad type: %T", initVal)
 		}
@@ -219,3 +225,99 @@ func (s *configSettings) Dump() {
 		log.Printf("%s : %T: %v\n", k, v, v)
 	}
 }
+
+/*
+func toUInt8(val interface{}) (uint8, error) {
+	switch v := val.(type) {
+	case uint8:
+		return v, nil
+	case float64:
+		return uint8(v), nil
+	case int:
+		return uint8(v), nil
+	default:
+		return 0, errors.New("failed to convert")
+	}
+}
+
+func toBool(val interface{}) (bool, error) {
+	// if it's a string, try strconv.Parse
+	switch rt := val.(type) {
+	case string:
+		return strconv.ParseBool(rt)
+	case bool:
+		return rt, nil
+	case int:
+		if rt != 0 {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	default:
+		return false, errors.New("No conversion to bool from ?")
+	}
+}
+
+func toUInt8Array(result interface{}) ([]uint8, error) {
+	switch rt := result.(type) {
+	case []interface{}:
+		// convert each value
+		var err error
+		ay := make([]uint8, len(rt))
+		for i := range rt {
+			ay[i], err = toUInt8(rt[i])
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		return ay, nil
+	default:
+		return nil, errors.New("No conversion to []uint8 from ")
+	}
+}
+
+func main() {
+	known := make(map[string]interface{})
+	known["button_pins"] = []uint8{4, 5}
+	known["i2c_bus"] = 0
+	known["i2c_device"] = 0x01
+	known["blinkTime"] = true
+
+	fmt.Println(data)
+	for k, v := range known {
+		fmt.Printf("%v : %v\n", k, v)
+	}
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(data), &result)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for k, v := range known {
+		fmt.Printf("Result type: %T : %v\n", result[k], result[k])
+		switch target := v.(type) {
+		case bool:
+			known[k], err = toBool(result[k])
+			if err != nil {
+				fmt.Println(err)
+			}
+		case []uint8:
+			known[k], err = toUInt8Array(result[k])
+		case int:
+			// straight conversion
+			switch rt := result[k].(type) {
+			case int:
+				known[k] = rt
+			default:
+				fmt.Printf("No conversion to int from %v: %T\n", k, rt)
+			}
+		default:
+			fmt.Printf("No handler for %v: %T\n", k, target)
+		}
+	}
+
+	for k, v := range known {
+		fmt.Printf("%v : %v\n", k, v)
+	}
+}*/
