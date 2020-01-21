@@ -41,10 +41,6 @@ type almStateMsg struct {
 	val interface{}
 }
 
-type checkMsg struct {
-	alarms []alarm
-}
-
 type musicFile struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
@@ -346,9 +342,11 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 	}
 	comms.leds <- ledMessage(16, modeOff, 0)
 
-	comms.almState <- alarmsLoadedMsg(loadID, alarms, report)
+	msg := alarmsLoadedMsg(loadID, alarms, report)
+	// notify state change to loaded
+	comms.almState <- msg
 	// tell runCheckAlarms that we have some alarms
-	comms.alarms <- checkMsg{alarms: alarms}
+	comms.alarms <- msg
 }
 
 func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
@@ -396,7 +394,7 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 					// noise, just respond to the one that matches our current ID
 					loadedPayload, _ := toLoadedPayload(msg.val)
 					if loadedPayload.loadID == curReloadID {
-						// force reload -> show alarm count
+						// force reload -> show alarm counFt
 						// normal reload -> only show if > 0
 						if loadedPayload.report || len(loadedPayload.alarms) > 0 {
 							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), 2*time.Second)
@@ -444,9 +442,14 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 		case <-comms.quit:
 			log.Println("quit from runCheckAlarm")
 			return
-		case checkMsg := <-comms.alarms:
-			alarms = checkMsg.alarms
-			lastAlarm = nil
+		case stateMsg := <-comms.alarms:
+			if stateMsg.msg == "loaded" {
+				payload, _ := toLoadedPayload(stateMsg.val)
+				alarms = payload.alarms
+				lastAlarm = nil
+			} else {
+				log.Printf("Ignoring state change message: %v", stateMsg.msg)
+			}
 		default:
 			// continue
 		}
