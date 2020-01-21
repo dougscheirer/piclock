@@ -4,7 +4,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	// keyboard for sim mode
@@ -16,27 +15,22 @@ func init() {
 	features = append(features, "key-buttons")
 }
 
-func simSetupButtons(pins []int, buttonMap string, runtime runtimeConfig) ([]button, error) {
+func simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
 	// return a list of buttons with the char as the "pin num"
-	ret := make([]button, len(pins))
+	ret := make(map[string]button)
 	now := runtime.rtc.now()
 
-	for i := 0; i < len(ret); i++ {
-		if i >= len(buttonMap) {
-			log.Printf("No key map for %v", pins[i])
-			ret[i].pinNum = -1
-			ret[i].state = pressState{pressed: false, start: now, count: 0, changed: false}
-			continue
-		}
-		log.Printf("Key map for pin %d is %c", pins[i], buttonMap[i])
-		ret[i].pinNum = int(buttonMap[i])
-		ret[i].state = pressState{pressed: false, start: now, count: 0, changed: false}
+	for k, v := range pins {
+		var btn button
+		btn.button = v
+		btn.state = pressState{pressed: false, start: now, count: 0, changed: false}
+		ret[k] = btn
 	}
 	return ret, nil
 }
 
-func checkKeyboard(btns []button) ([]rpio.State, error) {
-	ret := make([]rpio.State, len(btns))
+func checkKeyboard(btns map[string]button) (map[string]rpio.State, error) {
+	ret := make(map[string]rpio.State)
 
 	// poll with quick timeout
 	// no key means "no change"
@@ -67,22 +61,22 @@ func checkKeyboard(btns []button) ([]rpio.State, error) {
 
 	// char is toggle (down to up or up to down)
 	// neither letter is "do not change"
-	for i := 0; i < len(ret); i++ {
-		match := btns[i].pinNum == int(ev.Ch)
-		if btns[i].state.pressed {
+	for k, v := range btns {
+		match := v.button.key[0] == byte(ev.Ch)
+		if v.state.pressed {
 			// orig state is down
 			if match {
-				ret[i] = btnUp
+				ret[k] = btnUp
 			} else {
 				// orig state is up
-				ret[i] = btnDown
+				ret[k] = btnDown
 			}
 		} else {
 			if match {
-				ret[i] = btnDown
+				ret[k] = btnDown
 			} else {
 				// orig state is up
-				ret[i] = btnUp
+				ret[k] = btnUp
 			}
 		}
 	}
@@ -90,17 +84,16 @@ func checkKeyboard(btns []button) ([]rpio.State, error) {
 	return ret, nil
 }
 
-func readButtons(btns []button) ([]rpio.State, error) {
+func readButtons(btns map[string]button) (map[string]rpio.State, error) {
 	// simulated mode we check it all at once or we wait a lot
 	return checkKeyboard(btns)
 }
 
-func setupButtons(pins []int, settings *configSettings, runtime runtimeConfig) ([]button, error) {
-	var buttons []button
+func setupButtons(pins map[string]buttonMap, settings *configSettings, runtime runtimeConfig) (map[string]button, error) {
+	var buttons map[string]button
 	var err error
 
-	simulated := settings.GetString("button_simulated")
-	buttons, err = simSetupButtons(pins, simulated, runtime)
+	buttons, err = simSetupButtons(pins, runtime)
 
 	return buttons, err
 }

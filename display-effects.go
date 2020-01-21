@@ -108,48 +108,12 @@ func toButtonInfo(val interface{}) (*buttonInfo, error) {
 	}
 }
 
-func toBool(val interface{}) (bool, error) {
-	switch v := val.(type) {
-	case bool:
-		return v, nil
-	default:
-		return false, fmt.Errorf("Bad type: %T", v)
-	}
-}
-
-func toInt(val interface{}) (int, error) {
-	switch v := val.(type) {
-	case int:
-		return v, nil
-	default:
-		return -1, fmt.Errorf("Bad type: %T", v)
-	}
-}
-
 func toAlarm(val interface{}) (*alarm, error) {
 	switch v := val.(type) {
 	case alarm:
 		return &v, nil
 	default:
 		return nil, fmt.Errorf("Bad type: %T", v)
-	}
-}
-
-func toString(val interface{}) (string, error) {
-	switch v := val.(type) {
-	case string:
-		return v, nil
-	default:
-		return "", fmt.Errorf("Bad type: %T", v)
-	}
-}
-
-func toDuration(val interface{}) (time.Duration, error) {
-	switch v := val.(type) {
-	case time.Duration:
-		return v, nil
-	default:
-		return 0, fmt.Errorf("Bad type: %T", v)
 	}
 }
 

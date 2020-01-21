@@ -16,7 +16,7 @@ type pressState struct {
 }
 
 type button struct {
-	pinNum int      // number of GPIO pin
+	button buttonMap
 	pin    rpio.Pin // rpio pin
 	state  pressState
 }
@@ -31,11 +31,11 @@ func init() {
 	wg.Add(1)
 }
 
-func checkButtons(btns []button, runtime runtimeConfig) ([]button, error) {
+func checkButtons(btns map[string]button, runtime runtimeConfig) (map[string]button, error) {
 	now := runtime.rtc.now()
-	ret := make([]button, len(btns))
+	ret := make(map[string]button)
 
-	var results []rpio.State
+	var results map[string]rpio.State
 	var err error
 
 	results, err = readButtons(btns)
@@ -43,27 +43,27 @@ func checkButtons(btns []button, runtime runtimeConfig) ([]button, error) {
 		return ret, err
 	}
 
-	for i := 0; i < len(btns); i++ {
-		var res rpio.State = results[i]
+	for k, v := range btns {
+		var res rpio.State = results[k]
 
-		ret[i] = btns[i]
-		ret[i].state.changed = false
+		btn := v
+		btn.state.changed = false
 
 		if res == btnDown {
 			// is this a change from before?
-			if ret[i].state.pressed {
+			if btn.state.pressed {
 				// no button state change, update the duration count
-				ret[i].state.count = int(now.Sub(ret[i].state.start) / time.Second)
-				if btns[i].state.count != ret[i].state.count {
-					ret[i].state.changed = true
+				btn.state.count = int(now.Sub(btn.state.start) / time.Second)
+				if btns[k].state.count != btn.state.count {
+					btn.state.changed = true
 				}
 			} else {
 				// just noticed it was pressed
-				ret[i].state = pressState{pressed: true, start: now, count: 0, changed: true}
+				btn.state = pressState{pressed: true, start: now, count: 0, changed: true}
 			}
 		} else {
 			// not pressed, is that a state change?
-			if !ret[i].state.pressed {
+			if !btn.state.pressed {
 				// no button state change, update the duration count?
 				// keep this less chatty, a button that is continually not pressed is not a state change
 				/*
@@ -73,12 +73,13 @@ func checkButtons(btns []button, runtime runtimeConfig) ([]button, error) {
 				   }*/
 			} else {
 				// just noticed the release
-				ret[i].state = pressState{pressed: false, start: now, count: 0, changed: true}
+				btn.state = pressState{pressed: false, start: now, count: 0, changed: true}
 			}
 		}
-		if ret[i].state.changed {
-			log.Printf("button changed state: %+v", ret[i])
+		if btn.state.changed {
+			log.Printf("button changed state: %+v", btn)
 		}
+		ret[k] = btn
 	}
 
 	return ret, nil
@@ -100,10 +101,9 @@ func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 	// we now should defer the closeButtons call to when this function exists
 	defer closeButtons()
 
-	var buttons []button
-	pins := []int{25, 24}
-	// 25 -> main button
-	// 24 -> some other button
+	var buttons map[string]button
+	pins := make(map[string]buttonMap)
+	pins["mainButton"] = settings.GetButtonMap("mainButton")
 
 	buttons, err = setupButtons(pins, settings, runtime)
 	if err != nil {
@@ -128,15 +128,15 @@ func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 			return
 		}
 
-		for i := 0; i < len(newButtons); i++ {
-			if newButtons[i].state.changed {
-				diff := time.Duration(newButtons[i].state.count) * time.Second
-				switch pins[i] {
-				case 25:
+		for k, v := range newButtons {
+			if v.state.changed {
+				diff := time.Duration(v.state.count) * time.Second
+				switch k {
+				case "mainButton":
 					log.Println("sending main button to effects")
-					comms.effects <- mainButton(newButtons[i].state.pressed, diff)
+					comms.effects <- mainButton(v.state.pressed, diff)
 				default:
-					log.Printf("Unhandled button %d", pins[i])
+					log.Printf("Unhandled button %s", k)
 				}
 			}
 		}

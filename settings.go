@@ -2,21 +2,23 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
-
-	"github.com/buger/jsonparser"
 )
 
 // keep configSettings generic strings, type-convert on the fly
 type configSettings struct {
 	settings map[string]interface{}
+}
+
+type buttonMap struct {
+	pin uint8
+	key string
 }
 
 func defaultSettings() *configSettings {
@@ -32,7 +34,6 @@ func defaultSettings() *configSettings {
 	s["i2c_device"] = byte(0x70)
 	s["calendar"] = "piclock"
 	s["debug_dump"] = false
-	s["button_simulated"] = ""
 	s["logFile"] = "/var/log/piclock.log"
 	s["cached_alarms"] = false // only use the cache, pretend that gcal is down
 	s["musicDownloads"] = "http://192.168.0.105/pimusic"
@@ -41,7 +42,7 @@ func defaultSettings() *configSettings {
 	s["strobe"] = true
 	s["skiploader"] = false
 	s["oauth"] = false
-	s["button_pins"] = []uint8{24, 25}
+	s["mainButton"] = buttonMap{pin: 25, key: "a"}
 
 	on := true
 	if runtime.GOARCH == "arm" {
@@ -54,80 +55,42 @@ func defaultSettings() *configSettings {
 
 func (s *configSettings) settingsFromJSON(data []byte) error {
 	tmp := defaultSettings()
-	for k, initVal := range tmp.settings {
-		var err error
-		// we walk through known keys and convert to the target value type
-		switch initVal.(type) {
-		case uint8:
-			var val int64
-			valSigned, err := jsonparser.GetInt(data, k)
-			if err != nil {
-				// try strconv ParseUint
-				valString, err2 := jsonparser.GetString(data, k)
-				if err2 == nil {
-					valSigned, err = strconv.ParseInt(valString, 0, 64)
-					val = int64(valSigned)
-				}
-			} else {
-				val = int64(valSigned)
-			}
-			if val > 255 || val < 0 {
-				err = fmt.Errorf("Value %v is out of range for %v", val, k)
-			}
-			if err == nil {
-				s.settings[k] = byte(val)
-			}
-		case int:
-			s.settings[k], err = jsonparser.GetInt(data, k)
-		case int64:
-			s.settings[k], err = jsonparser.GetInt(data, k)
-		case bool:
-			var bVal bool
-			bVal, err = jsonparser.GetBoolean(data, k)
-			if err != nil {
-				// try true and false
-				s, _ := jsonparser.GetString(data, k)
-				s = strings.ToLower(s)
-				switch s {
-				case "true":
-					bVal = true
-				case "false":
-					bVal = false
-				default:
-					// nothing, fail
-					return err
-				}
-			}
-			s.settings[k] = bVal
-			err = nil
-		case time.Duration:
-			var dur string
-			dur, err = jsonparser.GetString(data, k)
-			if err == nil {
-				var dur2 time.Duration
-				dur2, err = time.ParseDuration(dur)
-				if err == nil {
-					s.settings[k] = dur2
-				}
-			}
-		case string:
-			s.settings[k], err = jsonparser.GetString(data, k)
-		case []uint8:
-			// unmarshal the string value
-			var array []uint8
-			err = json.Unmarshal(data, &array)
-			if err == nil {
-				s.settings[k] = array
-			} else {
-				log.Println(err)
-			}
-		default:
-			err = fmt.Errorf("Bad type: %T", initVal)
+
+	var jsonMap map[string]interface{}
+	err := json.Unmarshal([]byte(data), &jsonMap)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range tmp.settings {
+		if jsonMap[k] == nil {
+			// skip, we will use the default
+			continue
 		}
+		switch target := v.(type) {
+		case bool:
+			s.settings[k], err = toBool(jsonMap[k])
+		case uint8:
+			s.settings[k], err = toUInt8(jsonMap[k])
+		case []uint8:
+			s.settings[k], err = toUInt8Array(jsonMap[k])
+		case int:
+			s.settings[k], err = toInt(jsonMap[k])
+		case string:
+			s.settings[k], err = toString(jsonMap[k])
+		case time.Duration:
+			s.settings[k], err = toDuration(jsonMap[k])
+		case buttonMap:
+			s.settings[k], err = toButtonMap(jsonMap[k])
+		default:
+			err = errors.New(fmt.Sprintf("No handler for %v: %T\n", k, target))
+		}
+
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -220,104 +183,18 @@ func (s *configSettings) GetInt(key string) int {
 	}
 }
 
+func (s *configSettings) GetButtonMap(key string) buttonMap {
+	switch v := s.settings[key].(type) {
+	case buttonMap:
+		return v
+	default:
+		log.Fatalf("Could not convert %T to buttonMap", v)
+		return buttonMap{}
+	}
+}
+
 func (s *configSettings) Dump() {
 	for k, v := range s.settings {
 		log.Printf("%s : %T: %v\n", k, v, v)
 	}
 }
-
-/*
-func toUInt8(val interface{}) (uint8, error) {
-	switch v := val.(type) {
-	case uint8:
-		return v, nil
-	case float64:
-		return uint8(v), nil
-	case int:
-		return uint8(v), nil
-	default:
-		return 0, errors.New("failed to convert")
-	}
-}
-
-func toBool(val interface{}) (bool, error) {
-	// if it's a string, try strconv.Parse
-	switch rt := val.(type) {
-	case string:
-		return strconv.ParseBool(rt)
-	case bool:
-		return rt, nil
-	case int:
-		if rt != 0 {
-			return true, nil
-		} else {
-			return false, nil
-		}
-	default:
-		return false, errors.New("No conversion to bool from ?")
-	}
-}
-
-func toUInt8Array(result interface{}) ([]uint8, error) {
-	switch rt := result.(type) {
-	case []interface{}:
-		// convert each value
-		var err error
-		ay := make([]uint8, len(rt))
-		for i := range rt {
-			ay[i], err = toUInt8(rt[i])
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-		return ay, nil
-	default:
-		return nil, errors.New("No conversion to []uint8 from ")
-	}
-}
-
-func main() {
-	known := make(map[string]interface{})
-	known["button_pins"] = []uint8{4, 5}
-	known["i2c_bus"] = 0
-	known["i2c_device"] = 0x01
-	known["blinkTime"] = true
-
-	fmt.Println(data)
-	for k, v := range known {
-		fmt.Printf("%v : %v\n", k, v)
-	}
-	var result map[string]interface{}
-	err := json.Unmarshal([]byte(data), &result)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	for k, v := range known {
-		fmt.Printf("Result type: %T : %v\n", result[k], result[k])
-		switch target := v.(type) {
-		case bool:
-			known[k], err = toBool(result[k])
-			if err != nil {
-				fmt.Println(err)
-			}
-		case []uint8:
-			known[k], err = toUInt8Array(result[k])
-		case int:
-			// straight conversion
-			switch rt := result[k].(type) {
-			case int:
-				known[k] = rt
-			default:
-				fmt.Printf("No conversion to int from %v: %T\n", k, rt)
-			}
-		default:
-			fmt.Printf("No handler for %v: %T\n", k, target)
-		}
-	}
-
-	for k, v := range known {
-		fmt.Printf("%v : %v\n", k, v)
-	}
-}*/
