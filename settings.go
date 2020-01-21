@@ -42,8 +42,8 @@ func defaultSettings() *configSettings {
 	s["skiploader"] = false
 	s["oauth"] = false
 	s["mainButton"] = buttonMap{pin: 25, key: "a"}
-	s["ledError"] = 6
-	s["ledAlarm"] = 16
+	s["ledError"] = byte(6)
+	s["ledAlarm"] = byte(16)
 
 	on := true
 	if runtime.GOARCH == "arm" {

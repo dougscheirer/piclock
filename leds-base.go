@@ -40,14 +40,15 @@ func ledMessageForce(pin int, mode int, duration time.Duration) ledEffect {
 }
 
 func diffLEDEffect(effect1 ledEffect, effect2 ledEffect) bool {
-	return effect1.mode != effect2.mode || effect1.duration != effect2.duration ||
-		effect1.pin != effect2.pin || effect1.startTime != effect2.startTime
+	return effect1.mode != effect2.mode || (effect1.duration != effect2.duration && effect1.duration > 0 && effect2.duration > 0) ||
+		effect1.pin != effect2.pin || (effect1.startTime != effect2.startTime && effect1.duration > 0 && effect2.duration > 0)
 }
 
 func setLEDEffect(effect ledEffect) ledEffect {
 	// clear the runtime info
 	effect.curMode = modeUnset
 	effect.lastUpdate = time.Time{}
+	effect.force = false // this is not part of the runtime, just an indicator in the message
 	return effect
 }
 

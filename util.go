@@ -59,6 +59,13 @@ func toInt(val interface{}) (int, error) {
 	case string:
 		ret, err := strconv.ParseInt(v, 0, 64)
 		return int(ret), err
+	case float64:
+		ret := int(v)
+		// make sure it's not really a float
+		if v != float64(ret) {
+			return -1, fmt.Errorf("Could not convert %T with value %v to int", v, v)
+		}
+		return ret, nil
 	default:
 		return -1, fmt.Errorf("Bad type: %T", v)
 	}

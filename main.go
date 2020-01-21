@@ -62,11 +62,17 @@ func main() {
 	go runLEDController(settings, runtime)
 	go runEffects(settings, runtime)
 
+	// force the LEDs to an on state
+	runtime.comms.leds <- ledMessageForce(settings.GetInt("ledAlarm"), modeOn, 0)
+	runtime.comms.leds <- ledMessageForce(settings.GetInt("ledError"), modeOn, 0)
+
 	// loader messages?
 	if !settings.GetBool("skiploader") {
 		// print the date and time of this build
 		runtime.comms.leds <- ledMessage(settings.GetInt("ledAlarm"), modeBlink50, 5*time.Second)
 		showLoader(runtime.comms.effects)
+	} else {
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	// launch the rest of the threads
