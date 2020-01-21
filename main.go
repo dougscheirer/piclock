@@ -65,7 +65,7 @@ func main() {
 	// loader messages?
 	if !settings.GetBool("skiploader") {
 		// print the date and time of this build
-		runtime.comms.leds <- ledMessage(16, modeBlink50, 5*time.Second)
+		runtime.comms.leds <- ledMessage(settings.GetInt("ledAlarm"), modeBlink50, 5*time.Second)
 		showLoader(runtime.comms.effects)
 	}
 

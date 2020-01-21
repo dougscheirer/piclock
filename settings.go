@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -43,6 +42,8 @@ func defaultSettings() *configSettings {
 	s["skiploader"] = false
 	s["oauth"] = false
 	s["mainButton"] = buttonMap{pin: 25, key: "a"}
+	s["ledError"] = 6
+	s["ledAlarm"] = 16
 
 	on := true
 	if runtime.GOARCH == "arm" {
@@ -83,7 +84,7 @@ func (s *configSettings) settingsFromJSON(data []byte) error {
 		case buttonMap:
 			s.settings[k], err = toButtonMap(jsonMap[k])
 		default:
-			err = errors.New(fmt.Sprintf("No handler for %v: %T\n", k, target))
+			err = fmt.Errorf("No handler for %v: %T", k, target)
 		}
 
 		if err != nil {

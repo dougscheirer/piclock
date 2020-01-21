@@ -322,7 +322,7 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 	go downloadMusicFiles(settings, comms.effects)
 
 	// set error LED now, it should go out almost right away
-	comms.leds <- ledMessage(16, modeBlink75, 0)
+	comms.leds <- ledMessage(settings.GetInt("ledError"), modeBlink75, 0)
 
 	// TODO: handled alarms are not longer considered, need testing
 	alarms, err := getAlarmsFromService(settings, runtime)
@@ -340,7 +340,7 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 		}
 		return
 	}
-	comms.leds <- ledMessage(16, modeOff, 0)
+	comms.leds <- ledMessage(settings.GetInt("ledError"), modeOff, 0)
 
 	msg := alarmsLoadedMsg(loadID, alarms, report)
 	// notify state change to loaded
@@ -394,9 +394,8 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 					// noise, just respond to the one that matches our current ID
 					loadedPayload, _ := toLoadedPayload(msg.val)
 					if loadedPayload.loadID == curReloadID {
-						// force reload -> show alarm counFt
-						// normal reload -> only show if > 0
-						if loadedPayload.report || len(loadedPayload.alarms) > 0 {
+						// force reload -> show alarm count
+						if loadedPayload.report {
 							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), 2*time.Second)
 						}
 					} else {
@@ -423,6 +422,12 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 	}
 }
 
+// return true if they look the same
+func compareAlarms(alm1 alarm, alm2 alarm) bool {
+	return (alm1.When == alm2.When && alm1.Effect == alm2.Effect &&
+		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
+}
+
 func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -446,7 +451,6 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			if stateMsg.msg == "loaded" {
 				payload, _ := toLoadedPayload(stateMsg.val)
 				alarms = payload.alarms
-				lastAlarm = nil
 			} else {
 				log.Printf("Ignoring state change message: %v", stateMsg.msg)
 			}
@@ -454,6 +458,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			// continue
 		}
 
+		validAlarm := false
 		// alarms come in sorted with soonest first
 		for index := 0; index < len(alarms); index++ {
 			if alarms[index].disabled {
@@ -461,7 +466,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			}
 
 			// if alarms[index] != lastAlarm, run some effects
-			if lastAlarm == nil || lastAlarm.When != alarms[index].When {
+			if lastAlarm == nil || !compareAlarms(*lastAlarm, alarms[index]) {
 				lastAlarm = &alarms[index]
 				comms.effects <- printEffect(fmt.Sprintf("AL:%d", index+1), 1*time.Second)
 				comms.effects <- printEffect(lastAlarm.When.Format("15:04"), 2*time.Second)
@@ -475,6 +480,10 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 				lastLogSecond = now.Second()
 				log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration/time.Second, (duration-settings.GetDuration("countdownTime"))/time.Second))
 			}
+
+			// light the LED to show we have a pending alarm
+			comms.leds <- ledMessage(settings.GetInt("ledAlarm"), modeOn, 0)
+			validAlarm = true
 
 			if duration > 0 {
 				// start a countdown?
@@ -491,6 +500,9 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 				alarms[index].disabled = true
 			}
 			break
+		}
+		if !validAlarm {
+			comms.leds <- ledMessage(settings.GetInt("ledAlarm"), modeOff, 0)
 		}
 		// take some time off
 		time.Sleep(100 * time.Millisecond)

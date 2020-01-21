@@ -134,7 +134,7 @@ func toButtonMap(result interface{}) (buttonMap, error) {
 		}
 		return buttonMap{pin: pin, key: key}, nil
 	default:
-		return buttonMap{}, errors.New(fmt.Sprintf("Could not convert type %T (%v)", rt, rt))
+		return buttonMap{}, fmt.Errorf("Could not convert type %T (%v)", rt, rt)
 	}
 }
 

@@ -20,6 +20,7 @@ type ledEffect struct {
 	pin        int
 	mode       int
 	duration   time.Duration
+	force      bool      // ignore current state, just do it
 	curMode    int       // runtime setting, on or off
 	lastUpdate time.Time // runtime setting, last time we changed the state
 	startTime  time.Time // runtime setting, when we initiated
@@ -31,7 +32,11 @@ func init() {
 }
 
 func ledMessage(pin int, mode int, duration time.Duration) ledEffect {
-	return ledEffect{pin: pin, mode: mode, duration: duration, startTime: time.Time{}}
+	return ledEffect{pin: pin, mode: mode, duration: duration, startTime: time.Time{}, force: false}
+}
+
+func ledMessageForce(pin int, mode int, duration time.Duration) ledEffect {
+	return ledEffect{pin: pin, mode: mode, duration: duration, startTime: time.Time{}, force: true}
 }
 
 func diffLEDEffect(effect1 ledEffect, effect2 ledEffect) bool {
@@ -69,18 +74,22 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 			log.Printf("Got a quit signal in runLEDController")
 			return
 		case msg := <-comms.leds:
-			log.Printf("Received led message: %v", msg)
 			// TODO: find in leds, determine if we need to change the state
 			if val, ok := leds[msg.pin]; ok {
 				// if the state is changed, set the new effect state
-				if diffLEDEffect(val, msg) {
+				if val.force || diffLEDEffect(val, msg) {
+					log.Printf("Received led message: %v", msg)
 					leds[msg.pin] = setLEDEffect(msg)
 				} else {
-					log.Println("Duplicate message")
+					// log.Println("Duplicate message")
 				}
 			} else {
-				// it's new, add to the leds map
-				leds[msg.pin] = setLEDEffect(msg)
+				// it's new, add to the leds map?
+				// if it's "turn off" assume that we already did that unless it's "force"
+				if msg.mode != modeOff {
+					log.Printf("Received led message: %v", msg)
+					leds[msg.pin] = setLEDEffect(msg)
+				}
 			}
 		default:
 		}
