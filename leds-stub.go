@@ -1,4 +1,4 @@
-// +build noleds
+// +build notapi
 
 package main
 
@@ -11,4 +11,3 @@ func init() {
 func setLED(pinNum int, on bool) {
 	log.Printf("Set LED %v to %v", pinNum, on)
 }
-

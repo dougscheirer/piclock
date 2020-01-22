@@ -32,6 +32,22 @@ func (tc testClock) setTime(t time.Time) {
 	tc.curTime = t
 }
 
+func (tc testClock) now() time.Time {
+	return tc.curTime
+}
+
+func (tc testClock) sleep(d time.Duration) {
+	t := tc.curTime
+	// sleep and recheck that the curTime is past the deadline
+	// check out the golang clock mocker for ideas on channels to trigger this
+	for true {
+		if tc.curTime.After(t.Add(d)) {
+			return
+		}
+		time.Sleep(10 * time.Millisecond) // wait for a bit
+	}
+}
+
 func (tc testClock) add(d time.Duration) {
 	tc.curTime.Add(d)
 }
@@ -45,9 +61,8 @@ func (r rtc) sleep(d time.Duration) {
 }
 
 type runtimeConfig struct {
-	comms     commChannels
-	rtc       clock
-	wallClock clock
+	comms commChannels
+	rtc   clock
 }
 
 func toBool(val interface{}) (bool, error) {
@@ -169,9 +184,8 @@ func initCommChannels() commChannels {
 		leds:     leds}
 }
 
-func initRuntime(rtc clock, wallClock clock) runtimeConfig {
+func initRuntime(rtc clock) runtimeConfig {
 	return runtimeConfig{
-		rtc:       rtc,
-		wallClock: wallClock,
-		comms:     initCommChannels()}
+		rtc:   rtc,
+		comms: initCommChannels()}
 }

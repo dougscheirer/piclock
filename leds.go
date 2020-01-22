@@ -1,4 +1,4 @@
-// +build !noleds
+// +build !notapi
 
 package main
 

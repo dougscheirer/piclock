@@ -13,12 +13,26 @@ var wg sync.WaitGroup
 
 var features = []string{}
 
+func confirmCalendarAuth(settings *configSettings) {
+	_, err := getCalendarService(settings, true)
+	if err == nil {
+		// success!
+		log.Println("OAuth successful")
+		return
+	}
+
+	log.Println(err)
+}
+
 func main() {
+	// CLI args
+	args := parseCLIArgs()
+
 	// read config information
-	settings := initSettings()
+	settings := initSettings(args.configFile)
 
 	// are we just generating the oauth token?
-	if settings.GetBool("oauth") {
+	if args.oauth {
 		confirmCalendarAuth(settings)
 		return
 	}
@@ -56,7 +70,7 @@ func main() {
 	*/
 
 	// init runtime objects with a real clock
-	var runtime = initRuntime(rtc{}, rtc{})
+	var runtime = initRuntime(rtc{})
 
 	// start the effect threads so we can update the LEDs
 	go runLEDController(settings, runtime)

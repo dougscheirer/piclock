@@ -1,4 +1,4 @@
-// +build nolcd
+// +build notapi
 
 package main
 

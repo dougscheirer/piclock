@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"runtime"
 	"time"
 )
 
@@ -34,22 +33,14 @@ func defaultSettings() *configSettings {
 	s["calendar"] = "piclock"
 	s["debugDump"] = false
 	s["logFile"] = "/var/log/piclock.log"
-	s["cachedAlarms"] = false // only use the cache, pretend that gcal is down
 	s["musicDownloads"] = "http://192.168.0.105/pimusic"
 	s["musicPath"] = "/etc/default/piclock/music"
 	s["blinkTime"] = true
 	s["strobe"] = true
 	s["skipLoader"] = false
-	s["oauth"] = false
 	s["mainButton"] = buttonMap{pin: 25, key: "a"}
 	s["ledError"] = byte(6)
 	s["ledAlarm"] = byte(16)
-
-	i2cSim := true
-	if runtime.GOARCH == "arm" {
-		i2cSim = false // default to IRL i2c on the Pi
-	}
-	s["i2cSimulated"] = i2cSim
 
 	return &configSettings{settings: s}
 }
@@ -95,12 +86,12 @@ func (s *configSettings) settingsFromJSON(data []byte) error {
 	return nil
 }
 
-func initSettings() *configSettings {
-	log.Println("initSettings")
+type cliArgs struct {
+	oauth      bool
+	configFile string
+}
 
-	// defaults
-	s := defaultSettings()
-
+func parseCLIArgs() cliArgs {
 	// define our flags first
 	configFile := flag.String("config", "/etc/default/piclock/piclock.conf", "config file path")
 	oauthOnly := flag.Bool("oauth", false, "connect and generate the oauth token")
@@ -108,18 +99,30 @@ func initSettings() *configSettings {
 	// parse the flags
 	flag.Parse()
 
-	// oauth?
-	if *oauthOnly != false {
-		s.settings["oauth"] = true
+	args := cliArgs{oauth: false}
+	if oauthOnly != nil && *oauthOnly {
+		args.oauth = true
 	}
+	if configFile != nil {
+		args.configFile = *configFile
+	}
+
+	return args
+}
+
+func initSettings(configFile string) *configSettings {
+	log.Println("initSettings")
+
+	// defaults
+	s := defaultSettings()
 
 	// try to open the config file
-	data, err := ioutil.ReadFile(*configFile)
+	data, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		log.Fatalf("Could not load conf file '%s', terminating", *configFile)
+		log.Fatalf("Could not load conf file '%s', terminating", configFile)
 	}
 
-	log.Println(fmt.Sprintf("Reading configuration from '%s'", *configFile))
+	log.Println(fmt.Sprintf("Reading configuration from '%s'", configFile))
 
 	// json parse it
 	if err := s.settingsFromJSON(data); err != nil {

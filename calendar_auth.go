@@ -1,3 +1,5 @@
+// +build !test
+
 package main
 
 import (
@@ -99,12 +101,7 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func getCalenderService(settings *configSettings, prompt bool) (*calendar.Service, error) {
-	// if' we're pretending, skip the check
-	if settings.GetBool("cachedAlarms") {
-		return nil, nil
-	}
-
+func getCalendarService(settings *configSettings, prompt bool) (*calendar.Service, error) {
 	ctx := context.Background()
 
 	b, err := ioutil.ReadFile(settings.GetString("secretPath") + "/client_secret.json")
@@ -129,24 +126,4 @@ func getCalenderService(settings *configSettings, prompt bool) (*calendar.Servic
 	}
 
 	return srv, nil
-}
-
-// a looping function to get the Oauth key before anything else
-func confirmCalendarAuth(settings *configSettings) {
-	defer func() {
-	}()
-
-	// if we're pretending, skip the check
-	// TODO: move this logic into the test framework
-	if settings.GetBool("cachedAlarms") {
-		return
-	}
-
-	_, err := getCalenderService(settings, true)
-	if err == nil {
-		// success!
-		return
-	}
-
-	log.Println(err)
 }

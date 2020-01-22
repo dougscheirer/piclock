@@ -99,56 +99,19 @@ func cacheFilename(settings *configSettings) string {
 }
 
 func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]alarm, error) {
-	alarms := make([]alarm, 0)
-	srv, err := getCalenderService(settings, false)
+	// this is build dependent
+	events, err := fetchEventsFromCalendar(settings, runtime)
+	var alarms []alarm
 
-	if err != nil {
-		log.Printf("Failed to get calendar service")
-		return alarms, err
-	}
-
-	// map the calendar to an ID
-	calName := settings.GetString("calendar")
-	var id string
-	{
-		log.Println("get calendar list")
-		list, err := srv.CalendarList.List().Do()
-		log.Println("process calendar result")
-		if err != nil {
-			log.Println(err.Error())
-			return alarms, err
-		}
-		for _, i := range list.Items {
-			if i.Summary == calName {
-				id = i.Id
-				break
-			}
-		}
-	}
-
-	if id == "" {
-		return alarms, fmt.Errorf("Could not find calendar %s", calName)
-	}
-	// get next 10 (?) alarms
-	t := runtime.wallClock.now().Format(time.RFC3339)
-	events, err := srv.Events.List(id).
-		ShowDeleted(false).
-		SingleEvents(true).
-		TimeMin(t).
-		MaxResults(10).
-		OrderBy("startTime").
-		Do()
 	if err != nil {
 		return alarms, err
 	}
-
-	log.Printf("calendar fetch complete")
 
 	// remove the cached alarms if they are present
 	cacheFile := cacheFilename(settings)
 	if _, err := os.Stat(cacheFile); !os.IsNotExist(err) {
 		err = os.Remove(cacheFile)
-		// an error here is a system config issue
+		// an error here is probably a system config issue
 		if err != nil {
 			// TODO: severe error effect
 			log.Printf("Error: %s", err.Error())
@@ -174,7 +137,7 @@ func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]al
 			}
 
 			// TODO: account for countdown time
-			if when.Sub(runtime.wallClock.now()) < 0 {
+			if when.Sub(runtime.rtc.now()) < 0 {
 				log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
 				continue
 			}
@@ -222,7 +185,7 @@ func getAlarmsFromCache(settings *configSettings, runtime runtimeConfig) ([]alar
 	// remove any that are in the "handled" map or the time has passed
 	for i := len(alarms) - 1; i >= 0; i-- {
 		// TODO: account for countdown time
-		if alarms[i].When.Sub(runtime.wallClock.now()) < 0 {
+		if alarms[i].When.Sub(runtime.rtc.now()) < 0 {
 			// remove is append two slices without the part we don't want
 			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
 			alarms = append(alarms[:i], alarms[i+1:]...)
@@ -474,7 +437,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 2*time.Second)
 			}
 
-			now := runtime.wallClock.now()
+			now := runtime.rtc.now()
 			duration := alarms[index].When.Sub(now)
 			if lastLogSecond != now.Second() && now.Second()%30 == 0 {
 				lastLogSecond = now.Second()

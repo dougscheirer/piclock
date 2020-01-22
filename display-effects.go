@@ -129,7 +129,7 @@ func toPrint(val interface{}) (*displayPrint, error) {
 func displayClock(runtime runtimeConfig, display *sevensegShim, blinkColon bool, dot bool) {
 	// standard time display
 	colon := "15:04"
-	now := runtime.wallClock.now()
+	now := runtime.rtc.now()
 	if blinkColon && now.Second()%2 == 0 {
 		// no space required for the colon
 		colon = "1504"
@@ -150,7 +150,7 @@ func displayClock(runtime runtimeConfig, display *sevensegShim, blinkColon bool,
 
 func displayCountdown(runtime runtimeConfig, display *sevensegShim, alarm *alarm, dot bool) bool {
 	// calculate 10ths of secs to alarm time
-	count := alarm.When.Sub(runtime.wallClock.now()) / (time.Second / 10)
+	count := alarm.When.Sub(runtime.rtc.now()) / (time.Second / 10)
 	if count > 9999 {
 		count = 9999
 	} else if count <= 0 {

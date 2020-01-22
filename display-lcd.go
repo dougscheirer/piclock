@@ -1,4 +1,4 @@
-// +build !nolcd
+// +build !notapi
 
 package main
 
@@ -12,7 +12,7 @@ func openDisplay(settings *configSettings) (*sevensegShim, error) {
 	ssb, err := sevenseg_backpack.Open(
 		settings.GetByte("i2cDevice"),
 		settings.GetInt("i2cBus"),
-		settings.GetBool("i2cSimulated"))
+		false)
 	return &sevensegShim{ssb: ssb}, err
 }
 
