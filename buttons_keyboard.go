@@ -29,13 +29,13 @@ func simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[stri
 	return ret, nil
 }
 
-func checkKeyboard(btns map[string]button) (map[string]rpio.State, error) {
+func checkKeyboard(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
 
 	// poll with quick timeout
 	// no key means "no change"
 	go func() {
-		time.Sleep(100 * time.Millisecond)
+		runtime.rtc.sleep(100 * time.Millisecond)
 		termbox.Interrupt()
 	}()
 
@@ -84,9 +84,9 @@ func checkKeyboard(btns map[string]button) (map[string]rpio.State, error) {
 	return ret, nil
 }
 
-func readButtons(btns map[string]button) (map[string]rpio.State, error) {
+func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
 	// simulated mode we check it all at once or we wait a lot
-	return checkKeyboard(btns)
+	return checkKeyboard(runtime, btns)
 }
 
 func setupButtons(pins map[string]buttonMap, settings *configSettings, runtime runtimeConfig) (map[string]button, error) {

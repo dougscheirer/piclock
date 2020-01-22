@@ -38,7 +38,7 @@ func checkButtons(btns map[string]button, runtime runtimeConfig) (map[string]but
 	var results map[string]rpio.State
 	var err error
 
-	results, err = readButtons(btns)
+	results, err = readButtons(runtime, btns)
 	if err != nil {
 		return ret, err
 	}
@@ -142,6 +142,6 @@ func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 		}
 
 		buttons = newButtons
-		time.Sleep(10 * time.Millisecond)
+		runtime.rtc.sleep(10 * time.Millisecond)
 	}
 }

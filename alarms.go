@@ -417,7 +417,7 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 			lastRefresh = runtime.rtc.now()
 		} else {
 			// wait a little
-			time.Sleep(100 * time.Millisecond)
+			runtime.rtc.sleep(100 * time.Millisecond)
 		}
 	}
 }
@@ -505,6 +505,6 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			comms.leds <- ledOff(settings.GetInt("ledAlarm"))
 		}
 		// take some time off
-		time.Sleep(100 * time.Millisecond)
+		runtime.rtc.sleep(100 * time.Millisecond)
 	}
 }

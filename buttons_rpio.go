@@ -57,7 +57,7 @@ func closeButtons() {
 	// N/A, nothing special
 }
 
-func readButtons(btns map[string]button) (map[string]rpio.State, error) {
+func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
 	for k, v := range btns {
 		ret[k] = v.pin.Read() // Read state from pin (High / Low)

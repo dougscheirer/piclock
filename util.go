@@ -18,21 +18,30 @@ type commChannels struct {
 
 type clock interface {
 	now() time.Time
+	sleep(time.Duration)
 }
 
 type rtc struct {
 }
 
-type wallClock struct {
+type testClock struct {
 	curTime time.Time
+}
+
+func (tc testClock) setTime(t time.Time) {
+	tc.curTime = t
+}
+
+func (tc testClock) add(d time.Duration) {
+	tc.curTime.Add(d)
 }
 
 func (r rtc) now() time.Time {
 	return time.Now()
 }
 
-func (w wallClock) now() time.Time {
-	return w.curTime
+func (r rtc) sleep(d time.Duration) {
+	time.Sleep(d)
 }
 
 type runtimeConfig struct {

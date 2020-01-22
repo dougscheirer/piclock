@@ -185,6 +185,6 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 		}
 
 		// sleep for a bit (1/10s is our lowest resolution)
-		time.Sleep(100 * time.Millisecond)
+		runtime.rtc.sleep(100 * time.Millisecond)
 	}
 }

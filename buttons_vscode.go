@@ -10,7 +10,7 @@ func init() {
 	features = append(features, "no-buttons")
 }
 
-func readButtons(btns map[string]button) (map[string]rpio.State, error) {
+func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
 	// simulated mode we check it all at once or we wait a lot
 	ret := make(map[string]rpio.State)
 	for k, _ := range btns {

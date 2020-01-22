@@ -2,6 +2,8 @@
 
 package main
 
+import "log"
+
 type sevensegShim struct {
 	i2cBus     int
 	curDisplay string
@@ -10,6 +12,7 @@ type sevensegShim struct {
 	displayOn  bool
 	blinkRate  uint8
 	refreshOn  bool
+	segments   [8][8]bool
 }
 
 func openDisplay(settings *configSettings) (*sevensegShim, error) {
@@ -41,6 +44,9 @@ func (this *sevensegShim) DisplayOn(on bool) error {
 }
 
 func (this *sevensegShim) Print(e string) error {
+	if e != this.curDisplay {
+		log.Print(e)
+	}
 	this.curDisplay = e
 	return nil
 }
@@ -61,5 +67,9 @@ func (this *sevensegShim) ClearDisplay() error {
 }
 
 func (this *sevensegShim) SegmentOn(pos byte, seg byte, on bool) error {
+	this.curDisplay = ""
+	this.segments[pos][seg] = on
+	// debug output?
+	log.Printf("%d/%d set to %v", pos, seg, on)
 	return nil
 }

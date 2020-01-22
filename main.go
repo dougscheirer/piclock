@@ -71,7 +71,7 @@ func main() {
 		// print the date and time of this build
 		showLoader(runtime.comms.effects)
 	} else {
-		time.Sleep(500 * time.Millisecond)
+		runtime.rtc.sleep(500 * time.Millisecond)
 	}
 
 	// launch the rest of the threads

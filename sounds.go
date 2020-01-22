@@ -22,7 +22,7 @@ const sampleRate = 44100
 // two functions exist here:
 //   PlayPattern(segments []soundSegment, stop chan bool)
 //    given a series of frequencies/level/duration, play each in a repeating pattern
-//   playMP3(file string, stop chan bool)
+//   playMP3(runtime runtimeConfig, file string, stop chan bool)
 //    given an MP3 file, play it on repeat
 
 type soundSegment struct {
@@ -163,7 +163,7 @@ func getDecoder(fname string) *mpg123.Decoder {
 	return decoder
 }
 
-func playMP3(fName string, loop bool, stop chan bool) {
+func playMP3(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
 	// just run mpg123 or the pi fails to play
 	cmd := exec.Command("mpg123", fName)
 	completed := make(chan error, 1)
@@ -176,7 +176,7 @@ func playMP3(fName string, loop bool, stop chan bool) {
 	stopPlayback := false
 
 	for {
-		time.Sleep(100 * time.Millisecond)
+		runtime.rtc.sleep(100 * time.Millisecond)
 		select {
 		case <-stop:
 			stopPlayback = true

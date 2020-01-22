@@ -212,7 +212,7 @@ func playAlarmEffect(settings *configSettings, alm *alarm, stop chan bool, runti
 		playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
 	} else {
 		log.Printf("Playing %s", musicFile)
-		playMP3(musicFile, true, stop)
+		playMP3(runtime, musicFile, true, stop)
 	}
 }
 
@@ -277,7 +277,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 				// TODO: alarm error LED
 				display.Print("Err")
 				d, _ := toDuration(e.val)
-				time.Sleep(d)
+				runtime.rtc.sleep(d)
 			case eTerminate:
 				log.Println("terminate")
 				return
@@ -285,7 +285,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 				v, _ := toPrint(e.val)
 				log.Printf("Print: %s (%d)", v.s, v.d)
 				display.Print(v.s)
-				time.Sleep(v.d)
+				runtime.rtc.sleep(v.d)
 				skip = true // don't immediately print the clock in clock mode
 			case eAlarm:
 				mode = modeAlarm
@@ -335,7 +335,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 			}
 		default:
 			// nothing?
-			time.Sleep(time.Duration(sleepTime))
+			runtime.rtc.sleep(time.Duration(sleepTime))
 		}
 
 		// skip the mode stuff?
