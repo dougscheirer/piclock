@@ -15,7 +15,7 @@ type I2C struct {
 }
 
 const (
-	I2C_SLAVE = 0x0703
+	i2cSLAVE = 0x0703
 )
 
 func (this *I2C) logWrite(buf []uint8) error {
@@ -45,7 +45,7 @@ func Open(address uint8, bus int, simulated bool) (*I2C, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := ioctl(f.Fd(), I2C_SLAVE, uintptr(address)); err != nil {
+		if err := ioctl(f.Fd(), i2cSLAVE, uintptr(address)); err != nil {
 			return nil, err
 		}
 		this := &I2C{fd: f, address: address, fd_sim: false, debugdump: false}
@@ -93,11 +93,11 @@ func (this *I2C) Write(buf []uint8) (int, error) {
 }
 
 func select_line(this *I2C) error {
-	this.logMsg(fmt.Sprintf("ioctl: I2C_SLAVE @ 0x%02x", this.address))
+	this.logMsg(fmt.Sprintf("ioctl: i2cSLAVE @ 0x%02x", this.address))
 	if this.fd_sim {
 		return nil
 	}
-	return ioctl(this.fd.Fd(), I2C_SLAVE, uintptr(this.address))
+	return ioctl(this.fd.Fd(), i2cSLAVE, uintptr(this.address))
 }
 
 func ioctl(fd, cmd, arg uintptr) error {

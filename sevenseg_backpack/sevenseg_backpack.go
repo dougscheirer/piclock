@@ -15,15 +15,15 @@ const i2c_OSC_ON = 0x21
 const i2c_OSC_OFF = 0x20
 
 // display on/off and 2 "blink" bits in position 2+1
-const i2c_DISPLAY_CMD = 0x80
-const i2c_DISPLAY_ON = 0x81
-const i2c_DISPLAY_OFF = 0x80
+const i2cDISPLAY_CMD = 0x80
+const i2cDISPLAY_ON = 0x81
+const i2cDISPLAY_OFF = 0x80
 
 // 0x0 -> 0xF brightness levels
-const i2c_BRIGHTNESS_CMD = 0xE0
-const i2c_BRIGHTNESS_MAX = 0xEF
-const i2c_BRIGHTNESS_MIN = 0xE0
-const i2c_BRIGHTNESS_HALF = 0xE7
+const i2cBRIGHTNESS_CMD = 0xE0
+const i2cBRIGHTNESS_MAX = 0xEF
+const i2cBRIGHTNESS_MIN = 0xE0
+const i2cBRIGHTNESS_HALF = 0xE7
 
 // colon is just one bit at position 5 (+1 for address, position 2 * 2 for nil bytes)
 const i2c_COLON_POS = 1 + 2*2
@@ -74,7 +74,12 @@ var digitValues = map[byte]byte{
 	'H': 0x76,
 	'h': 0x74,
 	'l': 0x06,
-	'L': 0x38}
+	'L': 0x38,
+	'n': 0x62,
+	'N': 0x62,
+	'o': 0x63,
+	'O': 0x3F,
+}
 
 // TODO: support inverse
 var inverseDigitValues = map[byte]byte{
@@ -105,14 +110,19 @@ var inverseDigitValues = map[byte]byte{
 	'H': 0x76,
 	'h': 0x66,
 	'l': 0x30,
-	'L': 0x70}
+	'L': 0x70,
+	'n': 0x54,
+	'N': 0x54,
+	'o': 0x56,
+	'O': 0x3F,
+}
 
 // one address byte, plus 7-seg skips bytes for each display element
 const displaySize = 1 + 5*2
 
 type Sevenseg struct {
 	display        [displaySize]uint8
-	i2c_dev        *i2c.I2C
+	i2cDev         *i2c.I2C
 	refresh        bool
 	inverted       bool
 	dump           bool
@@ -137,13 +147,13 @@ func getClearDisplay() [displaySize]uint8 {
 }
 
 func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
-	i2c_dev, err := i2c.Open(address, bus, simulated)
+	i2cDev, err := i2c.Open(address, bus, simulated)
 	if err != nil {
 		return nil, err
 	}
 	// create "this" with the FD and refresh on by default
 	this := &Sevenseg{
-		i2c_dev:        i2c_dev,
+		i2cDev:         i2cDev,
 		refresh:        true,
 		inverted:       false,
 		blink:          BLINK_OFF,
@@ -152,8 +162,8 @@ func Open(address uint8, bus int, simulated bool) (*Sevenseg, error) {
 		sim:            simulated,
 		currentDisplay: getClearDisplay()}
 	// turn on the oscillator, set default brightness
-	this.i2c_dev.WriteByte(i2c_OSC_ON)
-	this.i2c_dev.WriteByte(i2c_BRIGHTNESS_MAX)
+	this.i2cDev.WriteByte(i2c_OSC_ON)
+	this.i2cDev.WriteByte(i2cBRIGHTNESS_MAX)
 	// you still need to call DisplayOn(true) to turn on the display
 	return this, nil
 }
@@ -170,11 +180,11 @@ func (this *Sevenseg) SetInverted(inverted bool) {
 func (this *Sevenseg) DisplayOn(on bool) error {
 	this.simLog("Display: %t", on)
 	// blink rate is bits 2 and 1 of the display command
-	var val byte = i2c_DISPLAY_ON | (this.blink << 1)
+	var val byte = i2cDISPLAY_ON | (this.blink << 1)
 	if !on {
-		val = i2c_DISPLAY_OFF
+		val = i2cDISPLAY_OFF
 	}
-	_, err := this.i2c_dev.WriteByte(val)
+	_, err := this.i2cDev.WriteByte(val)
 	return err
 }
 
@@ -303,7 +313,7 @@ func (this *Sevenseg) refresh_display() error {
 		this.dumpDisplay()
 	}
 
-	_, err := this.i2c_dev.Write(this.display[:])
+	_, err := this.i2cDev.Write(this.display[:])
 	return err
 }
 
@@ -538,6 +548,6 @@ func (this *Sevenseg) SetBrightness(level uint8) error {
 		return errors.New(fmt.Sprintf("Bad brightness level: %d", level))
 	}
 	this.simLog("Brightness %d", level)
-	_, err := this.i2c_dev.WriteByte(i2c_BRIGHTNESS_CMD | level)
+	_, err := this.i2cDev.WriteByte(i2cBRIGHTNESS_CMD | level)
 	return err
 }

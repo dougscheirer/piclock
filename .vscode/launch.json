@@ -12,7 +12,7 @@
       "program": "${workspaceRoot}",
       "env": {},
       "args": ["-config","./piclock.vscode.conf"],
-      "buildFlags": "-tags='nobuttons noaudio noleds'"
+      "buildFlags": "-tags='nobuttons noaudio noleds nolcd'"
     },
     {
       "name": "Launch audio",
@@ -22,7 +22,7 @@
       "program": "${workspaceRoot}",
       "env": {},
       "args": ["-config","./piclock.vscode.conf"],
-      "buildFlags": "-tags='nobuttons noleds'"
+      "buildFlags": "-tags='nobuttons noleds nolcd'"
     },
     {
       "name": "oauth",
@@ -32,7 +32,7 @@
       "program": "${workspaceRoot}",
       "env": {},
       "args": ["-oauth", "-config","./piclock.vscode.conf"],
-      "buildFlags": "-tags='nobuttons noaudio noleds'"
+      "buildFlags": "-tags='nobuttons noaudio noleds nolcd'"
     }
   ]
 }

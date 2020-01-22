@@ -39,6 +39,14 @@ func ledMessageForce(pin int, mode int, duration time.Duration) ledEffect {
 	return ledEffect{pin: pin, mode: mode, duration: duration, startTime: time.Time{}, force: true}
 }
 
+func ledOn(pin int) ledEffect {
+	return ledMessage(pin, modeOn, 0)
+}
+
+func ledOff(pin int) ledEffect {
+	return ledMessage(pin, modeOff, 0)
+}
+
 func diffLEDEffect(effect1 ledEffect, effect2 ledEffect) bool {
 	return effect1.mode != effect2.mode || (effect1.duration != effect2.duration && effect1.duration > 0 && effect2.duration > 0) ||
 		effect1.pin != effect2.pin || (effect1.startTime != effect2.startTime && effect1.duration > 0 && effect2.duration > 0)
@@ -52,11 +60,11 @@ func setLEDEffect(effect ledEffect) ledEffect {
 	return effect
 }
 
-func ledOn(pinNum int) {
+func setLEDOn(pinNum int) {
 	setLED(pinNum, true)
 }
 
-func ledOff(pinNum int) {
+func setLEDOff(pinNum int) {
 	setLED(pinNum, false)
 }
 
@@ -105,10 +113,10 @@ func runLEDController(settings *configSettings, runtime runtimeConfig) {
 			if v.curMode == modeUnset {
 				// transform broader categories of mode to on/off
 				if v.mode == modeOff {
-					ledOff(v.pin)
+					setLEDOff(v.pin)
 					v.curMode = modeOff
 				} else {
-					ledOn(v.pin)
+					setLEDOn(v.pin)
 					v.curMode = modeOn
 				}
 				v.lastUpdate = runtime.rtc.now()

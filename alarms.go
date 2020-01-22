@@ -340,7 +340,7 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 		}
 		return
 	}
-	comms.leds <- ledMessage(settings.GetInt("ledError"), modeOff, 0)
+	comms.leds <- ledOff(settings.GetInt("ledError"))
 
 	msg := alarmsLoadedMsg(loadID, alarms, report)
 	// notify state change to loaded
@@ -482,7 +482,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			}
 
 			// light the LED to show we have a pending alarm
-			comms.leds <- ledMessage(settings.GetInt("ledAlarm"), modeOn, 0)
+			comms.leds <- ledOn(settings.GetInt("ledAlarm"))
 			validAlarm = true
 
 			if duration > 0 {
@@ -502,7 +502,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			break
 		}
 		if !validAlarm {
-			comms.leds <- ledMessage(settings.GetInt("ledAlarm"), modeOff, 0)
+			comms.leds <- ledOff(settings.GetInt("ledAlarm"))
 		}
 		// take some time off
 		time.Sleep(100 * time.Millisecond)

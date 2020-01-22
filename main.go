@@ -67,9 +67,8 @@ func main() {
 	runtime.comms.leds <- ledMessageForce(settings.GetInt("ledError"), modeOn, 0)
 
 	// loader messages?
-	if !settings.GetBool("skiploader") {
+	if !settings.GetBool("skipLoader") {
 		// print the date and time of this build
-		runtime.comms.leds <- ledMessage(settings.GetInt("ledAlarm"), modeBlink50, 5*time.Second)
 		showLoader(runtime.comms.effects)
 	} else {
 		time.Sleep(500 * time.Millisecond)

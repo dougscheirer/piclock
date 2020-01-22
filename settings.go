@@ -29,27 +29,27 @@ func defaultSettings() *configSettings {
 	s["secretPath"] = "/etc/default/piclock"
 	s["alarmPath"] = "/etc/default/piclock/alarms"
 	s["alarmRefreshTime"], _ = time.ParseDuration("1m")
-	s["i2c_bus"] = byte(0)
-	s["i2c_device"] = byte(0x70)
+	s["i2cBus"] = byte(0)
+	s["i2cDevice"] = byte(0x70)
 	s["calendar"] = "piclock"
-	s["debug_dump"] = false
+	s["debugDump"] = false
 	s["logFile"] = "/var/log/piclock.log"
-	s["cached_alarms"] = false // only use the cache, pretend that gcal is down
+	s["cachedAlarms"] = false // only use the cache, pretend that gcal is down
 	s["musicDownloads"] = "http://192.168.0.105/pimusic"
 	s["musicPath"] = "/etc/default/piclock/music"
 	s["blinkTime"] = true
 	s["strobe"] = true
-	s["skiploader"] = false
+	s["skipLoader"] = false
 	s["oauth"] = false
 	s["mainButton"] = buttonMap{pin: 25, key: "a"}
 	s["ledError"] = byte(6)
 	s["ledAlarm"] = byte(16)
 
-	on := true
+	i2cSim := true
 	if runtime.GOARCH == "arm" {
-		on = false // default to IRL i2c on the Pi
+		i2cSim = false // default to IRL i2c on the Pi
 	}
-	s["i2c_simulated"] = on
+	s["i2cSimulated"] = i2cSim
 
 	return &configSettings{settings: s}
 }

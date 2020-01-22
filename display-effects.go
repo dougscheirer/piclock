@@ -126,7 +126,7 @@ func toPrint(val interface{}) (*displayPrint, error) {
 	}
 }
 
-func displayClock(runtime runtimeConfig, display *sevenseg_backpack.Sevenseg, blinkColon bool, dot bool) {
+func displayClock(runtime runtimeConfig, display *sevensegShim, blinkColon bool, dot bool) {
 	// standard time display
 	colon := "15:04"
 	now := runtime.wallClock.now()
@@ -148,7 +148,7 @@ func displayClock(runtime runtimeConfig, display *sevenseg_backpack.Sevenseg, bl
 	}
 }
 
-func displayCountdown(runtime runtimeConfig, display *sevenseg_backpack.Sevenseg, alarm *alarm, dot bool) bool {
+func displayCountdown(runtime runtimeConfig, display *sevensegShim, alarm *alarm, dot bool) bool {
 	// calculate 10ths of secs to alarm time
 	count := alarm.When.Sub(runtime.wallClock.now()) / (time.Second / 10)
 	if count > 9999 {
@@ -228,10 +228,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 
 	comms := runtime.comms
 
-	display, err := sevenseg_backpack.Open(
-		settings.GetByte("i2c_device"),
-		settings.GetInt("i2c_bus"),
-		settings.GetBool("i2c_simulated"))
+	display, err := openDisplay(settings)
 
 	if err != nil {
 		log.Printf("Error: %s", err.Error())
@@ -239,7 +236,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 	}
 
 	// turn on LED dump?
-	display.DebugDump(settings.GetBool("debug_dump"))
+	display.DebugDump(settings.GetBool("debugDump"))
 
 	display.SetBrightness(3)
 	// ready to rock

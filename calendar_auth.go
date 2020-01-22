@@ -101,7 +101,7 @@ func saveToken(file string, token *oauth2.Token) {
 
 func getCalenderService(settings *configSettings, prompt bool) (*calendar.Service, error) {
 	// if' we're pretending, skip the check
-	if settings.GetBool("cached_alarms") {
+	if settings.GetBool("cachedAlarms") {
 		return nil, nil
 	}
 
@@ -138,7 +138,7 @@ func confirmCalendarAuth(settings *configSettings) {
 
 	// if we're pretending, skip the check
 	// TODO: move this logic into the test framework
-	if settings.GetBool("cached_alarms") {
+	if settings.GetBool("cachedAlarms") {
 		return
 	}
 
