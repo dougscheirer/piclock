@@ -103,7 +103,7 @@ func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 
 	var buttons map[string]button
 	pins := make(map[string]buttonMap)
-	pins["mainButton"] = settings.GetButtonMap("mainButton")
+	pins[sMainBtn] = settings.GetButtonMap(sMainBtn)
 
 	buttons, err = setupButtons(pins, settings, runtime)
 	if err != nil {
@@ -132,7 +132,7 @@ func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 			if v.state.changed {
 				diff := time.Duration(v.state.count) * time.Second
 				switch k {
-				case "mainButton":
+				case sMainBtn:
 					log.Println("sending main button to effects")
 					comms.effects <- mainButton(v.state.pressed, diff)
 				default:

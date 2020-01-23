@@ -10,8 +10,8 @@ type sevensegShim struct {
 
 func openDisplay(settings *configSettings) (*sevensegShim, error) {
 	ssb, err := sevenseg_backpack.Open(
-		settings.GetByte("i2cDevice"),
-		settings.GetInt("i2cBus"),
+		settings.GetByte(sI2CDev),
+		settings.GetInt(sI2CBus),
 		false)
 	return &sevensegShim{ssb: ssb}, err
 }

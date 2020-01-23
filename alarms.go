@@ -99,7 +99,7 @@ func handledAlarm(alarm alarm, handled map[string]alarm) bool {
 }
 
 func cacheFilename(settings *configSettings) string {
-	return settings.GetString("alarmPath") + "/alarm.json"
+	return settings.GetString(sAlarms) + "/alarm.json"
 }
 
 func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]alarm, error) {
@@ -219,7 +219,7 @@ func OOBFetch(url string) []byte {
 func downloadMusicFiles(settings *configSettings, cE chan displayEffect) {
 	// this is currently dumb, it just uses a list from musicDownloads
 	// and walks through it, downloading to the music dir
-	jsonPath := settings.GetString("musicDownloads")
+	jsonPath := settings.GetString(sMusicURL)
 	log.Printf("Downloading list from " + jsonPath)
 
 	results := make(chan []byte, 1)
@@ -236,7 +236,7 @@ func downloadMusicFiles(settings *configSettings, cE chan displayEffect) {
 		return
 	}
 
-	musicPath := settings.GetString("musicPath")
+	musicPath := settings.GetString(sMusicPath)
 	log.Printf("Received a list of %d files", len(files))
 
 	mp3Files := make([]chan []byte, len(files))
@@ -289,7 +289,7 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 	go downloadMusicFiles(settings, comms.effects)
 
 	// set error LED now, it should go out almost right away
-	comms.leds <- ledMessage(settings.GetInt("ledError"), modeBlink75, 0)
+	comms.leds <- ledMessage(settings.GetInt(sLEDErr), modeBlink75, 0)
 
 	// TODO: handled alarms are not longer considered, need testing
 	alarms, err := getAlarmsFromService(settings, runtime)
@@ -307,7 +307,7 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 		}
 		return
 	}
-	comms.leds <- ledOff(settings.GetInt("ledError"))
+	comms.leds <- ledOff(settings.GetInt(sLEDErr))
 
 	msg := alarmsLoadedMsg(loadID, alarms, report)
 	// notify state change to loaded
@@ -336,7 +336,7 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 		reload := false
 		forceReload := false
 
-		if runtime.rtc.Now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
+		if runtime.rtc.Now().Sub(lastRefresh) > settings.GetDuration(sAlmRefresh) {
 			reload = true
 		}
 
@@ -445,16 +445,16 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			duration := alarms[index].When.Sub(now)
 			if lastLogSecond != now.Second() && now.Second()%30 == 0 {
 				lastLogSecond = now.Second()
-				log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration/time.Second, (duration-settings.GetDuration("countdownTime"))/time.Second))
+				log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration/time.Second, (duration-settings.GetDuration(sCountdown))/time.Second))
 			}
 
 			// light the LED to show we have a pending alarm
-			comms.leds <- ledOn(settings.GetInt("ledAlarm"))
+			comms.leds <- ledOn(settings.GetInt(sLEDAlm))
 			validAlarm = true
 
 			if duration > 0 {
 				// start a countdown?
-				countdown := settings.GetDuration("countdownTime")
+				countdown := settings.GetDuration(sCountdown)
 				if duration < countdown && !alarms[index].countdown {
 					comms.effects <- setCountdownMode(alarms[0])
 					alarms[index].countdown = true
@@ -469,7 +469,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			break
 		}
 		if !validAlarm {
-			comms.leds <- ledOff(settings.GetInt("ledAlarm"))
+			comms.leds <- ledOff(settings.GetInt(sLEDAlm))
 		}
 		// take some time off
 		runtime.rtc.Sleep(100 * time.Millisecond)

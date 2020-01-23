@@ -40,8 +40,8 @@ func main() {
 	}
 
 	// first try to set up the log (optional)
-	if settings.GetString("logFile") != "" {
-		f, err := os.OpenFile(settings.GetString("logFile"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if settings.GetString(sLog) != "" {
+		f, err := os.OpenFile(settings.GetString(sLog), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
 			wd, _ := os.Getwd()
 			log.Printf("CWD: %s", wd)
@@ -79,11 +79,11 @@ func main() {
 	go runEffects(settings, runtime)
 
 	// force the LEDs to an on state
-	runtime.comms.leds <- ledMessageForce(settings.GetInt("ledAlarm"), modeOn, 0)
-	runtime.comms.leds <- ledMessageForce(settings.GetInt("ledError"), modeOn, 0)
+	runtime.comms.leds <- ledMessageForce(settings.GetInt(sLEDAlm), modeOn, 0)
+	runtime.comms.leds <- ledMessageForce(settings.GetInt(sLEDErr), modeOn, 0)
 
 	// loader messages?
-	if !settings.GetBool("skipLoader") {
+	if !settings.GetBool(sSkipLoader) {
 		// print the date and time of this build
 		showLoader(runtime.comms.effects)
 	} else {

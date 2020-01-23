@@ -19,7 +19,7 @@ func fetchEventsFromCalendar(settings *configSettings, runtime runtimeConfig) (*
 	}
 
 	// map the calendar to an ID
-	calName := settings.GetString("calendar")
+	calName := settings.GetString(sCalName)
 	var id string
 	{
 		log.Println("get calendar list")

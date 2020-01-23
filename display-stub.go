@@ -17,9 +17,9 @@ type sevensegShim struct {
 
 func openDisplay(settings *configSettings) (*sevensegShim, error) {
 	this := &sevensegShim{
-		i2cBus:     settings.GetInt("i2cBus"),
+		i2cBus:     settings.GetInt(sI2CBus),
 		curDisplay: "",
-		debugDump:  settings.GetBool("debugDump"),
+		debugDump:  settings.GetBool(sDebug),
 		brightness: 0,
 		displayOn:  false,
 		blinkRate:  0,

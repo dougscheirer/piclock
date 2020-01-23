@@ -19,28 +19,47 @@ type buttonMap struct {
 	key string
 }
 
+const sCountdown string = "countdownTime"
+const sSleep string = "sleepTime"
+const sSecrets string = "secretPath"
+const sAlarms string = "alarmPath"
+const sAlmRefresh string = "alarmRefresh"
+const sI2CBus string = "i2cBus"
+const sI2CDev string = "i2cDevice"
+const sCalName string = "calendar"
+const sDebug string = "debugDump"
+const sLog string = "logFile"
+const sMusicURL string = "musicDownloads"
+const sMusicPath string = "musicPath"
+const sBlink string = "blinkTime"
+const sStrobe string = "strobe"
+const sSkipLoader string = "skipLoader"
+const sMainBtn string = "mainButton"
+const sLEDErr string = "ledErrr"
+const sLEDAlm string = "ledAlarm"
+
 func defaultSettings() *configSettings {
 	s := make(map[string]interface{})
 
 	// setting the type here makes the conversion "automatic" later
-	s["countdownTime"], _ = time.ParseDuration("1m")
-	s["sleepTime"], _ = time.ParseDuration("10ms")
-	s["secretPath"] = "/etc/default/piclock"
-	s["alarmPath"] = "/etc/default/piclock/alarms"
-	s["alarmRefreshTime"], _ = time.ParseDuration("1m")
-	s["i2cBus"] = byte(0)
-	s["i2cDevice"] = byte(0x70)
-	s["calendar"] = "piclock"
-	s["debugDump"] = false
-	s["logFile"] = "/var/log/piclock.log"
-	s["musicDownloads"] = "http://192.168.0.105/pimusic"
-	s["musicPath"] = "/etc/default/piclock/music"
-	s["blinkTime"] = true
-	s["strobe"] = true
-	s["skipLoader"] = false
-	s["mainButton"] = buttonMap{pin: 25, key: "a"}
-	s["ledError"] = byte(6)
-	s["ledAlarm"] = byte(16)
+	s[sCountdown], _ = time.ParseDuration("1m")
+	s[sSleep], _ = time.ParseDuration("10ms")
+	s[sSecrets] = "/etc/default/piclock"
+	s[sAlarms] = "/etc/default/piclock/alarms"
+	s[sAlmRefresh], _ = time.ParseDuration("1m")
+	s[sI2CBus] = byte(0)
+	s[sI2CDev] = byte(0x70)
+	s[sCalName] = "piclock"
+	s[sDebug] = false
+	s[sLog] = "/var/log/piclock.log"
+	s[sMusicURL] = "http://localhost/pimusic/music.json"
+	s[sMusicPath] = "/etc/default/piclock/music"
+	s[sBlink] = true
+	s[sStrobe] = true
+	s[sSkipLoader] = false
+	s[sMainBtn] = buttonMap{pin: 25, key: "a"}
+	s[sLEDErr] = byte(6)
+	s[sLEDAlm] = byte(16)
 
 	return &configSettings{settings: s}
 }

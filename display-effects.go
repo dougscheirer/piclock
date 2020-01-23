@@ -170,7 +170,7 @@ func displayCountdown(runtime runtimeConfig, display *sevensegShim, alarm *alarm
 }
 
 func playAlarmEffect(settings *configSettings, alm *alarm, stop chan bool, runtime runtimeConfig) {
-	musicPath := settings.GetString("musicPath")
+	musicPath := settings.GetString(sMusicPath)
 	var musicFile string
 	playTones := false
 
@@ -236,7 +236,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 	}
 
 	// turn on LED dump?
-	display.DebugDump(settings.GetBool("debugDump"))
+	display.DebugDump(settings.GetBool(sDebug))
 
 	display.SetBrightness(3)
 	// ready to rock
@@ -246,7 +246,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 	var countdown *alarm
 	var errorID = 0
 	alarmSegment := 0
-	defaultSleep := settings.GetDuration("sleepTime")
+	defaultSleep := settings.GetDuration(sSleep)
 	sleepTime := defaultSleep
 	buttonPressActed := false
 	buttonDot := false
@@ -345,7 +345,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 
 		switch mode {
 		case modeClock:
-			displayClock(runtime, display, settings.GetBool("blinkTime"), buttonDot)
+			displayClock(runtime, display, settings.GetBool(sBlink), buttonDot)
 		case modeCountdown:
 			if !displayCountdown(runtime, display, countdown, buttonDot) {
 				mode = modeClock
@@ -358,7 +358,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 			// do nothing
 		case modeAlarm:
 			// do a strobing 0, light up segments 0 - 5
-			if settings.GetBool("strobe") == true {
+			if settings.GetBool(sStrobe) == true {
 				display.RefreshOn(false)
 				display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
 				display.ClearDisplay()
