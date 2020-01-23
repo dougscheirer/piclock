@@ -41,7 +41,7 @@ func fetchEventsFromCalendar(settings *configSettings, runtime runtimeConfig) (*
 		return nil, fmt.Errorf("Could not find calendar %s", calName)
 	}
 	// get next 10 (?) alarms
-	t := runtime.rtc.now().Format(time.RFC3339)
+	t := runtime.rtc.Now().Format(time.RFC3339)
 	events, err := srv.Events.List(id).
 		ShowDeleted(false).
 		SingleEvents(true).

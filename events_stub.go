@@ -2,11 +2,32 @@
 
 package main
 
-import "google.golang.org/api/calendar/v3"
+import (
+	"fmt"
+
+	"google.golang.org/api/calendar/v3"
+)
 
 func fetchEventsFromCalendar(settings *configSettings, runtime runtimeConfig) (*calendar.Events, error) {
 	// TODO: use a faked list of events
-	return nil, nil
+	var events calendar.Events
+	events.Items = make([]*calendar.Event, 5)
+	for k := range events.Items {
+		events.Items[k] = &calendar.Event{}
+		events.Items[k].Start = &calendar.EventDateTime{DateTime: fmt.Sprintf("2020-01-01T0%d:00:00.00Z", k)}
+		events.Items[k].Id = fmt.Sprintf("%d", k)
+		switch k % 3 {
+		case 0:
+			events.Items[k].Summary = "music"
+		case 1:
+			events.Items[k].Summary = "tone"
+		case 2:
+			events.Items[k].Summary = "music dance"
+		default:
+			events.Items[k].Summary = "n/a"
+		}
+	}
+	return &events, nil
 }
 
 // stubbed out so that main.go will build

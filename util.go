@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 type commChannels struct {
@@ -16,53 +18,9 @@ type commChannels struct {
 	leds     chan ledEffect
 }
 
-type clock interface {
-	now() time.Time
-	sleep(time.Duration)
-}
-
-type rtc struct {
-}
-
-type testClock struct {
-	curTime time.Time
-}
-
-func (tc testClock) setTime(t time.Time) {
-	tc.curTime = t
-}
-
-func (tc testClock) now() time.Time {
-	return tc.curTime
-}
-
-func (tc testClock) sleep(d time.Duration) {
-	t := tc.curTime
-	// sleep and recheck that the curTime is past the deadline
-	// check out the golang clock mocker for ideas on channels to trigger this
-	for true {
-		if tc.curTime.After(t.Add(d)) {
-			return
-		}
-		time.Sleep(10 * time.Millisecond) // wait for a bit
-	}
-}
-
-func (tc testClock) add(d time.Duration) {
-	tc.curTime.Add(d)
-}
-
-func (r rtc) now() time.Time {
-	return time.Now()
-}
-
-func (r rtc) sleep(d time.Duration) {
-	time.Sleep(d)
-}
-
 type runtimeConfig struct {
 	comms commChannels
-	rtc   clock
+	rtc   clockwork.Clock
 }
 
 func toBool(val interface{}) (bool, error) {
@@ -184,7 +142,7 @@ func initCommChannels() commChannels {
 		leds:     leds}
 }
 
-func initRuntime(rtc clock) runtimeConfig {
+func initRuntime(rtc clockwork.Clock) runtimeConfig {
 	return runtimeConfig{
 		rtc:   rtc,
 		comms: initCommChannels()}

@@ -36,6 +36,10 @@ func toLoadedPayload(val interface{}) (loadedPayload, error) {
 	}
 }
 
+const msgLoaded string = "loaded"
+const msgHandled string = "handled"
+const msgReload string = "reload"
+
 type almStateMsg struct {
 	msg string
 	val interface{}
@@ -61,15 +65,15 @@ func init() {
 }
 
 func handledMessage(alm alarm) almStateMsg {
-	return almStateMsg{msg: "handled", val: alm}
+	return almStateMsg{msg: msgHandled, val: alm}
 }
 
 func reloadMessage() almStateMsg {
-	return almStateMsg{msg: "reload"}
+	return almStateMsg{msg: msgReload}
 }
 
 func alarmsLoadedMsg(loadID int, alarms []alarm, report bool) almStateMsg {
-	return almStateMsg{msg: "loaded", val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
+	return almStateMsg{msg: msgLoaded, val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {
@@ -137,7 +141,7 @@ func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]al
 			}
 
 			// TODO: account for countdown time
-			if when.Sub(runtime.rtc.now()) < 0 {
+			if when.Sub(runtime.rtc.Now()) < 0 {
 				log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
 				continue
 			}
@@ -145,7 +149,7 @@ func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]al
 			alm := alarm{ID: i.Id, Name: i.Summary, When: when, disabled: false}
 
 			// look for hashtags (does not work ATM, the gAPI is broken I think)
-			log.Println(i.Summary)
+			log.Printf("Event: %s", i.Summary)
 			// priority is arbitrary except for random (default)
 			if m, _ := regexp.MatchString("[Mm]usic .*", i.Summary); m {
 				alm.Effect = almMusic
@@ -185,7 +189,7 @@ func getAlarmsFromCache(settings *configSettings, runtime runtimeConfig) ([]alar
 	// remove any that are in the "handled" map or the time has passed
 	for i := len(alarms) - 1; i >= 0; i-- {
 		// TODO: account for countdown time
-		if alarms[i].When.Sub(runtime.rtc.now()) < 0 {
+		if alarms[i].When.Sub(runtime.rtc.Now()) < 0 {
 			// remove is append two slices without the part we don't want
 			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
 			alarms = append(alarms[:i], alarms[i+1:]...)
@@ -332,7 +336,7 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 		reload := false
 		forceReload := false
 
-		if runtime.rtc.now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
+		if runtime.rtc.Now().Sub(lastRefresh) > settings.GetDuration("alarmRefreshTime") {
 			reload = true
 		}
 
@@ -343,14 +347,14 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 				return
 			case msg := <-comms.almState:
 				switch msg.msg {
-				case "handled":
+				case msgHandled:
 					alarm, _ := toAlarm(msg.val)
 					handledAlarms[alarm.ID] = *alarm
-				case "reload":
+				case msgReload:
 					reload = true
 					forceReload = true
 					comms.effects <- printEffect("rLd", 2*time.Second)
-				case "loaded":
+				case msgLoaded:
 					// decide if we display a message or not
 					// it's possible we launched a bunch of loadAlarms threads
 					// and they all eventually unblock. to prevent a bunch of
@@ -377,10 +381,10 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 			loadID := curReloadID + 1
 			curReloadID++
 			go loadAlarms(settings, runtime, loadID, forceReload)
-			lastRefresh = runtime.rtc.now()
+			lastRefresh = runtime.rtc.Now()
 		} else {
 			// wait a little
-			runtime.rtc.sleep(100 * time.Millisecond)
+			runtime.rtc.Sleep(100 * time.Millisecond)
 		}
 	}
 }
@@ -411,7 +415,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			log.Println("quit from runCheckAlarm")
 			return
 		case stateMsg := <-comms.alarms:
-			if stateMsg.msg == "loaded" {
+			if stateMsg.msg == msgLoaded {
 				payload, _ := toLoadedPayload(stateMsg.val)
 				alarms = payload.alarms
 			} else {
@@ -437,7 +441,7 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 2*time.Second)
 			}
 
-			now := runtime.rtc.now()
+			now := runtime.rtc.Now()
 			duration := alarms[index].When.Sub(now)
 			if lastLogSecond != now.Second() && now.Second()%30 == 0 {
 				lastLogSecond = now.Second()
@@ -468,6 +472,6 @@ func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
 			comms.leds <- ledOff(settings.GetInt("ledAlarm"))
 		}
 		// take some time off
-		runtime.rtc.sleep(100 * time.Millisecond)
+		runtime.rtc.Sleep(100 * time.Millisecond)
 	}
 }

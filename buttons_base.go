@@ -32,7 +32,7 @@ func init() {
 }
 
 func checkButtons(btns map[string]button, runtime runtimeConfig) (map[string]button, error) {
-	now := runtime.rtc.now()
+	now := runtime.rtc.Now()
 	ret := make(map[string]button)
 
 	var results map[string]rpio.State
@@ -142,6 +142,6 @@ func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 		}
 
 		buttons = newButtons
-		runtime.rtc.sleep(10 * time.Millisecond)
+		runtime.rtc.Sleep(10 * time.Millisecond)
 	}
 }

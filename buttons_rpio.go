@@ -24,7 +24,7 @@ func setupPinButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[stri
 	}
 
 	ret := make(map[string]button, len(pins))
-	now := runtime.rtc.now()
+	now := runtime.rtc.Now()
 
 	for k, v := range pins {
 		// TODO: configurable pin numbers and high or low

@@ -18,7 +18,7 @@ func init() {
 func simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
 	// return a list of buttons with the char as the "pin num"
 	ret := make(map[string]button)
-	now := runtime.rtc.now()
+	now := runtime.rtc.Now()
 
 	for k, v := range pins {
 		var btn button
@@ -35,7 +35,7 @@ func checkKeyboard(runtime runtimeConfig, btns map[string]button) (map[string]rp
 	// poll with quick timeout
 	// no key means "no change"
 	go func() {
-		runtime.rtc.sleep(100 * time.Millisecond)
+		runtime.rtc.Sleep(100 * time.Millisecond)
 		termbox.Interrupt()
 	}()
 

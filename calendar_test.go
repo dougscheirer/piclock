@@ -1,23 +1,42 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
 
-func TestCalendar(t *testing.T) {
+	"gotest.tools/assert"
+
+	"github.com/jonboulle/clockwork"
+)
+
+func setup() (*configSettings, runtimeConfig, clockwork.FakeClock) {
 	// load our test config
 	cfgFile := "./test/config.conf"
 	settings := initSettings(cfgFile)
 	// make runtime for test
-	runtime := initRuntime(testClock{})
+	clock := clockwork.NewFakeClock()
+	runtime := initRuntime(clock)
 
-	// launch some threads
-	go runEffects(settings, runtime)
-	go runLEDController(settings, runtime)
+	return settings, runtime, clock
+}
+
+func TestCalendar(t *testing.T) {
+	settings, runtime, clock := setup()
 
 	// load alarms
+	go runGetAlarms(settings, runtime)
 
-	// now advance time to trigger alarm
+	// block for a while?
+	clock.BlockUntil(1)
 
-	// see if the alarm triggered
-
-	t.Error("Failed!")
+	// read the comm channel for messages
+	state := <-runtime.comms.almState
+	assert.Assert(t, state.msg == msgLoaded)
+	switch v := state.val.(type) {
+	case loadedPayload:
+		assert.Assert(t, len(v.alarms) == 5)
+		assert.Assert(t, v.loadID == 1)
+	default:
+		assert.Assert(t, false, fmt.Sprintf("Bad value: %v", v))
+	}
 }

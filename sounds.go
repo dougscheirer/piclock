@@ -176,7 +176,7 @@ func playMP3(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
 	stopPlayback := false
 
 	for {
-		runtime.rtc.sleep(100 * time.Millisecond)
+		runtime.rtc.Sleep(100 * time.Millisecond)
 		select {
 		case <-stop:
 			stopPlayback = true

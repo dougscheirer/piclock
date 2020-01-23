@@ -5,6 +5,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 // piclock -config={config file}
@@ -70,7 +72,7 @@ func main() {
 	*/
 
 	// init runtime objects with a real clock
-	var runtime = initRuntime(rtc{})
+	var runtime = initRuntime(clockwork.NewRealClock())
 
 	// start the effect threads so we can update the LEDs
 	go runLEDController(settings, runtime)
@@ -85,7 +87,7 @@ func main() {
 		// print the date and time of this build
 		showLoader(runtime.comms.effects)
 	} else {
-		runtime.rtc.sleep(500 * time.Millisecond)
+		runtime.rtc.Sleep(500 * time.Millisecond)
 	}
 
 	// launch the rest of the threads

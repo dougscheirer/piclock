@@ -129,7 +129,7 @@ func toPrint(val interface{}) (*displayPrint, error) {
 func displayClock(runtime runtimeConfig, display *sevensegShim, blinkColon bool, dot bool) {
 	// standard time display
 	colon := "15:04"
-	now := runtime.rtc.now()
+	now := runtime.rtc.Now()
 	if blinkColon && now.Second()%2 == 0 {
 		// no space required for the colon
 		colon = "1504"
@@ -150,7 +150,7 @@ func displayClock(runtime runtimeConfig, display *sevensegShim, blinkColon bool,
 
 func displayCountdown(runtime runtimeConfig, display *sevensegShim, alarm *alarm, dot bool) bool {
 	// calculate 10ths of secs to alarm time
-	count := alarm.When.Sub(runtime.rtc.now()) / (time.Second / 10)
+	count := alarm.When.Sub(runtime.rtc.Now()) / (time.Second / 10)
 	if count > 9999 {
 		count = 9999
 	} else if count <= 0 {
@@ -184,7 +184,7 @@ func playAlarmEffect(settings *configSettings, alm *alarm, stop chan bool, runti
 		return
 	default:
 		// play a random mp3 in the cache
-		s1 := rand.NewSource(runtime.rtc.now().UnixNano())
+		s1 := rand.NewSource(runtime.rtc.Now().UnixNano())
 		r1 := rand.New(s1)
 
 		files, err := filepath.Glob(musicPath + "/*")
@@ -277,7 +277,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 				// TODO: alarm error LED
 				display.Print("Err")
 				d, _ := toDuration(e.val)
-				runtime.rtc.sleep(d)
+				runtime.rtc.Sleep(d)
 			case eTerminate:
 				log.Println("terminate")
 				return
@@ -285,7 +285,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 				v, _ := toPrint(e.val)
 				log.Printf("Print: %s (%d)", v.s, v.d)
 				display.Print(v.s)
-				runtime.rtc.sleep(v.d)
+				runtime.rtc.Sleep(v.d)
 				skip = true // don't immediately print the clock in clock mode
 			case eAlarm:
 				mode = modeAlarm
@@ -335,7 +335,7 @@ func runEffects(settings *configSettings, runtime runtimeConfig) {
 			}
 		default:
 			// nothing?
-			runtime.rtc.sleep(time.Duration(sleepTime))
+			runtime.rtc.Sleep(time.Duration(sleepTime))
 		}
 
 		// skip the mode stuff?
