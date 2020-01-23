@@ -20,9 +20,8 @@ func setup() (*configSettings, runtimeConfig, clockwork.FakeClock) {
 	return settings, runtime, clock
 }
 
-func TestCalendar(t *testing.T) {
+func TestCalendarLoadEvents(t *testing.T) {
 	settings, runtime, clock := setup()
-
 	// load alarms
 	go runGetAlarms(settings, runtime)
 
@@ -39,4 +38,21 @@ func TestCalendar(t *testing.T) {
 	default:
 		assert.Assert(t, false, fmt.Sprintf("Bad value: %v", v))
 	}
+
+	close(runtime.comms.quit)
+	clock.BlockUntil(1)
+}
+
+func TestCalendarLoadEventsFailed(t *testing.T) {
+	settings, runtime, clock := setup()
+	// start led controller
+	go runLEDController(settings, runtime)
+
+	// load alarms
+	go runGetAlarms(settings, runtime)
+
+	// block for a while?
+	clock.BlockUntil(1)
+
+	// read from the led channel
 }
