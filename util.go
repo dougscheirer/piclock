@@ -23,6 +23,10 @@ type runtimeConfig struct {
 	comms    commChannels
 	rtc      clockwork.Clock
 	sounds   sounds
+	buttons  buttons
+	display  display
+	led      led
+	events   events
 }
 
 func toBool(val interface{}) (bool, error) {
@@ -141,5 +145,51 @@ func initCommChannels() commChannels {
 		alarms:   alarmChannel,
 		effects:  effectChannel,
 		almState: loaderChannel,
-		leds:     leds}
+		leds:     leds,
+	}
+}
+
+func initRuntimeConfig(settings configSettings) runtimeConfig {
+	var sounds sounds
+	var buttons buttons
+	var display display
+	var led led
+
+	switch settings.GetBool(sDisplay) {
+	case true:
+		display = &ledDisplay{}
+		led = &rpiLed{}
+	default:
+		display = &logDisplay{}
+		led = &logLed{}
+	}
+
+	switch settings.GetString(sButtons) {
+	case sKeyboard:
+		buttons = &simButtons{}
+	case sRPi:
+		buttons = &rpioButtons{}
+	default:
+		buttons = &noButtons{}
+	}
+
+	// TODO: do not build audio on platforms
+	//       that don't have mplayer
+	switch settings.GetBool(sAudio) {
+	case true:
+		sounds = &realSounds{}
+	default:
+		sounds = &noSounds{}
+	}
+
+	return runtimeConfig{
+		settings: settings,
+		comms:    initCommChannels(),
+		rtc:      clockwork.NewRealClock(),
+		sounds:   sounds,
+		buttons:  buttons,
+		display:  display,
+		led:      led,
+		events:   &gcalEvents{},
+	}
 }

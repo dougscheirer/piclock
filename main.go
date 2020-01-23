@@ -5,8 +5,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/jonboulle/clockwork"
 )
 
 // piclock -config={config file}
@@ -16,7 +14,9 @@ var wg sync.WaitGroup
 var features = []string{}
 
 func confirmCalendarAuth(settings configSettings) {
-	_, err := getCalendarService(settings, true)
+	// this is only for real auth, so specifcally use the gcalEvents impl
+	events := &gcalEvents{}
+	_, err := events.getCalendarService(settings, true)
 	if err == nil {
 		// success!
 		log.Println("OAuth successful")
@@ -72,12 +72,7 @@ func main() {
 	*/
 
 	// init runtime objects with a real clock
-	runtime := runtimeConfig{
-		settings: settings,
-		comms:    initCommChannels(),
-		rtc:      clockwork.NewRealClock(),
-		sounds:   realSounds{},
-	}
+	runtime := initRuntimeConfig(settings)
 
 	// start the effect threads so we can update the LEDs
 	go runLEDController(runtime)

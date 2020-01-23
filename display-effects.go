@@ -126,7 +126,7 @@ func toPrint(val interface{}) (*displayPrint, error) {
 	}
 }
 
-func displayClock(runtime runtimeConfig, display *sevensegShim, blinkColon bool, dot bool) {
+func displayClock(runtime runtimeConfig, blinkColon bool, dot bool) {
 	// standard time display
 	colon := "15:04"
 	now := runtime.rtc.Now()
@@ -142,13 +142,13 @@ func displayClock(runtime runtimeConfig, display *sevensegShim, blinkColon bool,
 	if dot {
 		timeString += "."
 	}
-	err := display.Print(timeString)
+	err := runtime.display.Print(timeString)
 	if err != nil {
 		log.Printf("Error: %s\n", err.Error())
 	}
 }
 
-func displayCountdown(runtime runtimeConfig, display *sevensegShim, alarm *alarm, dot bool) bool {
+func displayCountdown(runtime runtimeConfig, alarm *alarm, dot bool) bool {
 	// calculate 10ths of secs to alarm time
 	count := alarm.When.Sub(runtime.rtc.Now()) / (time.Second / 10)
 	if count > 9999 {
@@ -164,13 +164,13 @@ func displayCountdown(runtime runtimeConfig, display *sevensegShim, alarm *alarm
 	if count < 100 {
 		blinkRate = sevenseg_backpack.BLINK_2HZ
 	}
-	display.SetBlinkRate(blinkRate)
-	display.Print(s)
+	runtime.display.SetBlinkRate(blinkRate)
+	runtime.display.Print(s)
 	return true
 }
 
-func playAlarmEffect(settings configSettings, alm *alarm, stop chan bool, runtime runtimeConfig) {
-	musicPath := settings.GetString(sMusicPath)
+func playAlarmEffect(runtime runtimeConfig, alm *alarm, stop chan bool) {
+	musicPath := runtime.settings.GetString(sMusicPath)
 	var musicFile string
 	playTones := false
 
@@ -229,7 +229,7 @@ func runEffects(runtime runtimeConfig) {
 	settings := runtime.settings
 	comms := runtime.comms
 
-	display, err := openDisplay(settings)
+	err := runtime.display.OpenDisplay(settings)
 
 	if err != nil {
 		log.Printf("Error: %s", err.Error())
@@ -237,11 +237,11 @@ func runEffects(runtime runtimeConfig) {
 	}
 
 	// turn on LED dump?
-	display.DebugDump(settings.GetBool(sDebug))
+	runtime.display.DebugDump(settings.GetBool(sDebug))
 
-	display.SetBrightness(3)
+	runtime.display.SetBrightness(3)
 	// ready to rock
-	display.DisplayOn(true)
+	runtime.display.DisplayOn(true)
 
 	mode := modeClock
 	var countdown *alarm
@@ -267,7 +267,7 @@ func runEffects(runtime runtimeConfig) {
 			switch e.id {
 			case eDebug:
 				v, _ := toBool(e.val)
-				display.DebugDump(v)
+				runtime.display.DebugDump(v)
 			case eClock:
 				mode = modeClock
 			case eCountdown:
@@ -276,7 +276,7 @@ func runEffects(runtime runtimeConfig) {
 				sleepTime = 10 * time.Millisecond
 			case eAlarmError:
 				// TODO: alarm error LED
-				display.Print("Err")
+				runtime.display.Print("Err")
 				d, _ := toDuration(e.val)
 				runtime.rtc.Sleep(d)
 			case eTerminate:
@@ -285,7 +285,7 @@ func runEffects(runtime runtimeConfig) {
 			case ePrint:
 				v, _ := toPrint(e.val)
 				log.Printf("Print: %s (%d)", v.s, v.d)
-				display.Print(v.s)
+				runtime.display.Print(v.s)
 				runtime.rtc.Sleep(v.d)
 				skip = true // don't immediately print the clock in clock mode
 			case eAlarm:
@@ -294,7 +294,7 @@ func runEffects(runtime runtimeConfig) {
 				sleepTime = 10 * time.Millisecond
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
-				go playAlarmEffect(settings, alm, stopAlarm, runtime)
+				go playAlarmEffect(runtime, alm, stopAlarm)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed
@@ -309,7 +309,7 @@ func runEffects(runtime runtimeConfig) {
 							mode = modeClock
 							sleepTime = defaultSleep
 							buttonPressActed = true
-							display.SetBlinkRate(0)
+							runtime.display.SetBlinkRate(0)
 							stopAlarmEffect(stopAlarm)
 						case modeCountdown:
 							// cancel the alarm
@@ -346,35 +346,35 @@ func runEffects(runtime runtimeConfig) {
 
 		switch mode {
 		case modeClock:
-			displayClock(runtime, display, settings.GetBool(sBlink), buttonDot)
+			displayClock(runtime, settings.GetBool(sBlink), buttonDot)
 		case modeCountdown:
-			if !displayCountdown(runtime, display, countdown, buttonDot) {
+			if !displayCountdown(runtime, countdown, buttonDot) {
 				mode = modeClock
 				sleepTime = defaultSleep
 			}
 		case modeAlarmError:
 			log.Printf("Error: %d\n", errorID)
-			display.Print("Err")
+			runtime.display.Print("Err")
 		case modeOutput:
 			// do nothing
 		case modeAlarm:
 			// do a strobing 0, light up segments 0 - 5
 			if settings.GetBool(sStrobe) == true {
-				display.RefreshOn(false)
-				display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
-				display.ClearDisplay()
+				runtime.display.RefreshOn(false)
+				runtime.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
+				runtime.display.ClearDisplay()
 				for i := 0; i < 4; i++ {
-					display.SegmentOn(byte(i), byte(alarmSegment), true)
+					runtime.display.SegmentOn(byte(i), byte(alarmSegment), true)
 				}
-				display.RefreshOn(true)
+				runtime.display.RefreshOn(true)
 				alarmSegment = (alarmSegment + 1) % 6
 			} else {
-				display.Print("_-_-")
+				runtime.display.Print("_-_-")
 			}
 		default:
 			log.Printf("Unknown mode: '%d'\n", mode)
 		}
 	}
 
-	display.DisplayOn(false)
+	runtime.display.DisplayOn(false)
 }

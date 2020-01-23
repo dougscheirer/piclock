@@ -1,5 +1,3 @@
-// +build nobuttons
-
 package main
 
 import (
@@ -10,22 +8,38 @@ func init() {
 	features = append(features, "no-buttons")
 }
 
-func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
-	// simulated mode we check it all at once or we wait a lot
+type noButtons struct {
+	buttons map[string]button
+}
+
+func (nb *noButtons) getButtons() *map[string]button {
+	return &nb.buttons
+}
+
+func (nb *noButtons) readButtons(runtime runtimeConfig) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
-	for k, _ := range btns {
-		ret[k] = btnUp
+	down := false
+	for k := range nb.buttons {
+		if !down {
+			ret[k] = btnUp
+		} else {
+			ret[k] = btnDown
+		}
 	}
 	return ret, nil
 }
 
-func setupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
-	return make(map[string]button), nil
-}
-
-func initButtons(settings configSettings) error {
+func (nb *noButtons) setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+	nb.buttons = make(map[string]button)
+	for k, v := range pins {
+		nb.buttons[k] = button{button: v}
+	}
 	return nil
 }
 
-func closeButtons() {
+func (nb *noButtons) initButtons(settings configSettings) error {
+	return nil
+}
+
+func (nb *noButtons) closeButtons() {
 }

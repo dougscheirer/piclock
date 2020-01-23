@@ -1,6 +1,3 @@
-// +build !nobuttons
-// +build !keybuttons
-
 package main
 
 import (
@@ -11,19 +8,28 @@ import (
 	// keyboard for sim mode
 )
 
+type rpioButtons struct {
+	buttons map[string]button
+}
+
 func init() {
 	features = append(features, "rpio-buttons")
 }
 
-func setupPinButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
+func (rb *rpioButtons) getButtons() *map[string]button {
+	return &rb.buttons
+}
+
+func (rb *rpioButtons) setupPinButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+	rb.buttons = make(map[string]button)
+
 	// map pins to buttons
 	err := rpio.Open()
 	if err != nil {
 		log.Println(err.Error())
-		return map[string]button{}, err
+		return err
 	}
 
-	ret := make(map[string]button, len(pins))
 	now := runtime.rtc.Now()
 
 	for k, v := range pins {
@@ -38,28 +44,28 @@ func setupPinButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[stri
 		btn.pin.PullUp() // GND => button press
 
 		btn.state = pressState{pressed: false, start: now, count: 0, changed: false}
-		ret[k] = btn
+		rb.buttons[k] = btn
 	}
 
-	return ret, nil
+	return nil
 }
 
-func setupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
-	return setupPinButtons(pins, runtime)
+func (rb *rpioButtons) setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+	return rb.setupPinButtons(pins, runtime)
 }
 
-func initButtons(settings configSettings) error {
+func (rb *rpioButtons) initButtons(settings configSettings) error {
 	// nothing to init for GPIO buttons
 	return nil
 }
 
-func closeButtons() {
+func (rb *rpioButtons) closeButtons() {
 	// N/A, nothing special
 }
 
-func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
+func (rb *rpioButtons) readButtons(runtime runtimeConfig) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
-	for k, v := range btns {
+	for k, v := range rb.buttons {
 		ret[k] = v.pin.Read() // Read state from pin (High / Low)
 	}
 

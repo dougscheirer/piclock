@@ -1,5 +1,3 @@
-// +build keybuttons
-
 package main
 
 import (
@@ -15,21 +13,30 @@ func init() {
 	features = append(features, "key-buttons")
 }
 
-func simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
+type simButtons struct {
+	buttons map[string]button
+}
+
+func (sb *simButtons) getButtons() *map[string]button {
+	return &sb.buttons
+}
+
+func (sb *simButtons) simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+	sb.buttons = make(map[string]button)
+
 	// return a list of buttons with the char as the "pin num"
-	ret := make(map[string]button)
 	now := runtime.rtc.Now()
 
 	for k, v := range pins {
 		var btn button
 		btn.button = v
 		btn.state = pressState{pressed: false, start: now, count: 0, changed: false}
-		ret[k] = btn
+		sb.buttons[k] = btn
 	}
-	return ret, nil
+	return nil
 }
 
-func checkKeyboard(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
+func (sb *simButtons) checkKeyboard(runtime runtimeConfig) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
 
 	// poll with quick timeout
@@ -61,7 +68,7 @@ func checkKeyboard(runtime runtimeConfig, btns map[string]button) (map[string]rp
 
 	// char is toggle (down to up or up to down)
 	// neither letter is "do not change"
-	for k, v := range btns {
+	for k, v := range sb.buttons {
 		match := v.button.key[0] == byte(ev.Ch)
 		if v.state.pressed {
 			// orig state is down
@@ -84,21 +91,16 @@ func checkKeyboard(runtime runtimeConfig, btns map[string]button) (map[string]rp
 	return ret, nil
 }
 
-func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio.State, error) {
+func (sb *simButtons) readButtons(runtime runtimeConfig) (map[string]rpio.State, error) {
 	// simulated mode we check it all at once or we wait a lot
-	return checkKeyboard(runtime, btns)
+	return sb.checkKeyboard(runtime)
 }
 
-func setupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
-	var buttons map[string]button
-	var err error
-
-	buttons, err = simSetupButtons(pins, runtime)
-
-	return buttons, err
+func (sb *simButtons) setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+	return sb.simSetupButtons(pins, runtime)
 }
 
-func initButtons(settings configSettings) error {
+func (sb *simButtons) initButtons(settings configSettings) error {
 	err := termbox.Init()
 	if err != nil {
 		return err
@@ -111,6 +113,6 @@ func initButtons(settings configSettings) error {
 	return nil
 }
 
-func closeButtons() {
+func (sb *simButtons) closeButtons() {
 	termbox.Close()
 }

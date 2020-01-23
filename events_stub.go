@@ -1,5 +1,3 @@
-// +build test
-
 package main
 
 import (
@@ -8,7 +6,11 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func fetchEventsFromCalendar(runtime runtimeConfig) (*calendar.Events, error) {
+type testEvents struct {
+	events calendar.Events
+}
+
+func (te *testEvents) fetch(runtime runtimeConfig) (*calendar.Events, error) {
 	// TODO: use a faked list of events
 	var events calendar.Events
 	events.Items = make([]*calendar.Event, 5)
@@ -30,7 +32,6 @@ func fetchEventsFromCalendar(runtime runtimeConfig) (*calendar.Events, error) {
 	return &events, nil
 }
 
-// stubbed out so that main.go will build
-func getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
+func (te *testEvents) getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
 	return nil, nil
 }

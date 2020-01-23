@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"runtime"
 	"time"
 )
 
@@ -37,6 +38,11 @@ const sSkipLoader string = "skipLoader"
 const sMainBtn string = "mainButton"
 const sLEDErr string = "ledErr"
 const sLEDAlm string = "ledAlarm"
+const sDisplay string = "display"
+const sButtons string = "buttons"
+const sKeyboard string = "keys"
+const sRPi string = "rpi"
+const sAudio string = "audio"
 
 func defaultSettings() *configSettings {
 	s := make(map[string]interface{})
@@ -61,6 +67,15 @@ func defaultSettings() *configSettings {
 	s[sLEDErr] = byte(6)
 	s[sLEDAlm] = byte(16)
 
+	if runtime.GOARCH == "arm" {
+		s[sButtons] = sRPi
+		s[sDisplay] = true
+		s[sAudio] = true
+	} else {
+		s[sDisplay] = false
+		s[sButtons] = sKeyboard
+		s[sAudio] = true
+	}
 	return &configSettings{settings: s}
 }
 

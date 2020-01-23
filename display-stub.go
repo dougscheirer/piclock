@@ -1,10 +1,8 @@
-// +build notapi
-
 package main
 
 import "log"
 
-type sevensegShim struct {
+type logDisplay struct {
 	i2cBus     int
 	curDisplay string
 	debugDump  bool
@@ -15,60 +13,56 @@ type sevensegShim struct {
 	segments   [8][8]bool
 }
 
-func openDisplay(settings configSettings) (*sevensegShim, error) {
-	this := &sevensegShim{
-		i2cBus:     settings.GetInt(sI2CBus),
-		curDisplay: "",
-		debugDump:  settings.GetBool(sDebug),
-		brightness: 0,
-		displayOn:  false,
-		blinkRate:  0,
-		refreshOn:  false,
-	}
-	return this, nil
-}
-
-func (this *sevensegShim) DebugDump(on bool) error {
-	this.debugDump = on
+func (ld *logDisplay) OpenDisplay(settings configSettings) error {
+	ld.i2cBus = settings.GetInt(sI2CBus)
+	ld.curDisplay = ""
+	ld.debugDump = settings.GetBool(sDebug)
+	ld.brightness = 0
+	ld.displayOn = false
+	ld.blinkRate = 0
+	ld.refreshOn = false
 	return nil
 }
 
-func (this *sevensegShim) SetBrightness(b uint8) error {
-	this.brightness = b
+func (ld *logDisplay) DebugDump(on bool) {
+	ld.debugDump = on
+}
+
+func (ld *logDisplay) SetBrightness(b uint8) error {
+	ld.brightness = b
 	return nil
 }
 
-func (this *sevensegShim) DisplayOn(on bool) error {
-	this.displayOn = on
-	return nil
+func (ld *logDisplay) DisplayOn(on bool) {
+	ld.displayOn = on
 }
 
-func (this *sevensegShim) Print(e string) error {
-	if e != this.curDisplay {
+func (ld *logDisplay) Print(e string) error {
+	if e != ld.curDisplay {
 		log.Print(e)
 	}
-	this.curDisplay = e
+	ld.curDisplay = e
 	return nil
 }
 
-func (this *sevensegShim) SetBlinkRate(r uint8) error {
-	this.blinkRate = r
+func (ld *logDisplay) SetBlinkRate(r uint8) error {
+	ld.blinkRate = r
 	return nil
 }
 
-func (this *sevensegShim) RefreshOn(on bool) error {
-	this.refreshOn = on
+func (ld *logDisplay) RefreshOn(on bool) error {
+	ld.refreshOn = on
 	return nil
 }
 
-func (this *sevensegShim) ClearDisplay() error {
-	this.curDisplay = ""
+func (ld *logDisplay) ClearDisplay() error {
+	ld.curDisplay = ""
 	return nil
 }
 
-func (this *sevensegShim) SegmentOn(pos byte, seg byte, on bool) error {
-	this.curDisplay = ""
-	this.segments[pos][seg] = on
+func (ld *logDisplay) SegmentOn(pos byte, seg byte, on bool) error {
+	ld.curDisplay = ""
+	ld.segments[pos][seg] = on
 	// debug output?
 	log.Printf("%d/%d set to %v", pos, seg, on)
 	return nil

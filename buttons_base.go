@@ -31,19 +31,17 @@ func init() {
 	wg.Add(1)
 }
 
-func checkButtons(btns map[string]button, runtime runtimeConfig) (map[string]button, error) {
+func checkButtons(runtime runtimeConfig) (map[string]button, error) {
 	now := runtime.rtc.Now()
 	ret := make(map[string]button)
 
-	var results map[string]rpio.State
-	var err error
-
-	results, err = readButtons(runtime, btns)
+	btns := runtime.buttons.getButtons()
+	results, err := runtime.buttons.readButtons(runtime)
 	if err != nil {
 		return ret, err
 	}
 
-	for k, v := range btns {
+	for k, v := range *btns {
 		var res rpio.State = results[k]
 
 		btn := v
@@ -54,7 +52,7 @@ func checkButtons(btns map[string]button, runtime runtimeConfig) (map[string]but
 			if btn.state.pressed {
 				// no button state change, update the duration count
 				btn.state.count = int(now.Sub(btn.state.start) / time.Second)
-				if btns[k].state.count != btn.state.count {
+				if (*btns)[k].state.count != btn.state.count {
 					btn.state.changed = true
 				}
 			} else {
@@ -79,10 +77,10 @@ func checkButtons(btns map[string]button, runtime runtimeConfig) (map[string]but
 		if btn.state.changed {
 			log.Printf("button changed state: %+v", btn)
 		}
-		ret[k] = btn
+		(*btns)[k] = btn
 	}
 
-	return ret, nil
+	return *btns, nil
 }
 
 func runWatchButtons(runtime runtimeConfig) {
@@ -93,20 +91,19 @@ func runWatchButtons(runtime runtimeConfig) {
 
 	settings := runtime.settings
 	comms := runtime.comms
-	err := initButtons(settings)
+	err := runtime.buttons.initButtons(settings)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
 
 	// we now should defer the closeButtons call to when this function exists
-	defer closeButtons()
+	defer runtime.buttons.closeButtons()
 
-	var buttons map[string]button
 	pins := make(map[string]buttonMap)
 	pins[sMainBtn] = settings.GetButtonMap(sMainBtn)
 
-	buttons, err = setupButtons(pins, runtime)
+	err = runtime.buttons.setupButtons(pins, runtime)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -121,7 +118,7 @@ func runWatchButtons(runtime runtimeConfig) {
 		default:
 		}
 
-		newButtons, err := checkButtons(buttons, runtime)
+		newButtons, err := checkButtons(runtime)
 		if err != nil {
 			// we're done
 			log.Println("quit from runWatchButtons")
@@ -142,7 +139,6 @@ func runWatchButtons(runtime runtimeConfig) {
 			}
 		}
 
-		buttons = newButtons
 		runtime.rtc.Sleep(10 * time.Millisecond)
 	}
 }

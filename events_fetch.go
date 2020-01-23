@@ -1,5 +1,3 @@
-// +build !test
-
 package main
 
 import (
@@ -10,9 +8,9 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func fetchEventsFromCalendar(runtime runtimeConfig) (*calendar.Events, error) {
+func (ge *gcalEvents) fetch(runtime runtimeConfig) (*calendar.Events, error) {
 	settings := runtime.settings
-	srv, err := getCalendarService(settings, false)
+	srv, err := ge.getCalendarService(settings, false)
 
 	if err != nil {
 		log.Printf("Failed to get calendar service")

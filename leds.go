@@ -1,5 +1,3 @@
-// +build !notapi
-
 package main
 
 import (
@@ -8,16 +6,21 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
+type rpiLed struct {
+}
+
 func init() {
 	features = append(features, "leds")
+}
 
+func (rpi *rpiLed) init() {
 	err := rpio.Open()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 }
 
-func setLED(pinNum int, on bool) {
+func (rpi *rpiLed) set(pinNum int, on bool) {
 	log.Printf("Set pin %v to %v", pinNum, on)
 	pin := rpio.Pin(pinNum)
 	pin.Output()
@@ -26,4 +29,12 @@ func setLED(pinNum int, on bool) {
 	} else {
 		pin.Low()
 	}
+}
+
+func (rpi *rpiLed) on(pin int) {
+	rpi.set(pin, true)
+}
+
+func (rpi *rpiLed) off(pin int) {
+	rpi.set(pin, false)
 }

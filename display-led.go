@@ -1,49 +1,48 @@
-// +build !notapi
-
 package main
 
 import "piclock/sevenseg_backpack"
 
-type sevensegShim struct {
+type ledDisplay struct {
 	ssb *sevenseg_backpack.Sevenseg
 }
 
-func openDisplay(settings configSettings) (*sevensegShim, error) {
-	ssb, err := sevenseg_backpack.Open(
+func (ss *ledDisplay) OpenDisplay(settings configSettings) error {
+	var err error
+	ss.ssb, err = sevenseg_backpack.Open(
 		settings.GetByte(sI2CDev),
 		settings.GetInt(sI2CBus),
 		false)
-	return &sevensegShim{ssb: ssb}, err
+	return err
 }
 
-func (this *sevensegShim) DebugDump(on bool) {
-	this.ssb.DebugDump(on)
+func (ss *ledDisplay) DebugDump(on bool) {
+	ss.ssb.DebugDump(on)
 }
 
-func (this *sevensegShim) SetBrightness(b uint8) error {
-	return this.ssb.SetBrightness(b)
+func (ss *ledDisplay) SetBrightness(b uint8) error {
+	return ss.ssb.SetBrightness(b)
 }
 
-func (this *sevensegShim) DisplayOn(on bool) {
-	this.ssb.DisplayOn(on)
+func (ss *ledDisplay) DisplayOn(on bool) {
+	ss.ssb.DisplayOn(on)
 }
 
-func (this *sevensegShim) Print(e string) error {
-	return this.ssb.Print(e)
+func (ss *ledDisplay) Print(e string) error {
+	return ss.ssb.Print(e)
 }
 
-func (this *sevensegShim) SetBlinkRate(r uint8) error {
-	return this.ssb.SetBlinkRate(r)
+func (ss *ledDisplay) SetBlinkRate(r uint8) error {
+	return ss.ssb.SetBlinkRate(r)
 }
 
-func (this *sevensegShim) RefreshOn(on bool) error {
-	return this.ssb.RefreshOn(on)
+func (ss *ledDisplay) RefreshOn(on bool) error {
+	return ss.ssb.RefreshOn(on)
 }
 
-func (this *sevensegShim) ClearDisplay() error {
-	return this.ClearDisplay()
+func (ss *ledDisplay) ClearDisplay() error {
+	return ss.ClearDisplay()
 }
 
-func (this *sevensegShim) SegmentOn(pos byte, seg byte, on bool) error {
-	return this.SegmentOn(pos, seg, on)
+func (ss *ledDisplay) SegmentOn(pos byte, seg byte, on bool) error {
+	return ss.SegmentOn(pos, seg, on)
 }

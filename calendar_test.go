@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/assert"
-
 	"github.com/jonboulle/clockwork"
+	"gotest.tools/assert"
 )
 
 func setup() (runtimeConfig, clockwork.FakeClock) {
@@ -18,7 +17,7 @@ func setup() (runtimeConfig, clockwork.FakeClock) {
 	runtime := runtimeConfig{
 		settings: settings,
 		comms:    initCommChannels(),
-		sounds:   noSounds{},
+		sounds:   &noSounds{},
 		rtc:      clockwork.NewFakeClock(),
 	}
 

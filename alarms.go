@@ -105,7 +105,7 @@ func cacheFilename(settings configSettings) string {
 func getAlarmsFromService(runtime runtimeConfig) ([]alarm, error) {
 	// this is build dependent
 	settings := runtime.settings
-	events, err := fetchEventsFromCalendar(runtime)
+	events, err := runtime.events.fetch(runtime)
 	var alarms []alarm
 
 	if err != nil {

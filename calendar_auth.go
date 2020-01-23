@@ -1,5 +1,3 @@
-// +build !test
-
 package main
 
 import (
@@ -18,6 +16,9 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
 )
+
+type gcalEvents struct {
+}
 
 // getClient uses a Context and Config to retrieve a Token
 // then generate a Client. It returns the generated Client.
@@ -101,7 +102,7 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
+func (ge *gcalEvents) getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
 	ctx := context.Background()
 
 	b, err := ioutil.ReadFile(settings.GetString(sSecrets) + "/client_secret.json")

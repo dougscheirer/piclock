@@ -60,14 +60,6 @@ func setLEDEffect(effect ledEffect) ledEffect {
 	return effect
 }
 
-func setLEDOn(pinNum int) {
-	setLED(pinNum, true)
-}
-
-func setLEDOff(pinNum int) {
-	setLED(pinNum, false)
-}
-
 func runLEDController(runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -76,6 +68,8 @@ func runLEDController(runtime runtimeConfig) {
 
 	comms := runtime.comms
 	leds := make(map[int]ledEffect)
+
+	runtime.led.init()
 
 	for true {
 		select {
@@ -113,10 +107,10 @@ func runLEDController(runtime runtimeConfig) {
 			if v.curMode == modeUnset {
 				// transform broader categories of mode to on/off
 				if v.mode == modeOff {
-					setLEDOff(v.pin)
+					runtime.led.off(v.pin)
 					v.curMode = modeOff
 				} else {
-					setLEDOn(v.pin)
+					runtime.led.on(v.pin)
 					v.curMode = modeOn
 				}
 				v.lastUpdate = runtime.rtc.Now()
