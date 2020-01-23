@@ -101,7 +101,7 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func getCalendarService(settings *configSettings, prompt bool) (*calendar.Service, error) {
+func getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
 	ctx := context.Background()
 
 	b, err := ioutil.ReadFile(settings.GetString(sSecrets) + "/client_secret.json")

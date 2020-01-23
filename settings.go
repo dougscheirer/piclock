@@ -23,7 +23,7 @@ const sCountdown string = "countdownTime"
 const sSleep string = "sleepTime"
 const sSecrets string = "secretPath"
 const sAlarms string = "alarmPath"
-const sAlmRefresh string = "alarmRefresh"
+const sAlmRefresh string = "alarmRefreshTime"
 const sI2CBus string = "i2cBus"
 const sI2CDev string = "i2cDevice"
 const sCalName string = "calendar"
@@ -35,7 +35,7 @@ const sBlink string = "blinkTime"
 const sStrobe string = "strobe"
 const sSkipLoader string = "skipLoader"
 const sMainBtn string = "mainButton"
-const sLEDErr string = "ledErrr"
+const sLEDErr string = "ledErr"
 const sLEDAlm string = "ledAlarm"
 
 func defaultSettings() *configSettings {
@@ -129,7 +129,7 @@ func parseCLIArgs() cliArgs {
 	return args
 }
 
-func initSettings(configFile string) *configSettings {
+func initSettings(configFile string) configSettings {
 	log.Println("initSettings")
 
 	// defaults
@@ -149,7 +149,7 @@ func initSettings(configFile string) *configSettings {
 		log.Fatal(err.Error())
 	}
 
-	return s
+	return *s
 }
 
 func (s *configSettings) GetString(key string) string {

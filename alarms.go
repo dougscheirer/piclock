@@ -98,13 +98,14 @@ func handledAlarm(alarm alarm, handled map[string]alarm) bool {
 	return true
 }
 
-func cacheFilename(settings *configSettings) string {
+func cacheFilename(settings configSettings) string {
 	return settings.GetString(sAlarms) + "/alarm.json"
 }
 
-func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]alarm, error) {
+func getAlarmsFromService(runtime runtimeConfig) ([]alarm, error) {
 	// this is build dependent
-	events, err := fetchEventsFromCalendar(settings, runtime)
+	settings := runtime.settings
+	events, err := fetchEventsFromCalendar(runtime)
 	var alarms []alarm
 
 	if err != nil {
@@ -173,7 +174,8 @@ func getAlarmsFromService(settings *configSettings, runtime runtimeConfig) ([]al
 	return alarms, nil
 }
 
-func getAlarmsFromCache(settings *configSettings, runtime runtimeConfig) ([]alarm, error) {
+func getAlarmsFromCache(runtime runtimeConfig) ([]alarm, error) {
+	settings := runtime.settings
 	alarms := make([]alarm, 0)
 	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
 		return alarms, nil
@@ -216,7 +218,7 @@ func OOBFetch(url string) []byte {
 	return body
 }
 
-func downloadMusicFiles(settings *configSettings, cE chan displayEffect) {
+func downloadMusicFiles(settings configSettings, cE chan displayEffect) {
 	// this is currently dumb, it just uses a list from musicDownloads
 	// and walks through it, downloading to the music dir
 	jsonPath := settings.GetString(sMusicURL)
@@ -278,11 +280,12 @@ func downloadMusicFiles(settings *configSettings, cE chan displayEffect) {
 }
 
 // the calendar thing is a little flaky, so we load in another thread
-func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, report bool) {
+func loadAlarms(runtime runtimeConfig, loadID int, report bool) {
 	defer func() {
 		log.Println("returning from loadAlarms")
 	}()
 
+	settings := runtime.settings
 	comms := runtime.comms
 
 	// also launch a thread to grab all of the music we can
@@ -292,12 +295,12 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 	comms.leds <- ledMessage(settings.GetInt(sLEDErr), modeBlink75, 0)
 
 	// TODO: handled alarms are not longer considered, need testing
-	alarms, err := getAlarmsFromService(settings, runtime)
+	alarms, err := getAlarmsFromService(runtime)
 	if err != nil {
 		comms.effects <- alarmError(5 * time.Second)
 		log.Println(err.Error())
 		// try the backup
-		alarms, err = getAlarmsFromCache(settings, runtime)
+		alarms, err = getAlarmsFromCache(runtime)
 		if err != nil {
 			// very bad, so...delete and try again later?
 			// TODO: more effects
@@ -316,11 +319,13 @@ func loadAlarms(settings *configSettings, runtime runtimeConfig, loadID int, rep
 	comms.alarms <- msg
 }
 
-func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
+func runGetAlarms(runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runGetAlarms")
 	}()
+
+	settings := runtime.settings
 
 	// keep a list of things that we have done
 	// TODO: GC the list occassionally
@@ -380,7 +385,7 @@ func runGetAlarms(settings *configSettings, runtime runtimeConfig) {
 			// launch a thing, it could hang
 			loadID := curReloadID + 1
 			curReloadID++
-			go loadAlarms(settings, runtime, loadID, forceReload)
+			go loadAlarms(runtime, loadID, forceReload)
 			lastRefresh = runtime.rtc.Now()
 		} else {
 			// wait a little
@@ -395,12 +400,13 @@ func compareAlarms(alm1 alarm, alm2 alarm) bool {
 		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
 }
 
-func runCheckAlarm(settings *configSettings, runtime runtimeConfig) {
+func runCheckAlarm(runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runCheckAlarms")
 	}()
 
+	settings := runtime.settings
 	alarms := make([]alarm, 0)
 	comms := runtime.comms
 

@@ -44,11 +44,11 @@ func setupPinButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[stri
 	return ret, nil
 }
 
-func setupButtons(pins map[string]buttonMap, settings *configSettings, runtime runtimeConfig) (map[string]button, error) {
+func setupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
 	return setupPinButtons(pins, runtime)
 }
 
-func initButtons(settings *configSettings) error {
+func initButtons(settings configSettings) error {
 	// nothing to init for GPIO buttons
 	return nil
 }

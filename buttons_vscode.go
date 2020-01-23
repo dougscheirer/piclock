@@ -19,11 +19,11 @@ func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio
 	return ret, nil
 }
 
-func setupButtons(pins map[string]buttonMap, settings *configSettings, runtime runtimeConfig) (map[string]button, error) {
+func setupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
 	return make(map[string]button), nil
 }
 
-func initButtons(settings *configSettings) error {
+func initButtons(settings configSettings) error {
 	return nil
 }
 

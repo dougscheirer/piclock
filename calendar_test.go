@@ -9,21 +9,26 @@ import (
 	"github.com/jonboulle/clockwork"
 )
 
-func setup() (*configSettings, runtimeConfig, clockwork.FakeClock) {
+func setup() (runtimeConfig, clockwork.FakeClock) {
 	// load our test config
 	cfgFile := "./test/config.conf"
 	settings := initSettings(cfgFile)
 	// make runtime for test
 	clock := clockwork.NewFakeClock()
-	runtime := initRuntime(clock)
+	runtime := runtimeConfig{
+		settings: settings,
+		comms:    initCommChannels(),
+		sounds:   noSounds{},
+		rtc:      clockwork.NewFakeClock(),
+	}
 
-	return settings, runtime, clock
+	return runtime, clock
 }
 
 func TestCalendarLoadEvents(t *testing.T) {
-	settings, runtime, clock := setup()
+	runtime, clock := setup()
 	// load alarms
-	go runGetAlarms(settings, runtime)
+	go runGetAlarms(runtime)
 
 	// block for a while?
 	clock.BlockUntil(1)
@@ -44,12 +49,12 @@ func TestCalendarLoadEvents(t *testing.T) {
 }
 
 func TestCalendarLoadEventsFailed(t *testing.T) {
-	settings, runtime, clock := setup()
+	runtime, clock := setup()
 	// start led controller
-	go runLEDController(settings, runtime)
+	go runLEDController(runtime)
 
 	// load alarms
-	go runGetAlarms(settings, runtime)
+	go runGetAlarms(runtime)
 
 	// block for a while?
 	clock.BlockUntil(1)

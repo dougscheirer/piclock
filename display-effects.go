@@ -169,7 +169,7 @@ func displayCountdown(runtime runtimeConfig, display *sevensegShim, alarm *alarm
 	return true
 }
 
-func playAlarmEffect(settings *configSettings, alm *alarm, stop chan bool, runtime runtimeConfig) {
+func playAlarmEffect(settings configSettings, alm *alarm, stop chan bool, runtime runtimeConfig) {
 	musicPath := settings.GetString(sMusicPath)
 	var musicFile string
 	playTones := false
@@ -209,10 +209,10 @@ func playAlarmEffect(settings *configSettings, alm *alarm, stop chan bool, runti
 
 	if playTones {
 		log.Printf("Playing tones")
-		playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+		runtime.sounds.playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
 	} else {
 		log.Printf("Playing %s", musicFile)
-		playMP3(runtime, musicFile, true, stop)
+		runtime.sounds.playMP3(runtime, musicFile, true, stop)
 	}
 }
 
@@ -220,12 +220,13 @@ func stopAlarmEffect(stop chan bool) {
 	stop <- true
 }
 
-func runEffects(settings *configSettings, runtime runtimeConfig) {
+func runEffects(runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runEffects")
 	}()
 
+	settings := runtime.settings
 	comms := runtime.comms
 
 	display, err := openDisplay(settings)

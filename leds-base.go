@@ -68,7 +68,7 @@ func setLEDOff(pinNum int) {
 	setLED(pinNum, false)
 }
 
-func runLEDController(settings *configSettings, runtime runtimeConfig) {
+func runLEDController(runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Printf("Exitings runLEDController")

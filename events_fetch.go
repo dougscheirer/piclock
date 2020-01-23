@@ -10,7 +10,8 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func fetchEventsFromCalendar(settings *configSettings, runtime runtimeConfig) (*calendar.Events, error) {
+func fetchEventsFromCalendar(runtime runtimeConfig) (*calendar.Events, error) {
+	settings := runtime.settings
 	srv, err := getCalendarService(settings, false)
 
 	if err != nil {

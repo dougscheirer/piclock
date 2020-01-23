@@ -19,8 +19,10 @@ type commChannels struct {
 }
 
 type runtimeConfig struct {
-	comms commChannels
-	rtc   clockwork.Clock
+	settings configSettings
+	comms    commChannels
+	rtc      clockwork.Clock
+	sounds   sounds
 }
 
 func toBool(val interface{}) (bool, error) {
@@ -140,10 +142,4 @@ func initCommChannels() commChannels {
 		effects:  effectChannel,
 		almState: loaderChannel,
 		leds:     leds}
-}
-
-func initRuntime(rtc clockwork.Clock) runtimeConfig {
-	return runtimeConfig{
-		rtc:   rtc,
-		comms: initCommChannels()}
 }

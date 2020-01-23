@@ -89,7 +89,7 @@ func readButtons(runtime runtimeConfig, btns map[string]button) (map[string]rpio
 	return checkKeyboard(runtime, btns)
 }
 
-func setupButtons(pins map[string]buttonMap, settings *configSettings, runtime runtimeConfig) (map[string]button, error) {
+func setupButtons(pins map[string]buttonMap, runtime runtimeConfig) (map[string]button, error) {
 	var buttons map[string]button
 	var err error
 
@@ -98,7 +98,7 @@ func setupButtons(pins map[string]buttonMap, settings *configSettings, runtime r
 	return buttons, err
 }
 
-func initButtons(settings *configSettings) error {
+func initButtons(settings configSettings) error {
 	err := termbox.Init()
 	if err != nil {
 		return err

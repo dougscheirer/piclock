@@ -8,7 +8,7 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func fetchEventsFromCalendar(settings *configSettings, runtime runtimeConfig) (*calendar.Events, error) {
+func fetchEventsFromCalendar(runtime runtimeConfig) (*calendar.Events, error) {
 	// TODO: use a faked list of events
 	var events calendar.Events
 	events.Items = make([]*calendar.Event, 5)
@@ -31,6 +31,6 @@ func fetchEventsFromCalendar(settings *configSettings, runtime runtimeConfig) (*
 }
 
 // stubbed out so that main.go will build
-func getCalendarService(settings *configSettings, prompt bool) (*calendar.Service, error) {
+func getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
 	return nil, nil
 }

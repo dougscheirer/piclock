@@ -36,19 +36,23 @@ pi setup:
   (TODO: scripted test setup)
   
 TODO:
-  add simulation program for testing
+  add simulation program for testing?
   
 tests:
-  load old alarms
-    all valid
-    some expired
-    none
-  
-  simlated alarms
-    time display
-    alarm countdown
-    song play triggered
-    button cancel countdown
-    button cancel song
-  
-  reload button
+  alarm:
+    load empty alarm list
+    load single alarm
+      countdown
+      no countdown
+      countdown cancelled
+    load multiple alarms
+      ?
+    reload alarms 
+      ok
+      not ok, cache
+      not ok, no cache
+    timed reload alarms
+      ok
+      not ok, cache
+      not ok, no cache
+    

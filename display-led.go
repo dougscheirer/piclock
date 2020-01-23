@@ -8,7 +8,7 @@ type sevensegShim struct {
 	ssb *sevenseg_backpack.Sevenseg
 }
 
-func openDisplay(settings *configSettings) (*sevensegShim, error) {
+func openDisplay(settings configSettings) (*sevensegShim, error) {
 	ssb, err := sevenseg_backpack.Open(
 		settings.GetByte(sI2CDev),
 		settings.GetInt(sI2CBus),

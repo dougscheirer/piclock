@@ -15,7 +15,7 @@ var wg sync.WaitGroup
 
 var features = []string{}
 
-func confirmCalendarAuth(settings *configSettings) {
+func confirmCalendarAuth(settings configSettings) {
 	_, err := getCalendarService(settings, true)
 	if err == nil {
 		// success!
@@ -72,11 +72,16 @@ func main() {
 	*/
 
 	// init runtime objects with a real clock
-	var runtime = initRuntime(clockwork.NewRealClock())
+	runtime := runtimeConfig{
+		settings: settings,
+		comms:    initCommChannels(),
+		rtc:      clockwork.NewRealClock(),
+		sounds:   realSounds{},
+	}
 
 	// start the effect threads so we can update the LEDs
-	go runLEDController(settings, runtime)
-	go runEffects(settings, runtime)
+	go runLEDController(runtime)
+	go runEffects(runtime)
 
 	// force the LEDs to an on state
 	runtime.comms.leds <- ledMessageForce(settings.GetInt(sLEDAlm), modeOn, 0)
@@ -91,9 +96,9 @@ func main() {
 	}
 
 	// launch the rest of the threads
-	go runGetAlarms(settings, runtime)
-	go runCheckAlarm(settings, runtime)
-	go runWatchButtons(settings, runtime)
+	go runGetAlarms(runtime)
+	go runCheckAlarm(runtime)
+	go runWatchButtons(runtime)
 
 	wg.Wait()
 }

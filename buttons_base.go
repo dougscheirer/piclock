@@ -85,12 +85,13 @@ func checkButtons(btns map[string]button, runtime runtimeConfig) (map[string]but
 	return ret, nil
 }
 
-func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
+func runWatchButtons(runtime runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runWatchButtons")
 	}()
 
+	settings := runtime.settings
 	comms := runtime.comms
 	err := initButtons(settings)
 	if err != nil {
@@ -105,7 +106,7 @@ func runWatchButtons(settings *configSettings, runtime runtimeConfig) {
 	pins := make(map[string]buttonMap)
 	pins[sMainBtn] = settings.GetButtonMap(sMainBtn)
 
-	buttons, err = setupButtons(pins, settings, runtime)
+	buttons, err = setupButtons(pins, runtime)
 	if err != nil {
 		log.Println(err.Error())
 		return

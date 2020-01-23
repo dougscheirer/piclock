@@ -15,7 +15,7 @@ type sevensegShim struct {
 	segments   [8][8]bool
 }
 
-func openDisplay(settings *configSettings) (*sevensegShim, error) {
+func openDisplay(settings configSettings) (*sevensegShim, error) {
 	this := &sevensegShim{
 		i2cBus:     settings.GetInt(sI2CBus),
 		curDisplay: "",
