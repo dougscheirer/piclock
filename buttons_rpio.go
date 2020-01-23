@@ -12,10 +12,6 @@ type rpioButtons struct {
 	buttons map[string]button
 }
 
-func init() {
-	features = append(features, "rpio-buttons")
-}
-
 func (rb *rpioButtons) getButtons() *map[string]button {
 	return &rb.buttons
 }

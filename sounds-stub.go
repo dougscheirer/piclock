@@ -4,10 +4,6 @@ import (
 	"log"
 )
 
-func init() {
-	features = append(features, "noaudio")
-}
-
 type noSounds struct {
 	playFreqs  []string
 	playTiming []string

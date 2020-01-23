@@ -9,10 +9,6 @@ import (
 type rpiLed struct {
 }
 
-func init() {
-	features = append(features, "leds")
-}
-
 func (rpi *rpiLed) init() {
 	err := rpio.Open()
 	if err != nil {

@@ -5,10 +5,6 @@ import "log"
 type logLed struct {
 }
 
-func init() {
-	features = append(features, "noleds")
-}
-
 func (ll *logLed) init() {
 	// log the init?
 }

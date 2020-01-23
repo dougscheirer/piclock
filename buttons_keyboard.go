@@ -9,10 +9,6 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
-func init() {
-	features = append(features, "key-buttons")
-}
-
 type simButtons struct {
 	buttons map[string]button
 }

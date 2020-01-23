@@ -4,10 +4,6 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
-func init() {
-	features = append(features, "no-buttons")
-}
-
 type noButtons struct {
 	buttons map[string]button
 }
