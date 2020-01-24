@@ -4,6 +4,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -210,4 +212,26 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 		led:      &logLed{},
 		events:   &testEvents{},
 	}
+}
+
+func setupLogging(settings configSettings, append bool) (*os.File, error) {
+	if settings.GetString(sLog) != "" {
+		flags := os.O_WRONLY | os.O_CREATE
+		if append {
+			flags |= os.O_APPEND
+		}
+		f, err := os.OpenFile(settings.GetString(sLog), flags, 0644)
+		if err != nil {
+			wd, _ := os.Getwd()
+			log.Printf("CWD: %s", wd)
+			log.Fatal(err)
+		}
+
+		// set output of logs to f
+		log.SetOutput(f)
+		return f, nil
+	}
+
+	// default logging is OK
+	return nil, nil
 }

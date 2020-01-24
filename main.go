@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 	"sync"
 	"time"
 )
@@ -40,17 +39,9 @@ func main() {
 	}
 
 	// first try to set up the log (optional)
-	if settings.GetString(sLog) != "" {
-		f, err := os.OpenFile(settings.GetString(sLog), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			wd, _ := os.Getwd()
-			log.Printf("CWD: %s", wd)
-			log.Fatal(err)
-		}
+	f, _ := setupLogging(settings, true)
+	if f != nil {
 		defer f.Close()
-
-		// set output of logs to f
-		log.SetOutput(f)
 	}
 
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)

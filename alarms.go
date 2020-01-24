@@ -351,6 +351,7 @@ func runGetAlarms(runtime runtimeConfig) {
 				log.Println("quit from runGetAlarms")
 				return
 			case msg := <-comms.almState:
+				log.Printf("read state")
 				switch msg.msg {
 				case msgHandled:
 					alarm, _ := toAlarm(msg.val)

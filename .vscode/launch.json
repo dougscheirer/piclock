@@ -31,7 +31,7 @@
       "mode": "test",
       "program": "${workspaceRoot}",
       "env": {},
-      "buildFlags": ""
+      "buildFlags": "-tags=noaudio"
     },
     {
       "name": "Attach",
