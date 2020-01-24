@@ -22,7 +22,7 @@
       "program": "${workspaceRoot}",
       "env": {},
       "args": ["-config","./piclock.vscode.conf"],
-      "buildFlags": "-tags='nobuttons notapi'"
+      "buildFlags": ""
     },
     {
       "name": "Launch test",
@@ -31,7 +31,7 @@
       "mode": "test",
       "program": "${workspaceRoot}",
       "env": {},
-      "buildFlags": "-tags='noaudio'"
+      "buildFlags": ""
     },
     {
       "name": "Attach",
@@ -51,7 +51,7 @@
       "program": "${workspaceRoot}",
       "env": {},
       "args": ["-oauth", "-config","./piclock.vscode.conf"],
-      "buildFlags": "-tags='nobuttons noaudio notapi'"
+      "buildFlags": ""
     }
   ]
 }

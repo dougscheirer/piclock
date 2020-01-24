@@ -76,6 +76,7 @@ func defaultSettings() *configSettings {
 		s[sButtons] = sKeyboard
 		s[sAudio] = true
 	}
+	
 	return &configSettings{settings: s}
 }
 

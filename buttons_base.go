@@ -139,6 +139,6 @@ func runWatchButtons(runtime runtimeConfig) {
 			}
 		}
 
-		runtime.rtc.Sleep(10 * time.Millisecond)
+		runtime.rtc.Sleep(dButtonSleep)
 	}
 }

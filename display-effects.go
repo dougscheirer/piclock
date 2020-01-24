@@ -273,7 +273,7 @@ func runEffects(runtime runtimeConfig) {
 			case eCountdown:
 				mode = modeCountdown
 				countdown, _ = toAlarm(e.val)
-				sleepTime = 10 * time.Millisecond
+				sleepTime = dEffectSleep
 			case eAlarmError:
 				// TODO: alarm error LED
 				runtime.display.Print("Err")
@@ -291,7 +291,7 @@ func runEffects(runtime runtimeConfig) {
 			case eAlarm:
 				mode = modeAlarm
 				alm, _ := toAlarm(e.val)
-				sleepTime = 10 * time.Millisecond
+				sleepTime = dEffectSleep
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
 				go playAlarmEffect(runtime, alm, stopAlarm)

@@ -29,6 +29,11 @@ type runtimeConfig struct {
 	events   events
 }
 
+const dAlarmSleep time.Duration = 100 * time.Millisecond
+const dButtonSleep time.Duration = 10 * time.Millisecond
+const dEffectSleep time.Duration = 10 * time.Millisecond
+const dLEDSleep time.Duration = 100 * time.Millisecond
+
 func toBool(val interface{}) (bool, error) {
 	switch v := val.(type) {
 	case bool:
@@ -166,7 +171,7 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 
 	switch settings.GetString(sButtons) {
 	case sKeyboard:
-		buttons = &simButtons{}
+		buttons = &keyButtons{}
 	case sRPi:
 		buttons = &rpioButtons{}
 	default:
@@ -191,5 +196,18 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 		display:  display,
 		led:      led,
 		events:   &gcalEvents{},
+	}
+}
+
+func initTestRuntime(settings configSettings) runtimeConfig {
+	return runtimeConfig{
+		settings: settings,
+		comms:    initCommChannels(),
+		rtc:      clockwork.NewFakeClock(),
+		sounds:   &noSounds{},
+		buttons:  &noButtons{},
+		display:  &logDisplay{},
+		led:      &logLed{},
+		events:   &testEvents{},
 	}
 }

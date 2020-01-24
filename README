@@ -38,21 +38,6 @@ pi setup:
 TODO:
   add simulation program for testing?
   
-tests:
-  alarm:
-    load empty alarm list
-    load single alarm
-      countdown
-      no countdown
-      countdown cancelled
-    load multiple alarms
-      ?
-    reload alarms 
-      ok
-      not ok, cache
-      not ok, no cache
-    timed reload alarms
-      ok
-      not ok, cache
-      not ok, no cache
-    
+Testing
+  test each go run... as its own thing
+  TODO: some of them might launch other processes which will do their own sleeps, which makes clock.Block hard to manage

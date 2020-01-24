@@ -9,15 +9,15 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
-type simButtons struct {
+type keyButtons struct {
 	buttons map[string]button
 }
 
-func (sb *simButtons) getButtons() *map[string]button {
+func (sb *keyButtons) getButtons() *map[string]button {
 	return &sb.buttons
 }
 
-func (sb *simButtons) simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+func (sb *keyButtons) simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
 	sb.buttons = make(map[string]button)
 
 	// return a list of buttons with the char as the "pin num"
@@ -32,7 +32,7 @@ func (sb *simButtons) simSetupButtons(pins map[string]buttonMap, runtime runtime
 	return nil
 }
 
-func (sb *simButtons) checkKeyboard(runtime runtimeConfig) (map[string]rpio.State, error) {
+func (sb *keyButtons) checkKeyboard(runtime runtimeConfig) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
 
 	// poll with quick timeout
@@ -87,16 +87,16 @@ func (sb *simButtons) checkKeyboard(runtime runtimeConfig) (map[string]rpio.Stat
 	return ret, nil
 }
 
-func (sb *simButtons) readButtons(runtime runtimeConfig) (map[string]rpio.State, error) {
+func (sb *keyButtons) readButtons(runtime runtimeConfig) (map[string]rpio.State, error) {
 	// simulated mode we check it all at once or we wait a lot
 	return sb.checkKeyboard(runtime)
 }
 
-func (sb *simButtons) setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+func (sb *keyButtons) setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
 	return sb.simSetupButtons(pins, runtime)
 }
 
-func (sb *simButtons) initButtons(settings configSettings) error {
+func (sb *keyButtons) initButtons(settings configSettings) error {
 	err := termbox.Init()
 	if err != nil {
 		return err
@@ -109,6 +109,6 @@ func (sb *simButtons) initButtons(settings configSettings) error {
 	return nil
 }
 
-func (sb *simButtons) closeButtons() {
+func (sb *keyButtons) closeButtons() {
 	termbox.Close()
 }

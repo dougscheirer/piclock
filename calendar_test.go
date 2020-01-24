@@ -8,29 +8,26 @@ import (
 	"gotest.tools/assert"
 )
 
-func setup() (runtimeConfig, clockwork.FakeClock) {
+func setup() runtimeConfig {
 	// load our test config
 	cfgFile := "./test/config.conf"
 	settings := initSettings(cfgFile)
 	// make runtime for test
-	clock := clockwork.NewFakeClock()
-	runtime := runtimeConfig{
-		settings: settings,
-		comms:    initCommChannels(),
-		sounds:   &noSounds{},
-		rtc:      clockwork.NewFakeClock(),
-	}
-
-	return runtime, clock
+	return initTestRuntime(settings)
 }
 
 func TestCalendarLoadEvents(t *testing.T) {
-	runtime, clock := setup()
+	runtime := setup()
+	clock := runtime.rtc.(clockwork.FakeClock)
+
 	// load alarms
 	go runGetAlarms(runtime)
 
 	// block for a while?
 	clock.BlockUntil(1)
+	// signal stop and advance clock
+	close(runtime.comms.quit)
+	clock.Advance(dAlarmSleep)
 
 	// read the comm channel for messages
 	state := <-runtime.comms.almState
@@ -43,14 +40,20 @@ func TestCalendarLoadEvents(t *testing.T) {
 		assert.Assert(t, false, fmt.Sprintf("Bad value: %v", v))
 	}
 
-	close(runtime.comms.quit)
+	// make a new quit channel for the new thread
+	runtime.comms.quit = make(chan struct{}, 1)
+	go runLEDController(runtime)
 	clock.BlockUntil(1)
+
+	// read from the led channel (or check the led stub)
+	var logger *logLed = runtime.led.(*logLed)
+	assert.Assert(t, logger.leds[runtime.settings.GetInt(sLEDAlm)])
+	close(runtime.comms.quit)
 }
 
 func TestCalendarLoadEventsFailed(t *testing.T) {
-	runtime, clock := setup()
-	// start led controller
-	go runLEDController(runtime)
+	runtime := setup()
+	clock := runtime.rtc.(clockwork.FakeClock)
 
 	// load alarms
 	go runGetAlarms(runtime)
@@ -58,5 +61,5 @@ func TestCalendarLoadEventsFailed(t *testing.T) {
 	// block for a while?
 	clock.BlockUntil(1)
 
-	// read from the led channel
+	//
 }
