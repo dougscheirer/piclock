@@ -13,11 +13,11 @@ import (
 )
 
 type commChannels struct {
-	quit     chan struct{}
-	alarms   chan almStateMsg
-	effects  chan displayEffect
-	almState chan almStateMsg
-	leds     chan ledEffect
+	quit      chan struct{}
+	chkAlarms chan almStateMsg
+	effects   chan displayEffect
+	getAlarms chan almStateMsg
+	leds      chan ledEffect
 }
 
 type runtimeConfig struct {
@@ -143,16 +143,16 @@ func toButtonMap(result interface{}) (buttonMap, error) {
 func initCommChannels() commChannels {
 	quit := make(chan struct{}, 1)
 	alarmChannel := make(chan almStateMsg, 10)
-	effectChannel := make(chan displayEffect, 10)
+	effectChannel := make(chan displayEffect, 100)
 	loaderChannel := make(chan almStateMsg, 10)
-	leds := make(chan ledEffect, 10)
+	leds := make(chan ledEffect, 100)
 
 	return commChannels{
-		quit:     quit,
-		alarms:   alarmChannel,
-		effects:  effectChannel,
-		almState: loaderChannel,
-		leds:     leds,
+		quit:      quit,
+		chkAlarms: alarmChannel,
+		effects:   effectChannel,
+		getAlarms: loaderChannel,
+		leds:      leds,
 	}
 }
 
@@ -219,6 +219,8 @@ func setupLogging(settings configSettings, append bool) (*os.File, error) {
 		flags := os.O_WRONLY | os.O_CREATE
 		if append {
 			flags |= os.O_APPEND
+		} else {
+			flags |= os.O_TRUNC
 		}
 		f, err := os.OpenFile(settings.GetString(sLog), flags, 0644)
 		if err != nil {

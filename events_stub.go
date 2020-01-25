@@ -1,17 +1,22 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"google.golang.org/api/calendar/v3"
 )
 
 type testEvents struct {
-	events calendar.Events
+	events      calendar.Events
+	errorResult bool
 }
 
 func (te *testEvents) fetch(runtime runtimeConfig) (*calendar.Events, error) {
-	// TODO: use a faked list of events
+	if te.errorResult {
+		return nil, errors.New("Bad fetch error")
+	}
+	// use a faked list of events
 	var events calendar.Events
 	events.Items = make([]*calendar.Event, 5)
 	for k := range events.Items {
@@ -34,4 +39,13 @@ func (te *testEvents) fetch(runtime runtimeConfig) (*calendar.Events, error) {
 
 func (te *testEvents) getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
 	return nil, nil
+}
+
+func (gc *testEvents) downloadMusicFiles(settings configSettings, display chan displayEffect) {
+
+}
+
+func (gc *testEvents) loadAlarms(runtime runtimeConfig, loadID int, report bool) {
+	// do the thing in realtime for testing
+	loadAlarmsImpl(runtime, loadID, report)
 }

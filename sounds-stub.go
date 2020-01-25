@@ -9,18 +9,22 @@ type noSounds struct {
 	playTiming []string
 	mp3        string
 	loopMp3    bool
+	playItCnt  int
+	playMP3Cnt int
 }
 
 func (ns *noSounds) playIt(sfreqs []string, timing []string, stop chan bool) {
 	log.Println("STUB: playIt")
 	ns.playFreqs = sfreqs
 	ns.playTiming = timing
-	// do something about the stop channel, like wait for it
+	// pretend we did this
+	ns.playItCnt++
 }
 
 func (ns *noSounds) playMP3(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
 	log.Println("STUB: playMP3 " + fName)
 	ns.mp3 = fName
 	ns.loopMp3 = loop
-	// do something about the stop channel, like wait for it
+	// pretend we did this
+	ns.playMP3Cnt++
 }

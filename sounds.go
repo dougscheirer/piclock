@@ -168,6 +168,10 @@ func getDecoder(fname string) *mpg123.Decoder {
 }
 
 func (rs *realSounds) playMP3(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
+	go playMP3Later(runtime, fName, loop, stop)
+}
+
+func (rs *realSounds) playMP3Later(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
 	// just run mpg123 or the pi fails to play
 	cmd := exec.Command("mpg123", fName)
 	completed := make(chan error, 1)
@@ -205,6 +209,11 @@ func (rs *realSounds) playMP3(runtime runtimeConfig, fName string, loop bool, st
 }
 
 func (rs *realSounds) playIt(sfreqs []string, timing []string, stop chan bool) {
+	go rs.playItLater(sfreqs, timing, stop)
+}
+
+func (rs *realSounds) playItLater(sfreqs []string, timing []string, stop chan bool) {
+}
 	freqs := make([]float64, 0, len(sfreqs))
 	for i := range sfreqs {
 		f, e := strconv.ParseFloat(sfreqs[i], 64)

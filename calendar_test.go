@@ -17,12 +17,31 @@ func setup() runtimeConfig {
 	return initTestRuntime(settings)
 }
 
+func almStateRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
+	select {
+	case e := <-c:
+		return e, nil
+	default:
+		assert.Assert(t, false, "Nothing to read from alarm channel")
+	}
+	return almStateMsg{}, nil
+}
+
+func almStateNoRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
+	select {
+	case e := <-c:
+		assert.Assert(t, e == almStateMsg{}, "Got an unexpected value on alarm channel")
+	default:
+	}
+	return almStateMsg{}, nil
+}
+
 func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	select {
 	case e := <-c:
 		return e, nil
 	default:
-		assert.Assert(t, false, "Nothing to read from channel")
+		assert.Assert(t, false, "Nothing to read from led channel")
 	}
 	return ledEffect{}, nil
 }
@@ -40,8 +59,8 @@ func TestCalendarLoadEvents(t *testing.T) {
 	close(runtime.comms.quit)
 	clock.Advance(dAlarmSleep)
 
-	// read the comm channel for messages
-	state := <-runtime.comms.almState
+	// read the chkAlarms comm channel for messages
+	state, _ := almStateRead(t, runtime.comms.chkAlarms)
 	assert.Assert(t, state.msg == msgLoaded)
 	switch v := state.val.(type) {
 	case loadedPayload:
@@ -65,13 +84,27 @@ func TestCalendarLoadEvents(t *testing.T) {
 
 func TestCalendarLoadEventsFailed(t *testing.T) {
 	runtime := setup()
+	testEvents := runtime.events.(*testEvents)
+	// make it return errors
+	testEvents.errorResult = true
+
 	clock := runtime.rtc.(clockwork.FakeClock)
 
 	// load alarms
 	go runGetAlarms(runtime)
 
-	// block for a while?
+	// block for a sleep
 	clock.BlockUntil(1)
+	// signal stop and advance clock
+	close(runtime.comms.quit)
+	clock.Advance(dAlarmSleep)
 
-	//
+	// read the comm channel for (no) messages
+	almStateNoRead(t, runtime.comms.chkAlarms)
+
+	// expect 2 led messages, one for turning on the error blink, one to turn it off
+	ledBlink, _ := ledRead(t, runtime.comms.leds)
+	assert.Assert(t, ledBlink == ledMessage(runtime.settings.GetInt(sLEDErr), modeBlink75, 0))
+	ledOff, _ := ledRead(t, runtime.comms.leds)
+	assert.Assert(t, ledOff == ledMessage(runtime.settings.GetInt(sLEDErr), modeOff, 0))
 }

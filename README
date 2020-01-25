@@ -4,7 +4,7 @@ build:
 	go build [--tags='noaudio nobuttons']
 
 required packages
-	portaudio19-dev
+	portaudio19-dev (-tags=noaudio)
 	libmpg123-dev
   python-smbus
   i2c-tools
@@ -41,3 +41,8 @@ TODO:
 Testing
   test each go run... as its own thing
   TODO: some of them might launch other processes which will do their own sleeps, which makes clock.Block hard to manage
+  runGetAlarms
+  runCheckAlarm
+  runWatchButtons
+  runEffects
+  runLedController

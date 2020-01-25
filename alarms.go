@@ -102,8 +102,252 @@ func cacheFilename(settings configSettings) string {
 	return settings.GetString(sAlarms) + "/alarm.json"
 }
 
+func getAlarmsFromCache(runtime runtimeConfig) ([]alarm, error) {
+	settings := runtime.settings
+	alarms := make([]alarm, 0)
+	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
+		return alarms, nil
+	}
+	data, err := ioutil.ReadFile(cacheFilename(settings))
+	if err != nil {
+		return alarms, err
+	}
+	err = json.Unmarshal(data, &alarms)
+	if err != nil {
+		return alarms, err
+	}
+	// remove any that are in the "handled" map or the time has passed
+	for i := len(alarms) - 1; i >= 0; i-- {
+		// TODO: account for countdown time
+		if alarms[i].When.Sub(runtime.rtc.Now()) < 0 {
+			// remove is append two slices without the part we don't want
+			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
+			alarms = append(alarms[:i], alarms[i+1:]...)
+		}
+	}
+
+	return alarms, nil
+}
+
+// OOBFetch helper for grabbing http files
+func OOBFetch(url string) []byte {
+	resp, err := http.Get(url)
+	if resp == nil || err != nil || resp.StatusCode != 200 {
+		return nil
+	}
+
+	body, err2 := ioutil.ReadAll(resp.Body)
+
+	if err2 != nil {
+		return nil
+	}
+
+	// fmt.Println(string(body))
+	return body
+}
+
+func runGetAlarms(runtime runtimeConfig) {
+	defer wg.Done()
+	defer func() {
+		log.Println("exiting runGetAlarms")
+	}()
+
+	settings := runtime.settings
+
+	// keep a list of things that we have done
+	// TODO: GC the list occassionally
+	handledAlarms := map[string]alarm{}
+	comms := runtime.comms
+
+	var curReloadID int = 0
+	var lastRefresh time.Time
+
+	for true {
+		// read any messages alarms first
+		keepReading := true
+		reload := false
+		forceReload := false
+
+		if runtime.rtc.Now().Sub(lastRefresh) > settings.GetDuration(sAlmRefresh) {
+			reload = true
+		}
+
+		for keepReading {
+			select {
+			case <-comms.quit:
+				log.Println("quit from runGetAlarms")
+				return
+			case msg := <-comms.getAlarms:
+				log.Printf("read state")
+				switch msg.msg {
+				case msgHandled:
+					alarm, _ := toAlarm(msg.val)
+					handledAlarms[alarm.ID] = *alarm
+				case msgReload:
+					reload = true
+					forceReload = true
+					comms.effects <- printEffect("rLd", 2*time.Second)
+				case msgLoaded:
+					// decide if we display a message or not
+					// it's possible we launched a bunch of loadAlarms threads
+					// and they all eventually unblock. to prevent a bunch of
+					// noise, just respond to the one that matches our current ID
+					loadedPayload, _ := toLoadedPayload(msg.val)
+					if loadedPayload.loadID == curReloadID {
+						// force reload -> show alarm count
+						if loadedPayload.report {
+							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), 2*time.Second)
+						}
+					} else {
+						log.Printf("Skipping old loadID %v", loadedPayload.loadID)
+					}
+				default:
+					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
+				}
+			default:
+				keepReading = false
+			}
+		}
+
+		if reload {
+			// launch a thing, it could hang
+			loadID := curReloadID + 1
+			curReloadID++
+			// let the runtime decide whether to do it now oe later
+			runtime.events.loadAlarms(runtime, loadID, forceReload)
+			lastRefresh = runtime.rtc.Now()
+		} else {
+			// wait a little
+			log.Printf("Sleep")
+			runtime.rtc.Sleep(dAlarmSleep)
+		}
+	}
+}
+
+// return true if they look the same
+func compareAlarms(alm1 alarm, alm2 alarm) bool {
+	return (alm1.When == alm2.When && alm1.Effect == alm2.Effect &&
+		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
+}
+
+func runCheckAlarm(runtime runtimeConfig) {
+	defer wg.Done()
+	defer func() {
+		log.Println("exiting runCheckAlarms")
+	}()
+
+	settings := runtime.settings
+	alarms := make([]alarm, 0)
+	comms := runtime.comms
+
+	var lastLogSecond = -1
+
+	var lastAlarm *alarm
+
+	for true {
+		// try reading from our channel
+		select {
+		case <-comms.quit:
+			log.Println("quit from runCheckAlarm")
+			return
+		case stateMsg := <-comms.chkAlarms:
+			if stateMsg.msg == msgLoaded {
+				payload, _ := toLoadedPayload(stateMsg.val)
+				alarms = payload.alarms
+			} else {
+				log.Printf("Ignoring state change message: %v", stateMsg.msg)
+			}
+		default:
+			// continue
+		}
+
+		validAlarm := false
+		// alarms come in sorted with soonest first
+		for index := 0; index < len(alarms); index++ {
+			if alarms[index].disabled {
+				continue // skip processed alarms
+			}
+
+			// if alarms[index] != lastAlarm, run some effects
+			if lastAlarm == nil || !compareAlarms(*lastAlarm, alarms[index]) {
+				lastAlarm = &alarms[index]
+				comms.effects <- printEffect(fmt.Sprintf("AL:%d", index+1), 1*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("15:04"), 2*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("01.02"), 2*time.Second)
+				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 2*time.Second)
+			}
+
+			now := runtime.rtc.Now()
+			duration := alarms[index].When.Sub(now)
+			if lastLogSecond != now.Second() && now.Second()%30 == 0 {
+				lastLogSecond = now.Second()
+				log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration/time.Second, (duration-settings.GetDuration(sCountdown))/time.Second))
+			}
+
+			// light the LED to show we have a pending alarm
+			comms.leds <- ledOn(settings.GetInt(sLEDAlm))
+			validAlarm = true
+
+			if duration > 0 {
+				// start a countdown?
+				countdown := settings.GetDuration(sCountdown)
+				if duration < countdown && !alarms[index].countdown {
+					comms.effects <- setCountdownMode(alarms[0])
+					alarms[index].countdown = true
+				}
+			} else {
+				// Set alarm mode
+				comms.effects <- setAlarmMode(alarms[index])
+				// let getAlarms know we handled it
+				comms.getAlarms <- handledMessage(alarms[index])
+				alarms[index].disabled = true
+			}
+			break
+		}
+		if !validAlarm {
+			comms.leds <- ledOff(settings.GetInt(sLEDAlm))
+		}
+		// take some time off
+		runtime.rtc.Sleep(dAlarmSleep)
+	}
+}
+
+func loadAlarmsImpl(runtime runtimeConfig, loadID int, report bool) {
+	comms := runtime.comms
+	settings := runtime.settings
+
+	// also grab all of the music we can
+	runtime.events.downloadMusicFiles(settings, comms.effects)
+
+	// set error LED now, it should go out almost right away
+	comms.leds <- ledMessage(settings.GetInt(sLEDErr), modeBlink75, 0)
+
+	// TODO: handled alarms are not longer considered, need testing
+	alarms, err := getAlarmsFromService(runtime)
+	if err != nil {
+		comms.effects <- alarmError(5 * time.Second)
+		log.Println(err.Error())
+		// try the backup
+		alarms, err = getAlarmsFromCache(runtime)
+		if err != nil {
+			// very bad, so...delete and try again later?
+			// TODO: more effects
+			comms.effects <- alarmError(5 * time.Second)
+			log.Printf("Error reading alarm cache: %s\n", err.Error())
+			return
+		}
+		return
+	}
+	comms.leds <- ledOff(settings.GetInt(sLEDErr))
+
+	msg := alarmsLoadedMsg(loadID, alarms, report)
+	// notify state change to runGetAlarms
+	comms.getAlarms <- msg
+	// notify runCheckAlarms that we have some alarms
+	comms.chkAlarms <- msg
+}
+
 func getAlarmsFromService(runtime runtimeConfig) ([]alarm, error) {
-	// this is build dependent
 	settings := runtime.settings
 	events, err := runtime.events.fetch(runtime)
 	var alarms []alarm
@@ -172,313 +416,4 @@ func getAlarmsFromService(runtime runtimeConfig) ([]alarm, error) {
 	}
 
 	return alarms, nil
-}
-
-func getAlarmsFromCache(runtime runtimeConfig) ([]alarm, error) {
-	settings := runtime.settings
-	alarms := make([]alarm, 0)
-	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
-		return alarms, nil
-	}
-	data, err := ioutil.ReadFile(cacheFilename(settings))
-	if err != nil {
-		return alarms, err
-	}
-	err = json.Unmarshal(data, &alarms)
-	if err != nil {
-		return alarms, err
-	}
-	// remove any that are in the "handled" map or the time has passed
-	for i := len(alarms) - 1; i >= 0; i-- {
-		// TODO: account for countdown time
-		if alarms[i].When.Sub(runtime.rtc.Now()) < 0 {
-			// remove is append two slices without the part we don't want
-			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
-			alarms = append(alarms[:i], alarms[i+1:]...)
-		}
-	}
-
-	return alarms, nil
-}
-
-// OOBFetch helper for grabbing http files
-func OOBFetch(url string) []byte {
-	resp, err := http.Get(url)
-	if resp == nil || err != nil || resp.StatusCode != 200 {
-		return nil
-	}
-
-	body, err2 := ioutil.ReadAll(resp.Body)
-
-	if err2 != nil {
-		return nil
-	}
-
-	// fmt.Println(string(body))
-	return body
-}
-
-func downloadMusicFiles(settings configSettings, cE chan displayEffect) {
-	// this is currently dumb, it just uses a list from musicDownloads
-	// and walks through it, downloading to the music dir
-	jsonPath := settings.GetString(sMusicURL)
-	log.Printf("Downloading list from " + jsonPath)
-
-	results := make(chan []byte, 1)
-
-	go func() {
-		results <- OOBFetch(jsonPath)
-	}()
-
-	var files []musicFile
-	err := json.Unmarshal(<-results, &files)
-
-	if err != nil {
-		log.Printf("Error unmarshalling files: " + err.Error())
-		return
-	}
-
-	musicPath := settings.GetString(sMusicPath)
-	log.Printf("Received a list of %d files", len(files))
-
-	mp3Files := make([]chan []byte, len(files))
-	savePaths := make([]string, len(files))
-
-	for i := len(files) - 1; i >= 0; i-- {
-		// do we already have that file cached
-		savePaths[i] = musicPath + "/" + files[i].Name
-		// log.Printf("Checking for " + savePath)
-		if _, err := os.Stat(savePaths[i]); os.IsNotExist(err) {
-			mp3Files[i] = make(chan []byte, 1)
-			go func(i int) {
-				log.Println(fmt.Sprintf("Downloading %s [%s]", files[i].Name, files[i].Path))
-				mp3Files[i] <- OOBFetch(files[i].Path)
-			}(i)
-		}
-	}
-
-	for i := len(files) - 1; i >= 0; i-- {
-		if mp3Files[i] == nil {
-			continue
-		}
-
-		// write the file
-		data := <-mp3Files[i]
-		if data == nil || len(data) == 0 {
-			log.Printf("Skipping nil data for %s", savePaths[i])
-			continue
-		}
-
-		log.Printf("Saving %s", savePaths[i])
-		err = ioutil.WriteFile(savePaths[i], data, 0644)
-		if err != nil {
-			// handle error
-			log.Println(fmt.Sprintf("Failed to write %s: %s", savePaths[i], err.Error()))
-			continue
-		}
-	}
-}
-
-// the calendar thing is a little flaky, so we load in another thread
-func loadAlarms(runtime runtimeConfig, loadID int, report bool) {
-	defer func() {
-		log.Println("returning from loadAlarms")
-	}()
-
-	settings := runtime.settings
-	comms := runtime.comms
-
-	// also launch a thread to grab all of the music we can
-	go downloadMusicFiles(settings, comms.effects)
-
-	// set error LED now, it should go out almost right away
-	comms.leds <- ledMessage(settings.GetInt(sLEDErr), modeBlink75, 0)
-
-	// TODO: handled alarms are not longer considered, need testing
-	alarms, err := getAlarmsFromService(runtime)
-	if err != nil {
-		comms.effects <- alarmError(5 * time.Second)
-		log.Println(err.Error())
-		// try the backup
-		alarms, err = getAlarmsFromCache(runtime)
-		if err != nil {
-			// very bad, so...delete and try again later?
-			// TODO: more effects
-			comms.effects <- alarmError(5 * time.Second)
-			log.Printf("Error reading alarm cache: %s\n", err.Error())
-			return
-		}
-		return
-	}
-	comms.leds <- ledOff(settings.GetInt(sLEDErr))
-
-	msg := alarmsLoadedMsg(loadID, alarms, report)
-	// notify state change to loaded
-	comms.almState <- msg
-	// tell runCheckAlarms that we have some alarms
-	comms.alarms <- msg
-}
-
-func runGetAlarms(runtime runtimeConfig) {
-	defer wg.Done()
-	defer func() {
-		log.Println("exiting runGetAlarms")
-	}()
-
-	settings := runtime.settings
-
-	// keep a list of things that we have done
-	// TODO: GC the list occassionally
-	handledAlarms := map[string]alarm{}
-	comms := runtime.comms
-
-	var curReloadID int = 0
-	var lastRefresh time.Time
-
-	for true {
-		// read any messages alarms first
-		keepReading := true
-		reload := false
-		forceReload := false
-
-		if runtime.rtc.Now().Sub(lastRefresh) > settings.GetDuration(sAlmRefresh) {
-			reload = true
-		}
-
-		for keepReading {
-			select {
-			case <-comms.quit:
-				log.Println("quit from runGetAlarms")
-				return
-			case msg := <-comms.almState:
-				log.Printf("read state")
-				switch msg.msg {
-				case msgHandled:
-					alarm, _ := toAlarm(msg.val)
-					handledAlarms[alarm.ID] = *alarm
-				case msgReload:
-					reload = true
-					forceReload = true
-					comms.effects <- printEffect("rLd", 2*time.Second)
-				case msgLoaded:
-					// decide if we display a message or not
-					// it's possible we launched a bunch of loadAlarms threads
-					// and they all eventually unblock. to prevent a bunch of
-					// noise, just respond to the one that matches our current ID
-					loadedPayload, _ := toLoadedPayload(msg.val)
-					if loadedPayload.loadID == curReloadID {
-						// force reload -> show alarm count
-						if loadedPayload.report {
-							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), 2*time.Second)
-						}
-					} else {
-						log.Printf("Skipping old loadID %v", loadedPayload.loadID)
-					}
-				default:
-					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
-				}
-			default:
-				keepReading = false
-			}
-		}
-
-		if reload {
-			// launch a thing, it could hang
-			loadID := curReloadID + 1
-			curReloadID++
-			go loadAlarms(runtime, loadID, forceReload)
-			lastRefresh = runtime.rtc.Now()
-		} else {
-			// wait a little
-			runtime.rtc.Sleep(dAlarmSleep)
-		}
-	}
-}
-
-// return true if they look the same
-func compareAlarms(alm1 alarm, alm2 alarm) bool {
-	return (alm1.When == alm2.When && alm1.Effect == alm2.Effect &&
-		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
-}
-
-func runCheckAlarm(runtime runtimeConfig) {
-	defer wg.Done()
-	defer func() {
-		log.Println("exiting runCheckAlarms")
-	}()
-
-	settings := runtime.settings
-	alarms := make([]alarm, 0)
-	comms := runtime.comms
-
-	var lastLogSecond = -1
-
-	var lastAlarm *alarm
-
-	for true {
-		// try reading from our channel
-		select {
-		case <-comms.quit:
-			log.Println("quit from runCheckAlarm")
-			return
-		case stateMsg := <-comms.alarms:
-			if stateMsg.msg == msgLoaded {
-				payload, _ := toLoadedPayload(stateMsg.val)
-				alarms = payload.alarms
-			} else {
-				log.Printf("Ignoring state change message: %v", stateMsg.msg)
-			}
-		default:
-			// continue
-		}
-
-		validAlarm := false
-		// alarms come in sorted with soonest first
-		for index := 0; index < len(alarms); index++ {
-			if alarms[index].disabled {
-				continue // skip processed alarms
-			}
-
-			// if alarms[index] != lastAlarm, run some effects
-			if lastAlarm == nil || !compareAlarms(*lastAlarm, alarms[index]) {
-				lastAlarm = &alarms[index]
-				comms.effects <- printEffect(fmt.Sprintf("AL:%d", index+1), 1*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("15:04"), 2*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("01.02"), 2*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 2*time.Second)
-			}
-
-			now := runtime.rtc.Now()
-			duration := alarms[index].When.Sub(now)
-			if lastLogSecond != now.Second() && now.Second()%30 == 0 {
-				lastLogSecond = now.Second()
-				log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration/time.Second, (duration-settings.GetDuration(sCountdown))/time.Second))
-			}
-
-			// light the LED to show we have a pending alarm
-			comms.leds <- ledOn(settings.GetInt(sLEDAlm))
-			validAlarm = true
-
-			if duration > 0 {
-				// start a countdown?
-				countdown := settings.GetDuration(sCountdown)
-				if duration < countdown && !alarms[index].countdown {
-					comms.effects <- setCountdownMode(alarms[0])
-					alarms[index].countdown = true
-				}
-			} else {
-				// Set alarm mode
-				comms.effects <- setAlarmMode(alarms[index])
-				// let someone know we handled it
-				comms.almState <- handledMessage(alarms[index])
-				alarms[index].disabled = true
-			}
-			break
-		}
-		if !validAlarm {
-			comms.leds <- ledOff(settings.GetInt(sLEDAlm))
-		}
-		// take some time off
-		runtime.rtc.Sleep(dAlarmSleep)
-	}
 }

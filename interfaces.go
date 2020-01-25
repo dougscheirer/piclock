@@ -38,6 +38,9 @@ type led interface {
 }
 
 type events interface {
+	// TODO: probably don't need all of these
 	fetch(runtime runtimeConfig) (*calendar.Events, error)
 	getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error)
+	loadAlarms(runtime runtimeConfig, loadID int, report bool)
+	downloadMusicFiles(settings configSettings, cE chan displayEffect)
 }

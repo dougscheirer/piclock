@@ -252,7 +252,7 @@ func runEffects(runtime runtimeConfig) {
 	buttonPressActed := false
 	buttonDot := false
 
-	stopAlarm := make(chan bool, 1)
+	stopAlarm := make(chan bool, 20)
 
 	for true {
 		var e displayEffect
@@ -294,7 +294,7 @@ func runEffects(runtime runtimeConfig) {
 				sleepTime = dEffectSleep
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
-				go playAlarmEffect(runtime, alm, stopAlarm)
+				playAlarmEffect(runtime, alm, stopAlarm)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed
@@ -314,13 +314,13 @@ func runEffects(runtime runtimeConfig) {
 						case modeCountdown:
 							// cancel the alarm
 							mode = modeClock
-							comms.almState <- handledMessage(*countdown)
+							comms.getAlarms <- handledMessage(*countdown)
 							countdown = nil
 							buttonPressActed = true
 						case modeClock:
 							// more than 5 seconds is "reload"
 							if info.duration > 4*time.Second {
-								comms.almState <- reloadMessage()
+								comms.getAlarms <- reloadMessage()
 								buttonPressActed = true
 							}
 						default:

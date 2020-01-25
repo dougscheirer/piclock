@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,8 +12,6 @@ import (
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/calendar/v3"
 )
 
 type gcalEvents struct {
@@ -100,31 +97,4 @@ func saveToken(file string, token *oauth2.Token) {
 	}
 	defer f.Close()
 	json.NewEncoder(f).Encode(token)
-}
-
-func (ge *gcalEvents) getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
-	ctx := context.Background()
-
-	b, err := ioutil.ReadFile(settings.GetString(sSecrets) + "/client_secret.json")
-	if err != nil {
-		log.Printf("Unable to read client secret file: %v", err)
-		return nil, err
-	}
-
-	// If modifying these scopes, delete your previously saved credentials
-	// at ~/.credentials/piclock.json
-	config, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
-	if err != nil {
-		log.Printf("Unable to parse client secret file to config: %v", err)
-		return nil, err
-	}
-	client := getClient(ctx, config, prompt)
-
-	srv, err := calendar.New(client)
-	if err != nil {
-		log.Printf("Unable to retrieve calendar Client %v", err)
-		return nil, err
-	}
-
-	return srv, nil
 }
