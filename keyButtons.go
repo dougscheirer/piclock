@@ -17,11 +17,11 @@ func (sb *keyButtons) getButtons() *map[string]button {
 	return &sb.buttons
 }
 
-func (sb *keyButtons) simSetupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+func (sb *keyButtons) simSetupButtons(pins map[string]buttonMap, rt runtimeConfig) error {
 	sb.buttons = make(map[string]button)
 
 	// return a list of buttons with the char as the "pin num"
-	now := runtime.rtc.Now()
+	now := rt.clock.Now()
 
 	for k, v := range pins {
 		var btn button
@@ -32,13 +32,13 @@ func (sb *keyButtons) simSetupButtons(pins map[string]buttonMap, runtime runtime
 	return nil
 }
 
-func (sb *keyButtons) checkKeyboard(runtime runtimeConfig) (map[string]rpio.State, error) {
+func (sb *keyButtons) checkKeyboard(rt runtimeConfig) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
 
 	// poll with quick timeout
 	// no key means "no change"
 	go func() {
-		runtime.rtc.Sleep(100 * time.Millisecond)
+		rt.clock.Sleep(100 * time.Millisecond)
 		termbox.Interrupt()
 	}()
 
@@ -87,13 +87,13 @@ func (sb *keyButtons) checkKeyboard(runtime runtimeConfig) (map[string]rpio.Stat
 	return ret, nil
 }
 
-func (sb *keyButtons) readButtons(runtime runtimeConfig) (map[string]rpio.State, error) {
+func (sb *keyButtons) readButtons(rt runtimeConfig) (map[string]rpio.State, error) {
 	// simulated mode we check it all at once or we wait a lot
-	return sb.checkKeyboard(runtime)
+	return sb.checkKeyboard(rt)
 }
 
-func (sb *keyButtons) setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
-	return sb.simSetupButtons(pins, runtime)
+func (sb *keyButtons) setupButtons(pins map[string]buttonMap, rt runtimeConfig) error {
+	return sb.simSetupButtons(pins, rt)
 }
 
 func (sb *keyButtons) initButtons(settings configSettings) error {

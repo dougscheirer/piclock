@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"google.golang.org/api/calendar/v3"
 )
@@ -10,12 +11,35 @@ import (
 type testEvents struct {
 	events      calendar.Events
 	errorResult bool
+	errorCount  int
+	fetches     int
 }
 
-func (te *testEvents) fetch(runtime runtimeConfig) (*calendar.Events, error) {
-	if te.errorResult {
-		return nil, errors.New("Bad fetch error")
+const INFINITE int = -2
+
+func (te *testEvents) setFails(cnt int) {
+	if cnt <= 0 {
+		cnt = INFINITE
 	}
+	te.errorCount = cnt
+	te.errorResult = true
+}
+
+func (te *testEvents) fetch(rt runtimeConfig) (*calendar.Events, error) {
+	te.fetches++
+	log.Printf("Fetch: %d", te.fetches)
+	if te.errorResult {
+		err := errors.New("Bad fetch error")
+		if te.errorCount != INFINITE {
+			if te.errorCount > 0 {
+				te.errorCount--
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
 	// use a faked list of events
 	var events calendar.Events
 	events.Items = make([]*calendar.Event, 5)
@@ -45,7 +69,7 @@ func (gc *testEvents) downloadMusicFiles(settings configSettings, display chan d
 
 }
 
-func (gc *testEvents) loadAlarms(runtime runtimeConfig, loadID int, report bool) {
+func (gc *testEvents) loadAlarms(rt runtimeConfig, loadID int, report bool) {
 	// do the thing in realtime for testing
-	loadAlarmsImpl(runtime, loadID, report)
+	loadAlarmsImpl(rt, loadID, report)
 }

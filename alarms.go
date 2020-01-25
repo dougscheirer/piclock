@@ -102,8 +102,8 @@ func cacheFilename(settings configSettings) string {
 	return settings.GetString(sAlarms) + "/alarm.json"
 }
 
-func getAlarmsFromCache(runtime runtimeConfig) ([]alarm, error) {
-	settings := runtime.settings
+func getAlarmsFromCache(rt runtimeConfig) ([]alarm, error) {
+	settings := rt.settings
 	alarms := make([]alarm, 0)
 	if _, err := os.Stat(cacheFilename(settings)); os.IsNotExist(err) {
 		return alarms, nil
@@ -119,7 +119,7 @@ func getAlarmsFromCache(runtime runtimeConfig) ([]alarm, error) {
 	// remove any that are in the "handled" map or the time has passed
 	for i := len(alarms) - 1; i >= 0; i-- {
 		// TODO: account for countdown time
-		if alarms[i].When.Sub(runtime.rtc.Now()) < 0 {
+		if alarms[i].When.Sub(rt.clock.Now()) < 0 {
 			// remove is append two slices without the part we don't want
 			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
 			alarms = append(alarms[:i], alarms[i+1:]...)
@@ -146,18 +146,18 @@ func OOBFetch(url string) []byte {
 	return body
 }
 
-func runGetAlarms(runtime runtimeConfig) {
+func runGetAlarms(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runGetAlarms")
 	}()
 
-	settings := runtime.settings
+	settings := rt.settings
 
 	// keep a list of things that we have done
 	// TODO: GC the list occassionally
 	handledAlarms := map[string]alarm{}
-	comms := runtime.comms
+	comms := rt.comms
 
 	var curReloadID int = 0
 	var lastRefresh time.Time
@@ -168,7 +168,7 @@ func runGetAlarms(runtime runtimeConfig) {
 		reload := false
 		forceReload := false
 
-		if runtime.rtc.Now().Sub(lastRefresh) > settings.GetDuration(sAlmRefresh) {
+		if rt.clock.Now().Sub(lastRefresh) > settings.GetDuration(sAlmRefresh) {
 			reload = true
 		}
 
@@ -178,7 +178,6 @@ func runGetAlarms(runtime runtimeConfig) {
 				log.Println("quit from runGetAlarms")
 				return
 			case msg := <-comms.getAlarms:
-				log.Printf("read state")
 				switch msg.msg {
 				case msgHandled:
 					alarm, _ := toAlarm(msg.val)
@@ -213,13 +212,12 @@ func runGetAlarms(runtime runtimeConfig) {
 			// launch a thing, it could hang
 			loadID := curReloadID + 1
 			curReloadID++
-			// let the runtime decide whether to do it now oe later
-			runtime.events.loadAlarms(runtime, loadID, forceReload)
-			lastRefresh = runtime.rtc.Now()
+			// let the rt decide whether to do it now oe later
+			rt.events.loadAlarms(rt, loadID, forceReload)
+			lastRefresh = rt.clock.Now()
 		} else {
 			// wait a little
-			log.Printf("Sleep")
-			runtime.rtc.Sleep(dAlarmSleep)
+			rt.clock.Sleep(dAlarmSleep)
 		}
 	}
 }
@@ -230,15 +228,15 @@ func compareAlarms(alm1 alarm, alm2 alarm) bool {
 		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
 }
 
-func runCheckAlarm(runtime runtimeConfig) {
+func runCheckAlarm(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runCheckAlarms")
 	}()
 
-	settings := runtime.settings
+	settings := rt.settings
 	alarms := make([]alarm, 0)
-	comms := runtime.comms
+	comms := rt.comms
 
 	var lastLogSecond = -1
 
@@ -277,7 +275,7 @@ func runCheckAlarm(runtime runtimeConfig) {
 				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 2*time.Second)
 			}
 
-			now := runtime.rtc.Now()
+			now := rt.clock.Now()
 			duration := alarms[index].When.Sub(now)
 			if lastLogSecond != now.Second() && now.Second()%30 == 0 {
 				lastLogSecond = now.Second()
@@ -308,27 +306,27 @@ func runCheckAlarm(runtime runtimeConfig) {
 			comms.leds <- ledOff(settings.GetInt(sLEDAlm))
 		}
 		// take some time off
-		runtime.rtc.Sleep(dAlarmSleep)
+		rt.clock.Sleep(dAlarmSleep)
 	}
 }
 
-func loadAlarmsImpl(runtime runtimeConfig, loadID int, report bool) {
-	comms := runtime.comms
-	settings := runtime.settings
+func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
+	comms := rt.comms
+	settings := rt.settings
 
 	// also grab all of the music we can
-	runtime.events.downloadMusicFiles(settings, comms.effects)
+	rt.events.downloadMusicFiles(settings, comms.effects)
 
 	// set error LED now, it should go out almost right away
 	comms.leds <- ledMessage(settings.GetInt(sLEDErr), modeBlink75, 0)
 
 	// TODO: handled alarms are not longer considered, need testing
-	alarms, err := getAlarmsFromService(runtime)
+	alarms, err := getAlarmsFromService(rt)
 	if err != nil {
 		comms.effects <- alarmError(5 * time.Second)
 		log.Println(err.Error())
 		// try the backup
-		alarms, err = getAlarmsFromCache(runtime)
+		alarms, err = getAlarmsFromCache(rt)
 		if err != nil {
 			// very bad, so...delete and try again later?
 			// TODO: more effects
@@ -347,9 +345,9 @@ func loadAlarmsImpl(runtime runtimeConfig, loadID int, report bool) {
 	comms.chkAlarms <- msg
 }
 
-func getAlarmsFromService(runtime runtimeConfig) ([]alarm, error) {
-	settings := runtime.settings
-	events, err := runtime.events.fetch(runtime)
+func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
+	settings := rt.settings
+	events, err := rt.events.fetch(rt)
 	var alarms []alarm
 
 	if err != nil {
@@ -386,7 +384,7 @@ func getAlarmsFromService(runtime runtimeConfig) ([]alarm, error) {
 			}
 
 			// TODO: account for countdown time
-			if when.Sub(runtime.rtc.Now()) < 0 {
+			if when.Sub(rt.clock.Now()) < 0 {
 				log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
 				continue
 			}

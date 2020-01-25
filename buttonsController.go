@@ -31,12 +31,12 @@ func init() {
 	wg.Add(1)
 }
 
-func checkButtons(runtime runtimeConfig) (map[string]button, error) {
-	now := runtime.rtc.Now()
+func checkButtons(rt runtimeConfig) (map[string]button, error) {
+	now := rt.clock.Now()
 	ret := make(map[string]button)
 
-	btns := runtime.buttons.getButtons()
-	results, err := runtime.buttons.readButtons(runtime)
+	btns := rt.buttons.getButtons()
+	results, err := rt.buttons.readButtons(rt)
 	if err != nil {
 		return ret, err
 	}
@@ -83,27 +83,27 @@ func checkButtons(runtime runtimeConfig) (map[string]button, error) {
 	return *btns, nil
 }
 
-func runWatchButtons(runtime runtimeConfig) {
+func runWatchButtons(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runWatchButtons")
 	}()
 
-	settings := runtime.settings
-	comms := runtime.comms
-	err := runtime.buttons.initButtons(settings)
+	settings := rt.settings
+	comms := rt.comms
+	err := rt.buttons.initButtons(settings)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
 
 	// we now should defer the closeButtons call to when this function exists
-	defer runtime.buttons.closeButtons()
+	defer rt.buttons.closeButtons()
 
 	pins := make(map[string]buttonMap)
 	pins[sMainBtn] = settings.GetButtonMap(sMainBtn)
 
-	err = runtime.buttons.setupButtons(pins, runtime)
+	err = rt.buttons.setupButtons(pins, rt)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -118,7 +118,7 @@ func runWatchButtons(runtime runtimeConfig) {
 		default:
 		}
 
-		newButtons, err := checkButtons(runtime)
+		newButtons, err := checkButtons(rt)
 		if err != nil {
 			// we're done
 			log.Println("quit from runWatchButtons")
@@ -139,6 +139,6 @@ func runWatchButtons(runtime runtimeConfig) {
 			}
 		}
 
-		runtime.rtc.Sleep(dButtonSleep)
+		rt.clock.Sleep(dButtonSleep)
 	}
 }

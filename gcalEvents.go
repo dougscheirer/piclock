@@ -13,8 +13,8 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func (ge *gcalEvents) fetch(runtime runtimeConfig) (*calendar.Events, error) {
-	settings := runtime.settings
+func (ge *gcalEvents) fetch(rt runtimeConfig) (*calendar.Events, error) {
+	settings := rt.settings
 	srv, err := ge.getCalendarService(settings, false)
 
 	if err != nil {
@@ -45,7 +45,7 @@ func (ge *gcalEvents) fetch(runtime runtimeConfig) (*calendar.Events, error) {
 		return nil, fmt.Errorf("Could not find calendar %s", calName)
 	}
 	// get next 10 (?) alarms
-	t := runtime.rtc.Now().Format(time.RFC3339)
+	t := rt.clock.Now().Format(time.RFC3339)
 	events, err := srv.Events.List(id).
 		ShowDeleted(false).
 		SingleEvents(true).
@@ -154,12 +154,12 @@ func (gc *gcalEvents) downloadMusicFilesLater(settings configSettings, cE chan d
 	}
 }
 
-func (ge *gcalEvents) loadAlarms(runtime runtimeConfig, loadID int, report bool) {
+func (ge *gcalEvents) loadAlarms(rt runtimeConfig, loadID int, report bool) {
 	// spin up another thread in real life
 	defer func() {
 		log.Println("returning from loadAlarms")
 	}()
 
 	// call the testable method
-	go loadAlarmsImpl(runtime, loadID, report)
+	go loadAlarmsImpl(rt, loadID, report)
 }

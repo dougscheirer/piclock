@@ -21,7 +21,7 @@ func (ns *noSounds) playIt(sfreqs []string, timing []string, stop chan bool) {
 	ns.playItCnt++
 }
 
-func (ns *noSounds) playMP3(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
+func (ns *noSounds) playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool) {
 	log.Println("STUB: playMP3 " + fName)
 	ns.mp3 = fName
 	ns.loopMp3 = loop

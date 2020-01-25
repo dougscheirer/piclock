@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"log"
 	"piclock/sevenseg_backpack"
-	"runtime"
+	"rt"
 	"time"
 )
 
 func main2() {
 	simulated := true
-	if runtime.GOARCH == "arm" {
+	if rt.GOARCH == "arm" {
 		simulated = false
 	}
 

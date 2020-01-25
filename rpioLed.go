@@ -6,17 +6,17 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
-type rpiLed struct {
+type rpioLed struct {
 }
 
-func (rpi *rpiLed) init() {
+func (rpi *rpioLed) init() {
 	err := rpio.Open()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 }
 
-func (rpi *rpiLed) set(pinNum int, on bool) {
+func (rpi *rpioLed) set(pinNum int, on bool) {
 	log.Printf("Set pin %v to %v", pinNum, on)
 	pin := rpio.Pin(pinNum)
 	pin.Output()
@@ -27,10 +27,10 @@ func (rpi *rpiLed) set(pinNum int, on bool) {
 	}
 }
 
-func (rpi *rpiLed) on(pin int) {
+func (rpi *rpioLed) on(pin int) {
 	rpi.set(pin, true)
 }
 
-func (rpi *rpiLed) off(pin int) {
+func (rpi *rpioLed) off(pin int) {
 	rpi.set(pin, false)
 }

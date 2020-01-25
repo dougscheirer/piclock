@@ -126,10 +126,10 @@ func toPrint(val interface{}) (*displayPrint, error) {
 	}
 }
 
-func displayClock(runtime runtimeConfig, blinkColon bool, dot bool) {
+func displayClock(rt runtimeConfig, blinkColon bool, dot bool) {
 	// standard time display
 	colon := "15:04"
-	now := runtime.rtc.Now()
+	now := rt.clock.Now()
 	if blinkColon && now.Second()%2 == 0 {
 		// no space required for the colon
 		colon = "1504"
@@ -142,15 +142,15 @@ func displayClock(runtime runtimeConfig, blinkColon bool, dot bool) {
 	if dot {
 		timeString += "."
 	}
-	err := runtime.display.Print(timeString)
+	err := rt.display.Print(timeString)
 	if err != nil {
 		log.Printf("Error: %s\n", err.Error())
 	}
 }
 
-func displayCountdown(runtime runtimeConfig, alarm *alarm, dot bool) bool {
+func displayCountdown(rt runtimeConfig, alarm *alarm, dot bool) bool {
 	// calculate 10ths of secs to alarm time
-	count := alarm.When.Sub(runtime.rtc.Now()) / (time.Second / 10)
+	count := alarm.When.Sub(rt.clock.Now()) / (time.Second / 10)
 	if count > 9999 {
 		count = 9999
 	} else if count <= 0 {
@@ -164,13 +164,13 @@ func displayCountdown(runtime runtimeConfig, alarm *alarm, dot bool) bool {
 	if count < 100 {
 		blinkRate = sevenseg_backpack.BLINK_2HZ
 	}
-	runtime.display.SetBlinkRate(blinkRate)
-	runtime.display.Print(s)
+	rt.display.SetBlinkRate(blinkRate)
+	rt.display.Print(s)
 	return true
 }
 
-func playAlarmEffect(runtime runtimeConfig, alm *alarm, stop chan bool) {
-	musicPath := runtime.settings.GetString(sMusicPath)
+func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool) {
+	musicPath := rt.settings.GetString(sMusicPath)
 	var musicFile string
 	playTones := false
 
@@ -184,7 +184,7 @@ func playAlarmEffect(runtime runtimeConfig, alm *alarm, stop chan bool) {
 		return
 	default:
 		// play a random mp3 in the cache
-		s1 := rand.NewSource(runtime.rtc.Now().UnixNano())
+		s1 := rand.NewSource(rt.clock.Now().UnixNano())
 		r1 := rand.New(s1)
 
 		files, err := filepath.Glob(musicPath + "/*")
@@ -209,10 +209,10 @@ func playAlarmEffect(runtime runtimeConfig, alm *alarm, stop chan bool) {
 
 	if playTones {
 		log.Printf("Playing tones")
-		runtime.sounds.playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+		rt.sounds.playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
 	} else {
 		log.Printf("Playing %s", musicFile)
-		runtime.sounds.playMP3(runtime, musicFile, true, stop)
+		rt.sounds.playMP3(rt, musicFile, true, stop)
 	}
 }
 
@@ -220,16 +220,16 @@ func stopAlarmEffect(stop chan bool) {
 	stop <- true
 }
 
-func runEffects(runtime runtimeConfig) {
+func runEffects(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Println("exiting runEffects")
 	}()
 
-	settings := runtime.settings
-	comms := runtime.comms
+	settings := rt.settings
+	comms := rt.comms
 
-	err := runtime.display.OpenDisplay(settings)
+	err := rt.display.OpenDisplay(settings)
 
 	if err != nil {
 		log.Printf("Error: %s", err.Error())
@@ -237,11 +237,11 @@ func runEffects(runtime runtimeConfig) {
 	}
 
 	// turn on LED dump?
-	runtime.display.DebugDump(settings.GetBool(sDebug))
+	rt.display.DebugDump(settings.GetBool(sDebug))
 
-	runtime.display.SetBrightness(3)
+	rt.display.SetBrightness(3)
 	// ready to rock
-	runtime.display.DisplayOn(true)
+	rt.display.DisplayOn(true)
 
 	mode := modeClock
 	var countdown *alarm
@@ -267,7 +267,7 @@ func runEffects(runtime runtimeConfig) {
 			switch e.id {
 			case eDebug:
 				v, _ := toBool(e.val)
-				runtime.display.DebugDump(v)
+				rt.display.DebugDump(v)
 			case eClock:
 				mode = modeClock
 			case eCountdown:
@@ -276,17 +276,17 @@ func runEffects(runtime runtimeConfig) {
 				sleepTime = dEffectSleep
 			case eAlarmError:
 				// TODO: alarm error LED
-				runtime.display.Print("Err")
+				rt.display.Print("Err")
 				d, _ := toDuration(e.val)
-				runtime.rtc.Sleep(d)
+				rt.clock.Sleep(d)
 			case eTerminate:
 				log.Println("terminate")
 				return
 			case ePrint:
 				v, _ := toPrint(e.val)
 				log.Printf("Print: %s (%d)", v.s, v.d)
-				runtime.display.Print(v.s)
-				runtime.rtc.Sleep(v.d)
+				rt.display.Print(v.s)
+				rt.clock.Sleep(v.d)
 				skip = true // don't immediately print the clock in clock mode
 			case eAlarm:
 				mode = modeAlarm
@@ -294,7 +294,7 @@ func runEffects(runtime runtimeConfig) {
 				sleepTime = dEffectSleep
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
-				playAlarmEffect(runtime, alm, stopAlarm)
+				playAlarmEffect(rt, alm, stopAlarm)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed
@@ -309,7 +309,7 @@ func runEffects(runtime runtimeConfig) {
 							mode = modeClock
 							sleepTime = defaultSleep
 							buttonPressActed = true
-							runtime.display.SetBlinkRate(0)
+							rt.display.SetBlinkRate(0)
 							stopAlarmEffect(stopAlarm)
 						case modeCountdown:
 							// cancel the alarm
@@ -336,7 +336,7 @@ func runEffects(runtime runtimeConfig) {
 			}
 		default:
 			// nothing?
-			runtime.rtc.Sleep(time.Duration(sleepTime))
+			rt.clock.Sleep(time.Duration(sleepTime))
 		}
 
 		// skip the mode stuff?
@@ -346,35 +346,35 @@ func runEffects(runtime runtimeConfig) {
 
 		switch mode {
 		case modeClock:
-			displayClock(runtime, settings.GetBool(sBlink), buttonDot)
+			displayClock(rt, settings.GetBool(sBlink), buttonDot)
 		case modeCountdown:
-			if !displayCountdown(runtime, countdown, buttonDot) {
+			if !displayCountdown(rt, countdown, buttonDot) {
 				mode = modeClock
 				sleepTime = defaultSleep
 			}
 		case modeAlarmError:
 			log.Printf("Error: %d\n", errorID)
-			runtime.display.Print("Err")
+			rt.display.Print("Err")
 		case modeOutput:
 			// do nothing
 		case modeAlarm:
 			// do a strobing 0, light up segments 0 - 5
 			if settings.GetBool(sStrobe) == true {
-				runtime.display.RefreshOn(false)
-				runtime.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
-				runtime.display.ClearDisplay()
+				rt.display.RefreshOn(false)
+				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
+				rt.display.ClearDisplay()
 				for i := 0; i < 4; i++ {
-					runtime.display.SegmentOn(byte(i), byte(alarmSegment), true)
+					rt.display.SegmentOn(byte(i), byte(alarmSegment), true)
 				}
-				runtime.display.RefreshOn(true)
+				rt.display.RefreshOn(true)
 				alarmSegment = (alarmSegment + 1) % 6
 			} else {
-				runtime.display.Print("_-_-")
+				rt.display.Print("_-_-")
 			}
 		default:
 			log.Printf("Unknown mode: '%d'\n", mode)
 		}
 	}
 
-	runtime.display.DisplayOn(false)
+	rt.display.DisplayOn(false)
 }

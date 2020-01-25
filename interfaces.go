@@ -7,12 +7,12 @@ import (
 
 type sounds interface {
 	playIt(sfreqs []string, timing []string, stop chan bool)
-	playMP3(runtime runtimeConfig, fName string, loop bool, stop chan bool)
+	playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool)
 }
 
 type buttons interface {
-	readButtons(runtime runtimeConfig) (map[string]rpio.State, error)
-	setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error
+	readButtons(rt runtimeConfig) (map[string]rpio.State, error)
+	setupButtons(pins map[string]buttonMap, rt runtimeConfig) error
 	initButtons(settings configSettings) error
 	closeButtons()
 	getButtons() *map[string]button
@@ -39,8 +39,8 @@ type led interface {
 
 type events interface {
 	// TODO: probably don't need all of these
-	fetch(runtime runtimeConfig) (*calendar.Events, error)
+	fetch(rt runtimeConfig) (*calendar.Events, error)
 	getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error)
-	loadAlarms(runtime runtimeConfig, loadID int, report bool)
+	loadAlarms(rt runtimeConfig, loadID int, report bool)
 	downloadMusicFiles(settings configSettings, cE chan displayEffect)
 }

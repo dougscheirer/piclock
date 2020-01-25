@@ -21,9 +21,9 @@ type ledEffect struct {
 	mode       int
 	duration   time.Duration
 	force      bool      // ignore current state, just do it
-	curMode    int       // runtime setting, on or off
-	lastUpdate time.Time // runtime setting, last time we changed the state
-	startTime  time.Time // runtime setting, when we initiated
+	curMode    int       // rt setting, on or off
+	lastUpdate time.Time // rt setting, last time we changed the state
+	startTime  time.Time // rt setting, when we initiated
 }
 
 func init() {
@@ -53,23 +53,23 @@ func diffLEDEffect(effect1 ledEffect, effect2 ledEffect) bool {
 }
 
 func setLEDEffect(effect ledEffect) ledEffect {
-	// clear the runtime info
+	// clear the rt info
 	effect.curMode = modeUnset
 	effect.lastUpdate = time.Time{}
-	effect.force = false // this is not part of the runtime, just an indicator in the message
+	effect.force = false // this is not part of the rt, just an indicator in the message
 	return effect
 }
 
-func runLEDController(runtime runtimeConfig) {
+func runLEDController(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
 		log.Printf("Exitings runLEDController")
 	}()
 
-	comms := runtime.comms
+	comms := rt.comms
 	leds := make(map[int]ledEffect)
 
-	runtime.led.init()
+	rt.led.init()
 
 	for true {
 		select {
@@ -107,13 +107,13 @@ func runLEDController(runtime runtimeConfig) {
 			if v.curMode == modeUnset {
 				// transform broader categories of mode to on/off
 				if v.mode == modeOff {
-					runtime.led.off(v.pin)
+					rt.led.off(v.pin)
 					v.curMode = modeOff
 				} else {
-					runtime.led.on(v.pin)
+					rt.led.on(v.pin)
 					v.curMode = modeOn
 				}
-				v.lastUpdate = runtime.rtc.Now()
+				v.lastUpdate = rt.clock.Now()
 				v.startTime = v.lastUpdate
 				// if it's just "off" or "on" set the duration to -1 so we never re-check
 				if v.mode == modeOff || v.mode == modeOn {
@@ -124,7 +124,7 @@ func runLEDController(runtime runtimeConfig) {
 			}
 
 			// duration expired means turn it off
-			if v.duration > 0 && runtime.rtc.Now().Sub(v.startTime) > v.duration {
+			if v.duration > 0 && rt.clock.Now().Sub(v.startTime) > v.duration {
 				if v.curMode != modeOff {
 					ledOff(v.pin)
 					// negative duration is expired
@@ -138,7 +138,7 @@ func runLEDController(runtime runtimeConfig) {
 				}
 			}
 
-			timeInState := runtime.rtc.Now().Sub(v.lastUpdate)
+			timeInState := rt.clock.Now().Sub(v.lastUpdate)
 			var upTime, downTime time.Duration
 
 			switch v.mode {
@@ -165,20 +165,20 @@ func runLEDController(runtime runtimeConfig) {
 				if timeInState > downTime*time.Millisecond {
 					ledOn(v.pin)
 					v.curMode = modeOn
-					v.lastUpdate = runtime.rtc.Now()
+					v.lastUpdate = rt.clock.Now()
 					leds[i] = v
 				}
 			} else {
 				if timeInState > upTime*time.Millisecond {
 					ledOff(v.pin)
 					v.curMode = modeOff
-					v.lastUpdate = runtime.rtc.Now()
+					v.lastUpdate = rt.clock.Now()
 					leds[i] = v
 				}
 			}
 		}
 
 		// sleep for a bit (1/10s is our lowest resolution)
-		runtime.rtc.Sleep(dLEDSleep)
+		rt.clock.Sleep(dLEDSleep)
 	}
 }

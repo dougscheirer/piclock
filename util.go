@@ -23,7 +23,7 @@ type commChannels struct {
 type runtimeConfig struct {
 	settings configSettings
 	comms    commChannels
-	rtc      clockwork.Clock
+	clock    clockwork.Clock
 	sounds   sounds
 	buttons  buttons
 	display  display
@@ -164,8 +164,8 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 
 	switch settings.GetBool(sDisplay) {
 	case true:
-		display = &ledDisplay{}
-		led = &rpiLed{}
+		display = &rpioDisplay{}
+		led = &rpioLed{}
 	default:
 		display = &logDisplay{}
 		led = &logLed{}
@@ -192,7 +192,7 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 	return runtimeConfig{
 		settings: settings,
 		comms:    initCommChannels(),
-		rtc:      clockwork.NewRealClock(),
+		clock:    clockwork.NewRealClock(),
 		sounds:   sounds,
 		buttons:  buttons,
 		display:  display,
@@ -205,7 +205,7 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 	return runtimeConfig{
 		settings: settings,
 		comms:    initCommChannels(),
-		rtc:      clockwork.NewFakeClock(),
+		clock:    clockwork.NewFakeClock(),
 		sounds:   &noSounds{},
 		buttons:  &noButtons{},
 		display:  &logDisplay{},

@@ -22,7 +22,7 @@ const sampleRate = 44100
 // two functions exist here:
 //   PlayPattern(segments []soundSegment, stop chan bool)
 //    given a series of frequencies/level/duration, play each in a repeating pattern
-//   playMP3(runtime runtimeConfig, file string, stop chan bool)
+//   playMP3(rt runtimeConfig, file string, stop chan bool)
 //    given an MP3 file, play it on repeat
 
 type soundSegment struct {
@@ -32,7 +32,7 @@ type soundSegment struct {
 	rampDown    time.Duration
 }
 
-// this is runtime info for generating the waves
+// this is rt info for generating the waves
 type wave struct {
 	step, phase float64
 }
@@ -41,7 +41,7 @@ type wave struct {
 type playSegment struct {
 	steps    int64   // total steps
 	level    float64 // volume multiplier
-	waves    []wave  // runtime info on the sound
+	waves    []wave  // rt info on the sound
 	rampDown int64   // # of steps below which we fade the level
 }
 
@@ -167,11 +167,11 @@ func getDecoder(fname string) *mpg123.Decoder {
 	return decoder
 }
 
-func (rs *realSounds) playMP3(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
-	go playMP3Later(runtime, fName, loop, stop)
+func (rs *realSounds) playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool) {
+	go rs.playMP3Later(rt, fName, loop, stop)
 }
 
-func (rs *realSounds) playMP3Later(runtime runtimeConfig, fName string, loop bool, stop chan bool) {
+func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, stop chan bool) {
 	// just run mpg123 or the pi fails to play
 	cmd := exec.Command("mpg123", fName)
 	completed := make(chan error, 1)
@@ -184,7 +184,7 @@ func (rs *realSounds) playMP3Later(runtime runtimeConfig, fName string, loop boo
 	stopPlayback := false
 
 	for {
-		runtime.rtc.Sleep(100 * time.Millisecond)
+		rt.clock.Sleep(100 * time.Millisecond)
 		select {
 		case <-stop:
 			stopPlayback = true
@@ -213,7 +213,6 @@ func (rs *realSounds) playIt(sfreqs []string, timing []string, stop chan bool) {
 }
 
 func (rs *realSounds) playItLater(sfreqs []string, timing []string, stop chan bool) {
-}
 	freqs := make([]float64, 0, len(sfreqs))
 	for i := range sfreqs {
 		f, e := strconv.ParseFloat(sfreqs[i], 64)

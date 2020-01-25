@@ -62,29 +62,29 @@ func main() {
 		Main app
 	*/
 
-	// init runtime objects with a real clock
-	runtime := initRuntimeConfig(settings)
+	// init rt objects with a real clock
+	rt := initRuntimeConfig(settings)
 
 	// start the effect threads so we can update the LEDs
-	go runLEDController(runtime)
-	go runEffects(runtime)
+	go runLEDController(rt)
+	go runEffects(rt)
 
 	// force the LEDs to an on state
-	runtime.comms.leds <- ledMessageForce(settings.GetInt(sLEDAlm), modeOn, 0)
-	runtime.comms.leds <- ledMessageForce(settings.GetInt(sLEDErr), modeOn, 0)
+	rt.comms.leds <- ledMessageForce(settings.GetInt(sLEDAlm), modeOn, 0)
+	rt.comms.leds <- ledMessageForce(settings.GetInt(sLEDErr), modeOn, 0)
 
 	// loader messages?
 	if !settings.GetBool(sSkipLoader) {
 		// print the date and time of this build
-		showLoader(runtime.comms.effects)
+		showLoader(rt.comms.effects)
 	} else {
-		runtime.rtc.Sleep(500 * time.Millisecond)
+		rt.clock.Sleep(500 * time.Millisecond)
 	}
 
 	// launch the rest of the threads
-	go runGetAlarms(runtime)
-	go runCheckAlarm(runtime)
-	go runWatchButtons(runtime)
+	go runGetAlarms(rt)
+	go runCheckAlarm(rt)
+	go runWatchButtons(rt)
 
 	wg.Wait()
 }

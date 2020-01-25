@@ -16,7 +16,7 @@ func (rb *rpioButtons) getButtons() *map[string]button {
 	return &rb.buttons
 }
 
-func (rb *rpioButtons) setupPinButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
+func (rb *rpioButtons) setupPinButtons(pins map[string]buttonMap, rt runtimeConfig) error {
 	rb.buttons = make(map[string]button)
 
 	// map pins to buttons
@@ -26,7 +26,7 @@ func (rb *rpioButtons) setupPinButtons(pins map[string]buttonMap, runtime runtim
 		return err
 	}
 
-	now := runtime.rtc.Now()
+	now := rt.clock.Now()
 
 	for k, v := range pins {
 		// TODO: configurable pin numbers and high or low
@@ -46,8 +46,8 @@ func (rb *rpioButtons) setupPinButtons(pins map[string]buttonMap, runtime runtim
 	return nil
 }
 
-func (rb *rpioButtons) setupButtons(pins map[string]buttonMap, runtime runtimeConfig) error {
-	return rb.setupPinButtons(pins, runtime)
+func (rb *rpioButtons) setupButtons(pins map[string]buttonMap, rt runtimeConfig) error {
+	return rb.setupPinButtons(pins, rt)
 }
 
 func (rb *rpioButtons) initButtons(settings configSettings) error {
@@ -59,7 +59,7 @@ func (rb *rpioButtons) closeButtons() {
 	// N/A, nothing special
 }
 
-func (rb *rpioButtons) readButtons(runtime runtimeConfig) (map[string]rpio.State, error) {
+func (rb *rpioButtons) readButtons(rt runtimeConfig) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
 	for k, v := range rb.buttons {
 		ret[k] = v.pin.Read() // Read state from pin (High / Low)
