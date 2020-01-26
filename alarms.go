@@ -36,12 +36,15 @@ func toLoadedPayload(val interface{}) (loadedPayload, error) {
 	}
 }
 
-const msgLoaded string = "loaded"
-const msgHandled string = "handled"
-const msgReload string = "reload"
+const (
+	msgLoaded = iota
+	msgHandled
+	msgReload
+	msgMainButton
+)
 
 type almStateMsg struct {
-	msg string
+	ID  int
 	val interface{}
 }
 
@@ -65,15 +68,19 @@ func init() {
 }
 
 func handledMessage(alm alarm) almStateMsg {
-	return almStateMsg{msg: msgHandled, val: alm}
+	return almStateMsg{ID: msgHandled, val: alm}
 }
 
 func reloadMessage() almStateMsg {
-	return almStateMsg{msg: msgReload}
+	return almStateMsg{ID: msgReload}
 }
 
 func alarmsLoadedMsg(loadID int, alarms []alarm, report bool) almStateMsg {
-	return almStateMsg{msg: msgLoaded, val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
+	return almStateMsg{ID: msgLoaded, val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
+}
+
+func mainButtonAlmMsg(p bool, d time.Duration) almStateMsg {
+	return almStateMsg{ID: msgMainButton, val: buttonInfo{pressed: p, duration: d}}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {
@@ -178,7 +185,7 @@ func runGetAlarms(rt runtimeConfig) {
 				log.Println("quit from runGetAlarms")
 				return
 			case msg := <-comms.getAlarms:
-				switch msg.msg {
+				switch msg.ID {
 				case msgHandled:
 					alarm, _ := toAlarm(msg.val)
 					handledAlarms[alarm.ID] = *alarm
@@ -201,7 +208,7 @@ func runGetAlarms(rt runtimeConfig) {
 						log.Printf("Skipping old loadID %v", loadedPayload.loadID)
 					}
 				default:
-					log.Println(fmt.Sprintf("Unknown msg id: %s", msg.msg))
+					log.Println(fmt.Sprintf("Unknown msg id: %d", msg.ID))
 				}
 			default:
 				keepReading = false
@@ -231,7 +238,7 @@ func compareAlarms(alm1 alarm, alm2 alarm) bool {
 func runCheckAlarm(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
-		log.Println("exiting runCheckAlarms")
+		log.Println("exiting runCheckAlarm")
 	}()
 
 	settings := rt.settings
@@ -249,11 +256,11 @@ func runCheckAlarm(rt runtimeConfig) {
 			log.Println("quit from runCheckAlarm")
 			return
 		case stateMsg := <-comms.chkAlarms:
-			if stateMsg.msg == msgLoaded {
+			if stateMsg.ID == msgLoaded {
 				payload, _ := toLoadedPayload(stateMsg.val)
 				alarms = payload.alarms
 			} else {
-				log.Printf("Ignoring state change message: %v", stateMsg.msg)
+				log.Printf("Ignoring state change message: %v", stateMsg.ID)
 			}
 		default:
 			// continue

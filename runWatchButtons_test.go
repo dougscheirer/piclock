@@ -32,15 +32,7 @@ func TestButtonPress(t *testing.T) {
 	assert.Assert(t, btnInfo.pressed == true)
 
 	// let it go for a second so we get a duration
-	start := clock.Now()
-	keepClicking := true
-	for keepClicking {
-		clock.Advance(dButtonSleep)
-		clock.BlockUntil(1)
-		if clock.Now().Sub(start) > time.Second {
-			keepClicking = false
-		}
-	}
+	testBlockDuration(clock, dButtonSleep, time.Second)
 
 	// now release the button
 	buttons.clear()

@@ -1,6 +1,9 @@
 package main
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 type logDisplay struct {
 	i2cBus     int
@@ -11,6 +14,7 @@ type logDisplay struct {
 	blinkRate  uint8
 	refreshOn  bool
 	segments   [8][8]bool
+	audit      []string
 }
 
 func (ld *logDisplay) OpenDisplay(settings configSettings) error {
@@ -21,6 +25,7 @@ func (ld *logDisplay) OpenDisplay(settings configSettings) error {
 	ld.displayOn = false
 	ld.blinkRate = 0
 	ld.refreshOn = false
+	ld.audit = []string{}
 	return nil
 }
 
@@ -39,7 +44,8 @@ func (ld *logDisplay) DisplayOn(on bool) {
 
 func (ld *logDisplay) Print(e string) error {
 	if e != ld.curDisplay {
-		log.Print(e)
+		log.Println(e)
+		ld.audit = append(ld.audit, e)
 	}
 	ld.curDisplay = e
 	return nil
@@ -64,6 +70,7 @@ func (ld *logDisplay) SegmentOn(pos byte, seg byte, on bool) error {
 	ld.curDisplay = ""
 	ld.segments[pos][seg] = on
 	// debug output?
-	log.Printf("%d/%d set to %v", pos, seg, on)
+	log.Printf("%d/%d set to %v\n", pos, seg, on)
+	ld.audit = append(ld.audit, fmt.Sprintf("seg %d/%d %v", pos, seg, on))
 	return nil
 }

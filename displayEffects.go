@@ -51,7 +51,7 @@ func init() {
 }
 
 // channel messaging functions
-func mainButton(p bool, d time.Duration) displayEffect {
+func mainButtonEffect(p bool, d time.Duration) displayEffect {
 	return displayEffect{id: eMainButton, val: buttonInfo{pressed: p, duration: d}}
 }
 

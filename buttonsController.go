@@ -131,8 +131,9 @@ func runWatchButtons(rt runtimeConfig) {
 				diff := time.Duration(v.state.count) * time.Second
 				switch k {
 				case sMainBtn:
-					log.Println("sending main button to effects")
-					comms.effects <- mainButton(v.state.pressed, diff)
+					log.Println("sending main button messages")
+					comms.effects <- mainButtonEffect(v.state.pressed, diff)
+					comms.chkAlarms <- mainButtonAlmMsg(v.state.pressed, diff)
 				default:
 					log.Printf("Unhandled button %s", k)
 				}

@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jonboulle/clockwork"
 	"gotest.tools/assert"
@@ -107,4 +108,16 @@ func effectNoRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	default:
 	}
 	return displayEffect{}, nil
+}
+
+func testBlockDuration(clock clockwork.FakeClock, step time.Duration, d time.Duration) {
+	start := clock.Now()
+	keepClicking := true
+	for keepClicking {
+		clock.Advance(step)
+		clock.BlockUntil(1)
+		if clock.Now().Sub(start) > d {
+			keepClicking = false
+		}
+	}
 }

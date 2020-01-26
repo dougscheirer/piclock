@@ -22,7 +22,7 @@ func TestCalendarLoadEvents(t *testing.T) {
 
 	// read the chkAlarms comm channel for messages
 	state, _ := almStateRead(t, comms.chkAlarms)
-	assert.Assert(t, state.msg == msgLoaded)
+	assert.Assert(t, state.ID == msgLoaded)
 	switch v := state.val.(type) {
 	case loadedPayload:
 		assert.Assert(t, len(v.alarms) == 5)
@@ -94,7 +94,7 @@ func TestCalendarLoadEventsFailedThenOK(t *testing.T) {
 	// now expect that it's fixed
 	// read the chkAlarms comm channel for messages
 	state, _ := almStateRead(t, rt.comms.chkAlarms)
-	assert.Assert(t, state.msg == msgLoaded)
+	assert.Assert(t, state.ID == msgLoaded)
 	switch v := state.val.(type) {
 	case loadedPayload:
 		assert.Assert(t, len(v.alarms) == 5)
