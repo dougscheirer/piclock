@@ -202,6 +202,7 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 }
 
 func initTestRuntime(settings configSettings) runtimeConfig {
+	// use test modules for sounds/buttons/display/led/events interfaces
 	return runtimeConfig{
 		settings: settings,
 		comms:    initCommChannels(),

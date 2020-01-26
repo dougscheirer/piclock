@@ -15,11 +15,11 @@ type testEvents struct {
 	fetches     int
 }
 
-const INFINITE int = -2
+const infinite int = -2
 
 func (te *testEvents) setFails(cnt int) {
 	if cnt <= 0 {
-		cnt = INFINITE
+		cnt = infinite
 	}
 	te.errorCount = cnt
 	te.errorResult = true
@@ -30,7 +30,7 @@ func (te *testEvents) fetch(rt runtimeConfig) (*calendar.Events, error) {
 	log.Printf("Fetch: %d", te.fetches)
 	if te.errorResult {
 		err := errors.New("Bad fetch error")
-		if te.errorCount != INFINITE {
+		if te.errorCount != infinite {
 			if te.errorCount > 0 {
 				te.errorCount--
 				return nil, err
@@ -65,11 +65,11 @@ func (te *testEvents) getCalendarService(settings configSettings, prompt bool) (
 	return nil, nil
 }
 
-func (gc *testEvents) downloadMusicFiles(settings configSettings, display chan displayEffect) {
-
+func (te *testEvents) downloadMusicFiles(settings configSettings, display chan displayEffect) {
+	// note that we got a call to do this?
 }
 
-func (gc *testEvents) loadAlarms(rt runtimeConfig, loadID int, report bool) {
+func (te *testEvents) loadAlarms(rt runtimeConfig, loadID int, report bool) {
 	// do the thing in realtime for testing
 	loadAlarmsImpl(rt, loadID, report)
 }

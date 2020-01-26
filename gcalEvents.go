@@ -93,7 +93,7 @@ func (ge *gcalEvents) downloadMusicFiles(settings configSettings, cE chan displa
 	go ge.downloadMusicFilesLater(settings, cE)
 }
 
-func (gc *gcalEvents) downloadMusicFilesLater(settings configSettings, cE chan displayEffect) {
+func (ge *gcalEvents) downloadMusicFilesLater(settings configSettings, cE chan displayEffect) {
 	// this is currently dumb, it just uses a list from musicDownloads
 	// and walks through it, downloading to the music dir
 	jsonPath := settings.GetString(sMusicURL)
