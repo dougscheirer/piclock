@@ -21,7 +21,6 @@ type buttonMap struct {
 }
 
 const sCountdown string = "countdownTime"
-const sSleep string = "sleepTime"
 const sSecrets string = "secretPath"
 const sAlarms string = "alarmPath"
 const sAlmRefresh string = "alarmRefreshTime"
@@ -49,7 +48,6 @@ func defaultSettings() *configSettings {
 
 	// setting the type here makes the conversion "automatic" later
 	s[sCountdown], _ = time.ParseDuration("1m")
-	s[sSleep], _ = time.ParseDuration("10ms")
 	s[sSecrets] = "/etc/default/piclock"
 	s[sAlarms] = "/etc/default/piclock/alarms"
 	s[sAlmRefresh], _ = time.ParseDuration("1m")

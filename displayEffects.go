@@ -41,7 +41,8 @@ const (
 	eAlarmError
 	eTerminate
 	ePrint
-	eAlarm
+	eAlarmOn
+	eAlarmOff
 	eCountdown
 )
 
@@ -60,7 +61,11 @@ func setCountdownMode(alarm alarm) displayEffect {
 }
 
 func setAlarmMode(alarm alarm) displayEffect {
-	return displayEffect{id: eAlarm, val: alarm}
+	return displayEffect{id: eAlarmOn, val: alarm}
+}
+
+func cancelAlarmMode(alarm alarm) displayEffect {
+	return displayEffect{id: eAlarmOff, val: alarm}
 }
 
 func alarmError(d time.Duration) displayEffect {
@@ -247,9 +252,6 @@ func runEffects(rt runtimeConfig) {
 	var countdown *alarm
 	var errorID = 0
 	alarmSegment := 0
-	defaultSleep := settings.GetDuration(sSleep)
-	sleepTime := defaultSleep
-	buttonPressActed := false
 	buttonDot := false
 
 	stopAlarm := make(chan bool, 20)
@@ -273,7 +275,6 @@ func runEffects(rt runtimeConfig) {
 			case eCountdown:
 				mode = modeCountdown
 				countdown, _ = toAlarm(e.val)
-				sleepTime = dEffectSleep
 			case eAlarmError:
 				// TODO: alarm error LED
 				rt.display.Print("Err")
@@ -288,55 +289,27 @@ func runEffects(rt runtimeConfig) {
 				rt.display.Print(v.s)
 				rt.clock.Sleep(v.d)
 				skip = true // don't immediately print the clock in clock mode
-			case eAlarm:
+			case eAlarmOn:
 				mode = modeAlarm
 				alm, _ := toAlarm(e.val)
-				sleepTime = dEffectSleep
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
 				playAlarmEffect(rt, alm, stopAlarm)
+			case eAlarmOff:
+				mode = modeClock
+				alm, _ := toAlarm(e.val)
+				log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
+				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
+				stopAlarmEffect(stopAlarm)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed
-				if info.pressed {
-					if buttonPressActed {
-						log.Println("Ignore button hold")
-					} else {
-						log.Printf("Main button pressed: %dms", info.duration)
-						switch mode {
-						case modeAlarm:
-							// cancel the alarm
-							mode = modeClock
-							sleepTime = defaultSleep
-							buttonPressActed = true
-							rt.display.SetBlinkRate(0)
-							stopAlarmEffect(stopAlarm)
-						case modeCountdown:
-							// cancel the alarm
-							mode = modeClock
-							comms.getAlarms <- handledMessage(*countdown)
-							countdown = nil
-							buttonPressActed = true
-						case modeClock:
-							// more than 5 seconds is "reload"
-							if info.duration > 4*time.Second {
-								comms.getAlarms <- reloadMessage()
-								buttonPressActed = true
-							}
-						default:
-							log.Printf("No action for mode %d", mode)
-						}
-					}
-				} else {
-					buttonPressActed = false
-					log.Printf("Main button released: %dms", info.duration/time.Millisecond)
-				}
 			default:
 				log.Printf("Unhandled %d\n", e.id)
 			}
 		default:
 			// nothing?
-			rt.clock.Sleep(time.Duration(sleepTime))
+			rt.clock.Sleep(dEffectSleep)
 		}
 
 		// skip the mode stuff?
@@ -350,7 +323,6 @@ func runEffects(rt runtimeConfig) {
 		case modeCountdown:
 			if !displayCountdown(rt, countdown, buttonDot) {
 				mode = modeClock
-				sleepTime = defaultSleep
 			}
 		case modeAlarmError:
 			log.Printf("Error: %d\n", errorID)

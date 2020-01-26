@@ -1,7 +1,7 @@
 README
 
 build:
-	go build [--tags='noaudio nobuttons']
+	go build [--tags='noaudio']
 
 required packages
 	portaudio19-dev (-tags=noaudio)

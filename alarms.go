@@ -17,7 +17,7 @@ type alarm struct {
 	When      time.Time
 	Effect    int
 	Extra     string
-	disabled  bool // set to true when we're checking alarms and it fired
+	started   bool // set to true when we're checking alarms and it fired
 	countdown bool // set to true when we're checking alarms and we signaled countdown
 }
 
@@ -247,7 +247,9 @@ func runCheckAlarm(rt runtimeConfig) {
 
 	var lastLogSecond = -1
 
-	var lastAlarm *alarm
+	var curAlarm *alarm
+
+	var buttonPressActed bool = false
 
 	for true {
 		// try reading from our channel
@@ -256,11 +258,39 @@ func runCheckAlarm(rt runtimeConfig) {
 			log.Println("quit from runCheckAlarm")
 			return
 		case stateMsg := <-comms.chkAlarms:
-			if stateMsg.ID == msgLoaded {
+			switch stateMsg.ID {
+			case msgLoaded:
 				payload, _ := toLoadedPayload(stateMsg.val)
 				alarms = payload.alarms
-			} else {
-				log.Printf("Ignoring state change message: %v", stateMsg.ID)
+			case msgMainButton:
+				info := stateMsg.val.(buttonInfo)
+				if info.pressed {
+					if buttonPressActed {
+						log.Println("Ignore button hold")
+					} else {
+						log.Printf("Main button pressed: %dms", info.duration)
+						// use curAlarm to figure out if we're doing an alarm
+						// thing currently
+						if curAlarm != nil {
+							if curAlarm.started {
+								comms.effects <- cancelAlarmMode(*curAlarm)
+								buttonPressActed = true
+							} else if curAlarm.countdown {
+								comms.effects <- cancelAlarmMode(*curAlarm)
+								buttonPressActed = true
+							} else {
+								// more than 5 seconds is "reload"
+								if info.duration > 4*time.Second {
+									comms.getAlarms <- reloadMessage()
+									buttonPressActed = true
+								}
+							}
+						}
+					}
+				} else {
+					buttonPressActed = false
+					log.Printf("Main button released: %dms", info.duration/time.Millisecond)
+				}
 			}
 		default:
 			// continue
@@ -269,17 +299,17 @@ func runCheckAlarm(rt runtimeConfig) {
 		validAlarm := false
 		// alarms come in sorted with soonest first
 		for index := 0; index < len(alarms); index++ {
-			if alarms[index].disabled {
+			if alarms[index].started {
 				continue // skip processed alarms
 			}
 
-			// if alarms[index] != lastAlarm, run some effects
-			if lastAlarm == nil || !compareAlarms(*lastAlarm, alarms[index]) {
-				lastAlarm = &alarms[index]
+			// if alarms[index] != curAlarm, run some effects
+			if curAlarm == nil || !compareAlarms(*curAlarm, alarms[index]) {
+				curAlarm = &alarms[index]
 				comms.effects <- printEffect(fmt.Sprintf("AL:%d", index+1), 1*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("15:04"), 2*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("01.02"), 2*time.Second)
-				comms.effects <- printEffect(lastAlarm.When.Format("2006"), 2*time.Second)
+				comms.effects <- printEffect(curAlarm.When.Format("15:04"), 2*time.Second)
+				comms.effects <- printEffect(curAlarm.When.Format("01.02"), 2*time.Second)
+				comms.effects <- printEffect(curAlarm.When.Format("2006"), 2*time.Second)
 			}
 
 			now := rt.clock.Now()
@@ -305,7 +335,7 @@ func runCheckAlarm(rt runtimeConfig) {
 				comms.effects <- setAlarmMode(alarms[index])
 				// let getAlarms know we handled it
 				comms.getAlarms <- handledMessage(alarms[index])
-				alarms[index].disabled = true
+				alarms[index].started = true
 			}
 			break
 		}
@@ -396,7 +426,7 @@ func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
 				continue
 			}
 
-			alm := alarm{ID: i.Id, Name: i.Summary, When: when, disabled: false}
+			alm := alarm{ID: i.Id, Name: i.Summary, When: when, started: false}
 
 			// look for hashtags (does not work ATM, the gAPI is broken I think)
 			log.Printf("Event: %s", i.Summary)
