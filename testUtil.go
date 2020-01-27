@@ -47,6 +47,9 @@ func logCaller(pc uintptr, file string, line int, ok bool) {
 }
 
 func testRuntime() (runtimeConfig, clockwork.FakeClock, commChannels) {
+	// to keep wg from complaining, add extra wg every test
+	// we never wg.Wait in testing so who cares
+	wg.Add(1)
 	// make rt for test, log the start of the test
 	logCaller(runtime.Caller(1))
 	rt := initTestRuntime(testSettings)

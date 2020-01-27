@@ -57,13 +57,13 @@ type realSounds struct {
 }
 
 // call this as 'go PlayPattern()'
-func playPattern(clock clockwork.Clock, pattern []soundSegment, stop chan bool, dur time.Duration) {
+func playPattern(rt runtimeConfig, pattern []soundSegment, stop chan bool, dur time.Duration, done chan bool) {
 	defer func() {
 		done <- true
-	}
+	}()
 
 	// TODO: make just the portAudio part of the interface impl, move
-  //   the loop somewhere else so we can test it
+	//   the loop somewhere else so we can test it
 	portaudio.Initialize()
 	defer portaudio.Terminate()
 	s := newPlaySegments(pattern)
@@ -77,15 +77,16 @@ func playPattern(clock clockwork.Clock, pattern []soundSegment, stop chan bool, 
 	started = rt.clock.Now()
 
 	// watch for stop or give up
-	select {
-		case <-stop
+	for true {
+		select {
+		case <-stop:
 			s.Stop()
 		default:
-			if started.Add(dur) > clock.Now() {
+			if rt.clock.Now().Sub(started) > dur {
 				return
 			}
 		}
-		clock.Sleep(dAlarmSleep)
+		rt.clock.Sleep(dAlarmSleep)
 	}
 }
 
@@ -185,7 +186,7 @@ func getDecoder(fname string) *mpg123.Decoder {
 }
 
 func (rs *realSounds) playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool, done chan bool) {
-	go rs.playMP3Later(rt, fName, loop, stop)
+	go rs.playMP3Later(rt, fName, loop, stop, done)
 }
 
 func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, stop chan bool, done chan bool) {
@@ -194,9 +195,9 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 		done <- true
 	}()
 
-	// TODO: make just the launch part of the interface impl, move the loop 
+	// TODO: make just the launch part of the interface impl, move the loop
 	//   logic somewhere else so we can test it
-	
+
 	// just run mpg123 or the pi fails to play
 	cmd := exec.Command("mpg123", fName)
 	completed := make(chan error, 1)
@@ -234,11 +235,11 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 	}
 }
 
-func (rs *realSounds) playIt(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool) {
-	go rs.playItLater(rt, sfreqs, timing, stop)
+func (rs *realSounds) playIt(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool, done chan bool) {
+	go rs.playItLater(rt, sfreqs, timing, stop, done)
 }
 
-func (rs *realSounds) playItLater(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool) {
+func (rs *realSounds) playItLater(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool, done chan bool) {
 	freqs := make([]float64, 0, len(sfreqs))
 	for i := range sfreqs {
 		f, e := strconv.ParseFloat(sfreqs[i], 64)
@@ -271,5 +272,5 @@ func (rs *realSounds) playItLater(rt runtimeConfig, sfreqs []string, timing []st
 	}
 
 	// TODO: make duration configurable
-	go playPattern(rt.clock, segs, stop, 3*time.Minute)
+	go playPattern(rt, segs, stop, 3*time.Minute, done)
 }
