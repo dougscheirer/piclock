@@ -240,3 +240,55 @@ func TestClockModeAlarmOver(t *testing.T) {
 	// done
 	testQuit(rt)
 }
+
+func TestPrintDoesNotOverrideAlarm(t *testing.T) {
+	rt, clock, _ := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	clock.Advance(9*time.Hour + 15*time.Minute)
+	go runEffects(rt)
+
+	// advance to see the time
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, " 9:15")
+
+	// send alarm message
+	alm := alarm{
+		ID:        "xoxoxo",
+		Name:      "test alarm",
+		When:      clock.Now(),
+		Effect:    almMusic,
+		Extra:     "pizza",
+		started:   false,
+		countdown: true,
+	}
+
+	rt.comms.effects <- setAlarmMode(alm)
+
+	// now wait
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, "_-_-")
+	// make sure the alarm effect did fire
+	s := rt.sounds.(*noSounds)
+	assert.Equal(t, s.playMP3Cnt, 1)
+	assert.Equal(t, s.playItCnt, 0)
+
+	// now tell it to print stuff (this is what checkAlarms will do)
+	// ignore the print command while the alarm is firing, but print
+	// it later when the alarm is done
+	rt.comms.effects <- printEffect("pie", 2*time.Second)
+	testBlockDuration(clock, dEffectSleep, 20*time.Second)
+
+	assert.Equal(t, ld.curDisplay, "_-_-")
+	// now signal the alarm finished
+	ns := rt.sounds.(*noSounds)
+	ns.done <- true
+
+	// now wait
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, "pie")
+
+	// wait for it to clear to the time
+	testBlockDuration(clock, dEffectSleep, 2*time.Second)
+	assert.Equal(t, ld.curDisplay, " 9:15")
+}

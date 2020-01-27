@@ -316,10 +316,6 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 	e, _ = effectRead(t, rt.comms.effects)
 	assert.Equal(t, e.id, eAlarmOn)
 
-	// signal a done and wait
-	rt.sounds.(*noSounds).done <- true
-	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
-
 	// should get another alarm notice
 	es, _ = effectReads(t, rt.comms.effects, 4)
 	assert.Equal(t, es[0].id, ePrint)
@@ -330,17 +326,45 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 		le, _ = ledRead(t, rt.comms.leds)
 	})
 
-	// should be the next alarm
+	// wait for a second alarm in another hour
+	testBlockDurationCB(clock, dAlarmSleep, 60*time.Minute, func(int) {
+		le, _ = ledRead(t, rt.comms.leds)
+	})
+
+	// also should have started the countdown
+	e, _ = effectRead(t, rt.comms.effects)
+	assert.Equal(t, e.id, eCountdown)
+
+	// should also be an alarm effect
+	e, _ = effectRead(t, rt.comms.effects)
+	assert.Equal(t, e.id, eAlarmOn)
+
+	// should get another alarm notice
 	es, _ = effectReads(t, rt.comms.effects, 4)
 	assert.Equal(t, es[0].id, ePrint)
 	assert.Equal(t, es[0].val.(displayPrint).s, "AL:")
 
-	// TODO: wait for a second alarm in another hour
-
-	// wait for it to end
-
-	// one more alarm to go
-
 	// done
+	testQuit(rt)
+}
+
+func TestCheckAlarmsReloadButton(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	// events := rt.events.(*testEvents)
+
+	go runCheckAlarms(rt)
+	// wait for a cycle to complete startup loop
+	clock.BlockUntil(1)
+
+	// press and hold for > 5 seconds
+	for i := time.Duration(0); i < 7; i++ {
+		comms.chkAlarms <- mainButtonAlmMsg(true, i*time.Second)
+		testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	}
+
+	// should have sent a reload message to getAlarms
+	e, _ := almStateRead(t, rt.comms.getAlarms)
+	assert.Equal(t, e.ID, msgReload)
+
 	testQuit(rt)
 }

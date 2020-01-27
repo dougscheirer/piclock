@@ -59,12 +59,12 @@ func runCheckAlarms(rt runtimeConfig) {
 								comms.effects <- cancelAlarmMode(*curAlarm)
 								curAlarm.started = true
 								buttonPressActed = true
-							} else {
-								// more than 5 seconds is "reload"
-								if info.duration > 4*time.Second {
-									comms.getAlarms <- reloadMessage()
-									buttonPressActed = true
-								}
+							}
+						} else {
+							// more than 5 seconds is "reload"
+							if info.duration > 4*time.Second {
+								comms.getAlarms <- reloadMessage()
+								buttonPressActed = true
 							}
 						}
 					}

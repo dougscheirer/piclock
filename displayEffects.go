@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"fmt"
 	"log"
 	"math/rand"
@@ -225,6 +226,12 @@ func stopAlarmEffect(stop chan bool) {
 	stop <- true
 }
 
+func printDisplay(rt runtimeConfig, e displayPrint) {
+	log.Printf("Print: %s (%d)", e.s, e.d)
+	rt.display.Print(e.s)
+	rt.clock.Sleep(e.d)
+}
+
 func runEffects(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -256,6 +263,8 @@ func runEffects(rt runtimeConfig) {
 
 	stopAlarm := make(chan bool, 20)
 	done := make(chan bool, 20)
+
+	printQueue := list.New()
 
 	for true {
 		var e displayEffect
@@ -290,10 +299,14 @@ func runEffects(rt runtimeConfig) {
 				return
 			case ePrint:
 				v, _ := toPrint(e.val)
-				log.Printf("Print: %s (%d)", v.s, v.d)
-				rt.display.Print(v.s)
-				rt.clock.Sleep(v.d)
-				skip = true // don't immediately print the clock in clock mode
+				if mode != modeClock {
+					// queue it for later
+					printQueue.PushBack(v)
+					log.Printf("Queued print: %s (%d)", v.s, v.d)
+				} else {
+					printDisplay(rt, *v)
+					skip = true // don't immediately print the clock in clock mode
+				}
 			case eAlarmOn:
 				mode = modeAlarm
 				alm, _ := toAlarm(e.val)
@@ -324,7 +337,13 @@ func runEffects(rt runtimeConfig) {
 
 		switch mode {
 		case modeClock:
-			displayClock(rt, settings.GetBool(sBlink), buttonDot)
+			if printQueue.Len() > 0 {
+				e := printQueue.Front()
+				printDisplay(rt, *e.Value.(*displayPrint))
+				printQueue.Remove(e)
+			} else {
+				displayClock(rt, settings.GetBool(sBlink), buttonDot)
+			}
 		case modeCountdown:
 			if !displayCountdown(rt, countdown, buttonDot) {
 				mode = modeClock
