@@ -299,14 +299,9 @@ func runEffects(rt runtimeConfig) {
 				return
 			case ePrint:
 				v, _ := toPrint(e.val)
-				if mode != modeClock {
-					// queue it for later
-					printQueue.PushBack(v)
-					log.Printf("Queued print: %s (%d)", v.s, v.d)
-				} else {
-					printDisplay(rt, *v)
-					skip = true // don't immediately print the clock in clock mode
-				}
+				// queue it for later
+				printQueue.PushBack(v)
+				log.Printf("Queued print: %s (%d)", v.s, v.d)
 			case eAlarmOn:
 				mode = modeAlarm
 				alm, _ := toAlarm(e.val)
@@ -339,6 +334,7 @@ func runEffects(rt runtimeConfig) {
 		case modeClock:
 			if printQueue.Len() > 0 {
 				e := printQueue.Front()
+				log.Printf("Print from queue (%d)", printQueue.Len())
 				printDisplay(rt, *e.Value.(*displayPrint))
 				printQueue.Remove(e)
 			} else {
