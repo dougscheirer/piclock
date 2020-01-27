@@ -206,7 +206,7 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 	return runtimeConfig{
 		settings: settings,
 		comms:    initCommChannels(),
-		clock:    clockwork.NewFakeClock(),
+		clock:    clockwork.NewFakeClockAt(time.Date(2020, 01, 26, 0, 0, 0, 0, time.UTC)),
 		sounds:   &noSounds{},
 		buttons:  &noButtons{},
 		display:  &logDisplay{},

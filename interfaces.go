@@ -6,8 +6,8 @@ import (
 )
 
 type sounds interface {
-	playIt(sfreqs []string, timing []string, stop chan bool)
-	playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool)
+	playIt(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool, done chan bool)
+	playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool, done chan bool)
 }
 
 type buttons interface {

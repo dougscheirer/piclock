@@ -58,7 +58,7 @@ func almStateRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 	case e := <-c:
 		return e, nil
 	default:
-		assert.Assert(t, false, "Nothing to read from alarm channel")
+		assert.Equal(t, false, "Nothing to read from alarm channel")
 	}
 	return almStateMsg{}, nil
 }
@@ -66,7 +66,7 @@ func almStateRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 func almStateNoRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 	select {
 	case e := <-c:
-		assert.Assert(t, e == almStateMsg{}, "Got an unexpected value on alarm channel")
+		assert.Equal(t, e == almStateMsg{}, "Got an unexpected value on alarm channel")
 	default:
 	}
 	return almStateMsg{}, nil
@@ -77,7 +77,7 @@ func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	case e := <-c:
 		return e, nil
 	default:
-		assert.Assert(t, false, "Nothing to read from led channel")
+		assert.Equal(t, false, "Nothing to read from led channel")
 	}
 	return ledEffect{}, nil
 }
@@ -85,7 +85,7 @@ func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 func ledNoRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	select {
 	case e := <-c:
-		assert.Assert(t, e == ledEffect{}, "Got an unexpected value from led channel")
+		assert.Equal(t, e == ledEffect{}, "Got an unexpected value from led channel")
 	default:
 	}
 	return ledEffect{}, nil
@@ -96,28 +96,53 @@ func effectRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	case e := <-c:
 		return e, nil
 	default:
-		assert.Assert(t, false, "Nothing to read from effect channel")
+		assert.Equal(t, false, "Nothing to read from effect channel")
 	}
 	return displayEffect{}, nil
+}
+
+func effectReads(t *testing.T, c chan displayEffect, count int) ([]displayEffect, error) {
+	de := make([]displayEffect, count)
+	for i := 0; i < count; i++ {
+		de[i], _ = effectRead(t, c)
+	}
+	return de, nil
 }
 
 func effectNoRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	select {
 	case e := <-c:
-		assert.Assert(t, e == displayEffect{}, "Got an unexpected value from effect channel")
+		assert.Equal(t, e == displayEffect{}, "Got an unexpected value from effect channel")
 	default:
 	}
 	return displayEffect{}, nil
 }
 
+type stepCallback func(step int)
+
 func testBlockDuration(clock clockwork.FakeClock, step time.Duration, d time.Duration) {
+	testBlockDurationCB(clock, step, d, func(int) {})
+}
+
+func testBlockDurationCB(clock clockwork.FakeClock, step time.Duration, d time.Duration, cb stepCallback) {
 	start := clock.Now()
 	keepClicking := true
+	var count int = 0
 	for keepClicking {
+		count++
 		clock.Advance(step)
 		clock.BlockUntil(1)
+		// use the callback
+		if cb != nil {
+			cb(count)
+		}
 		if clock.Now().Sub(start) > d {
 			keepClicking = false
 		}
 	}
+}
+
+func testQuit(rt runtimeConfig) {
+	//	close(rt.comms.quit)
+	//	rt.clock.(clockwork.FakeClock).Advance(time.Second)
 }

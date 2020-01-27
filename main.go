@@ -78,12 +78,12 @@ func main() {
 		// print the date and time of this build
 		showLoader(rt.comms.effects)
 	} else {
-		rt.clock.Sleep(500 * time.Millisecond)
+		rt.clock.Sleep(250 * time.Millisecond)
 	}
 
 	// launch the rest of the threads
 	go runGetAlarms(rt)
-	go runCheckAlarm(rt)
+	go runCheckAlarms(rt)
 	go runWatchButtons(rt)
 
 	wg.Wait()

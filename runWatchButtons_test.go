@@ -26,10 +26,10 @@ func TestButtonPress(t *testing.T) {
 	clock.BlockUntil(1)
 
 	effect, _ := effectRead(t, comms.effects)
-	assert.Assert(t, effect.id == eMainButton, "Got non-main button effect")
+	assert.Equal(t, effect.id, eMainButton, "Got non-main button effect")
 	// should be buttonInfo
 	btnInfo, _ := effect.val.(buttonInfo)
-	assert.Assert(t, btnInfo.pressed == true)
+	assert.Equal(t, btnInfo.pressed, true)
 
 	// let it go for a second so we get a duration
 	testBlockDuration(clock, dButtonSleep, time.Second)
@@ -45,14 +45,17 @@ func TestButtonPress(t *testing.T) {
 
 	// we should get a second pressed message with a dutation of 1s
 	effect, _ = effectRead(t, comms.effects)
-	assert.Assert(t, effect.id == eMainButton, "Got non-main button effect")
+	assert.Equal(t, effect.id, eMainButton, "Got non-main button effect")
 	btnInfo, _ = effect.val.(buttonInfo)
-	assert.Assert(t, btnInfo.pressed == true)
+	assert.Equal(t, btnInfo.pressed, true)
 	assert.Assert(t, btnInfo.duration > 0)
 
 	// we also should get a release message
 	effect, _ = effectRead(t, comms.effects)
-	assert.Assert(t, effect.id == eMainButton, "Got non-main button effect")
+	assert.Equal(t, effect.id, eMainButton, "Got non-main button effect")
 	btnInfo, _ = effect.val.(buttonInfo)
-	assert.Assert(t, btnInfo.pressed == false)
+	assert.Equal(t, btnInfo.pressed, false)
+
+	// done
+	testQuit(rt)
 }

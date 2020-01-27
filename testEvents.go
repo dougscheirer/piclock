@@ -11,6 +11,7 @@ import (
 type testEvents struct {
 	events      calendar.Events
 	errorResult bool
+	oldAlarms   int
 	errorCount  int
 	fetches     int
 }
@@ -40,13 +41,22 @@ func (te *testEvents) fetch(rt runtimeConfig) (*calendar.Events, error) {
 		}
 	}
 
+	curDate := "2020-01-26"
+	oldDate := "2020-01-25"
+
 	// use a faked list of events
 	var events calendar.Events
 	events.Items = make([]*calendar.Event, 5)
 	for k := range events.Items {
 		events.Items[k] = &calendar.Event{}
-		events.Items[k].Start = &calendar.EventDateTime{DateTime: fmt.Sprintf("2020-01-01T0%d:00:00.00Z", k)}
-		events.Items[k].Id = fmt.Sprintf("%d", k)
+		var date string
+		if te.oldAlarms > k {
+			date = fmt.Sprintf("%sT%02d:00:00.00Z", oldDate, k+6)
+		} else {
+			date = fmt.Sprintf("%sT%02d:00:00.00Z", curDate, k+6)
+		}
+		events.Items[k].Start = &calendar.EventDateTime{DateTime: date}
+		events.Items[k].Id = fmt.Sprintf("%d", k+6)
 		switch k % 3 {
 		case 0:
 			events.Items[k].Summary = "music"

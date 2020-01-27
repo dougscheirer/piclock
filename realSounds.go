@@ -57,7 +57,13 @@ type realSounds struct {
 }
 
 // call this as 'go PlayPattern()'
-func playPattern(pattern []soundSegment, stop chan bool) {
+func playPattern(clock clockwork.Clock, pattern []soundSegment, stop chan bool, dur time.Duration) {
+	defer func() {
+		done <- true
+	}
+
+	// TODO: make just the portAudio part of the interface impl, move
+  //   the loop somewhere else so we can test it
 	portaudio.Initialize()
 	defer portaudio.Terminate()
 	s := newPlaySegments(pattern)
@@ -67,9 +73,20 @@ func playPattern(pattern []soundSegment, stop chan bool) {
 		return
 	}
 
-	// block on the stop
-	<-stop
-	s.Stop()
+	var started time.Time
+	started = rt.clock.Now()
+
+	// watch for stop or give up
+	select {
+		case <-stop
+			s.Stop()
+		default:
+			if started.Add(dur) > clock.Now() {
+				return
+			}
+		}
+		clock.Sleep(dAlarmSleep)
+	}
 }
 
 func newPlaySegments(pattern []soundSegment) *playbackPattern {
@@ -167,14 +184,23 @@ func getDecoder(fname string) *mpg123.Decoder {
 	return decoder
 }
 
-func (rs *realSounds) playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool) {
+func (rs *realSounds) playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool, done chan bool) {
 	go rs.playMP3Later(rt, fName, loop, stop)
 }
 
-func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, stop chan bool) {
+func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, stop chan bool, done chan bool) {
+	// when we exit the function, tell someone that we're done
+	defer func() {
+		done <- true
+	}()
+
+	// TODO: make just the launch part of the interface impl, move the loop 
+	//   logic somewhere else so we can test it
+	
 	// just run mpg123 or the pi fails to play
 	cmd := exec.Command("mpg123", fName)
 	completed := make(chan error, 1)
+	// TODO: make configurable?
 	replayMax := 5
 
 	go func() {
@@ -184,7 +210,7 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 	stopPlayback := false
 
 	for {
-		rt.clock.Sleep(100 * time.Millisecond)
+		rt.clock.Sleep(dAlarmSleep)
 		select {
 		case <-stop:
 			stopPlayback = true
@@ -208,11 +234,11 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 	}
 }
 
-func (rs *realSounds) playIt(sfreqs []string, timing []string, stop chan bool) {
-	go rs.playItLater(sfreqs, timing, stop)
+func (rs *realSounds) playIt(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool) {
+	go rs.playItLater(rt, sfreqs, timing, stop)
 }
 
-func (rs *realSounds) playItLater(sfreqs []string, timing []string, stop chan bool) {
+func (rs *realSounds) playItLater(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool) {
 	freqs := make([]float64, 0, len(sfreqs))
 	for i := range sfreqs {
 		f, e := strconv.ParseFloat(sfreqs[i], 64)
@@ -244,5 +270,6 @@ func (rs *realSounds) playItLater(sfreqs []string, timing []string, stop chan bo
 		segs[i].rampDown = 20 * time.Millisecond
 	}
 
-	go playPattern(segs, stop)
+	// TODO: make duration configurable
+	go playPattern(rt.clock, segs, stop, 3*time.Minute)
 }

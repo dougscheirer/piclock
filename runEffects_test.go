@@ -28,15 +28,15 @@ func TestClockMode(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
 
 	// check the logDisplay
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// advance by a few minutes
 	testBlockDuration(clock, dEffectSleep, 4*time.Minute)
 
-	assert.Assert(t, ld.curDisplay == " 9:19")
+	assert.Equal(t, ld.curDisplay, " 9:19")
 
 	// done
-	close(rt.comms.quit)
+	testQuit(rt)
 }
 
 func TestClockModeButton(t *testing.T) {
@@ -50,22 +50,22 @@ func TestClockModeButton(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
 
 	// check the logDisplay
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// press the button
 	rt.comms.effects <- mainButtonEffect(true, 1)
 	testBlockDuration(clock, dEffectSleep, 1)
 	// should be time with a dot
-	assert.Assert(t, ld.curDisplay == " 9:15.")
+	assert.Equal(t, ld.curDisplay, " 9:15.")
 
 	// un-press
 	rt.comms.effects <- mainButtonEffect(false, 1)
 	testBlockDuration(clock, dEffectSleep, 1)
 	// should be time with a dot
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// done
-	close(rt.comms.quit)
+	testQuit(rt)
 }
 
 func TestClockModeCountdown(t *testing.T) {
@@ -92,8 +92,8 @@ func TestClockModeCountdown(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 900*time.Millisecond)
 
 	// we did 10 and started at 59.9
-	assert.Assert(t, ld.curDisplay == "59.0")
-	assert.Assert(t, len(ld.audit) == 10)
+	assert.Equal(t, ld.curDisplay, "59.0")
+	assert.Equal(t, len(ld.audit), 10)
 
 	// now cancel
 	alm.started = true
@@ -101,10 +101,15 @@ func TestClockModeCountdown(t *testing.T) {
 
 	// advance and back to the clock
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
+
+	// make sure the alarm effect did not fire
+	s := rt.sounds.(*noSounds)
+	assert.Equal(t, s.playMP3Cnt, 0)
+	assert.Equal(t, s.playItCnt, 0)
 
 	// done
-	close(rt.comms.quit)
+	testQuit(rt)
 }
 
 func TestClockModeAlarmError(t *testing.T) {
@@ -118,14 +123,14 @@ func TestClockModeAlarmError(t *testing.T) {
 
 	// advance to see the msg
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
-	assert.Assert(t, ld.curDisplay == "Err")
+	assert.Equal(t, ld.curDisplay, "Err")
 
 	// now wait
 	testBlockDuration(clock, dEffectSleep, 3*time.Second)
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// done
-	close(rt.comms.quit)
+	testQuit(rt)
 }
 
 func TestClockModePrint(t *testing.T) {
@@ -139,14 +144,14 @@ func TestClockModePrint(t *testing.T) {
 
 	// advance to see the msg
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
-	assert.Assert(t, ld.curDisplay == "bob")
+	assert.Equal(t, ld.curDisplay, "bob")
 
 	// now wait
 	testBlockDuration(clock, dEffectSleep, time.Second)
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// done
-	close(rt.comms.quit)
+	testQuit(rt)
 }
 
 func TestClockModeAlarmOn(t *testing.T) {
@@ -158,7 +163,7 @@ func TestClockModeAlarmOn(t *testing.T) {
 
 	// advance to see the time
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// send alarm message
 	alm := alarm{
@@ -175,15 +180,63 @@ func TestClockModeAlarmOn(t *testing.T) {
 
 	// now wait
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
-	assert.Assert(t, ld.curDisplay == "_-_-")
+	assert.Equal(t, ld.curDisplay, "_-_-")
+	// make sure the alarm effect did fire
+	s := rt.sounds.(*noSounds)
+	assert.Equal(t, s.playMP3Cnt, 1)
+	assert.Equal(t, s.playItCnt, 0)
 
 	// cancel alarm
 	rt.comms.effects <- cancelAlarmMode(alm)
 
 	// now wait
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
-	assert.Assert(t, ld.curDisplay == " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// done
-	close(rt.comms.quit)
+	testQuit(rt)
+}
+
+func TestClockModeAlarmOver(t *testing.T) {
+	rt, clock, _ := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	clock.Advance(9*time.Hour + 15*time.Minute)
+	go runEffects(rt)
+
+	// advance to see the time
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, " 9:15")
+
+	// send alarm message
+	alm := alarm{
+		ID:        "xoxoxo",
+		Name:      "test alarm",
+		When:      clock.Now(),
+		Effect:    almMusic,
+		Extra:     "pizza",
+		started:   false,
+		countdown: true,
+	}
+
+	rt.comms.effects <- setAlarmMode(alm)
+
+	// now wait
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, "_-_-")
+	// make sure the alarm effect did fire
+	s := rt.sounds.(*noSounds)
+	assert.Equal(t, s.playMP3Cnt, 1)
+	assert.Equal(t, s.playItCnt, 0)
+
+	// signal the play completed
+	ns := rt.sounds.(*noSounds)
+	ns.done <- true
+
+	// now wait
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, " 9:15")
+
+	// done
+	testQuit(rt)
 }

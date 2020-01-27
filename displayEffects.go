@@ -174,7 +174,7 @@ func displayCountdown(rt runtimeConfig, alarm *alarm, dot bool) bool {
 	return true
 }
 
-func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool) {
+func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool, done chan bool) {
 	musicPath := rt.settings.GetString(sMusicPath)
 	var musicFile string
 	playTones := false
@@ -214,10 +214,10 @@ func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool) {
 
 	if playTones {
 		log.Printf("Playing tones")
-		rt.sounds.playIt([]string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop)
+		rt.sounds.playIt(rt, []string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop, done)
 	} else {
 		log.Printf("Playing %s", musicFile)
-		rt.sounds.playMP3(rt, musicFile, true, stop)
+		rt.sounds.playMP3(rt, musicFile, true, stop, done)
 	}
 }
 
@@ -255,6 +255,7 @@ func runEffects(rt runtimeConfig) {
 	buttonDot := false
 
 	stopAlarm := make(chan bool, 20)
+	done := make(chan bool, 20)
 
 	for true {
 		var e displayEffect
@@ -265,6 +266,11 @@ func runEffects(rt runtimeConfig) {
 		case <-comms.quit:
 			log.Println("quit from runEffects")
 			return
+		case d := <-done:
+			// go back to normal clock mode
+			log.Printf("Got a done signal from playEffect: %v", d)
+			mode = modeClock
+			// TODO: tell checkAlarms that it's over?
 		case e = <-comms.effects:
 			switch e.id {
 			case eDebug:
@@ -276,7 +282,6 @@ func runEffects(rt runtimeConfig) {
 				mode = modeCountdown
 				countdown, _ = toAlarm(e.val)
 			case eAlarmError:
-				// TODO: alarm error LED
 				rt.display.Print("Err")
 				d, _ := toDuration(e.val)
 				rt.clock.Sleep(d)
@@ -294,7 +299,7 @@ func runEffects(rt runtimeConfig) {
 				alm, _ := toAlarm(e.val)
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
-				playAlarmEffect(rt, alm, stopAlarm)
+				playAlarmEffect(rt, alm, stopAlarm, done)
 			case eAlarmOff:
 				mode = modeClock
 				alm, _ := toAlarm(e.val)
