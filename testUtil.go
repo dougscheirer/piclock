@@ -61,15 +61,15 @@ func almStateRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 	case e := <-c:
 		return e, nil
 	default:
-		assert.Equal(t, false, "Nothing to read from alarm channel")
+		assert.Assert(t, false, "Nothing to read from alarm channel")
 	}
 	return almStateMsg{}, nil
 }
 
 func almStateNoRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 	select {
-	case e := <-c:
-		assert.Equal(t, e == almStateMsg{}, "Got an unexpected value on alarm channel")
+	case <-c:
+		assert.Assert(t, false, "Got an unexpected value on alarm channel")
 	default:
 	}
 	return almStateMsg{}, nil
@@ -80,15 +80,15 @@ func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	case e := <-c:
 		return e, nil
 	default:
-		assert.Equal(t, false, "Nothing to read from led channel")
+		assert.Assert(t, false, "Nothing to read from led channel")
 	}
 	return ledEffect{}, nil
 }
 
 func ledNoRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	select {
-	case e := <-c:
-		assert.Equal(t, e == ledEffect{}, "Got an unexpected value from led channel")
+	case <-c:
+		assert.Assert(t, false, "Got an unexpected value from led channel")
 	default:
 	}
 	return ledEffect{}, nil
@@ -99,7 +99,7 @@ func effectRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	case e := <-c:
 		return e, nil
 	default:
-		assert.Equal(t, false, "Nothing to read from effect channel")
+		assert.Assert(t, false, "Nothing to read from effect channel")
 	}
 	return displayEffect{}, nil
 }
@@ -114,8 +114,8 @@ func effectReads(t *testing.T, c chan displayEffect, count int) ([]displayEffect
 
 func effectNoRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	select {
-	case e := <-c:
-		assert.Equal(t, e == displayEffect{}, "Got an unexpected value from effect channel")
+	case <-c:
+		assert.Assert(t, false, "Got an unexpected value from effect channel")
 	default:
 	}
 	return displayEffect{}, nil
@@ -146,6 +146,6 @@ func testBlockDurationCB(clock clockwork.FakeClock, step time.Duration, d time.D
 }
 
 func testQuit(rt runtimeConfig) {
-	//	close(rt.comms.quit)
-	//	rt.clock.(clockwork.FakeClock).Advance(time.Second)
+	// close(rt.comms.quit)
+	// rt.clock.(clockwork.FakeClock).Advance(time.Second)
 }

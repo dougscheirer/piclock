@@ -19,9 +19,6 @@ turns on alarm led is a pending alarm is found
 func TestCheckAlarmsNone(t *testing.T) {
 	rt, clock, comms := testRuntime()
 
-	// make sure to init the led
-	rt.led.init()
-
 	go runCheckAlarms(rt)
 
 	// pretend we loaded some alarms, all or old
@@ -37,15 +34,11 @@ func TestCheckAlarmsNone(t *testing.T) {
 	assert.Equal(t, le.mode, modeOff)
 	// done
 	testQuit(rt)
-
 }
 
 func TestCheckAlarmsOld(t *testing.T) {
 	rt, clock, comms := testRuntime()
 	events := rt.events.(*testEvents)
-
-	// make sure to init the led
-	rt.led.init()
 
 	go runCheckAlarms(rt)
 
@@ -68,9 +61,6 @@ func TestCheckAlarmsOld(t *testing.T) {
 func TestCheckAlarmsMixed(t *testing.T) {
 	rt, clock, comms := testRuntime()
 	events := rt.events.(*testEvents)
-
-	// make sure to init the led
-	rt.led.init()
 
 	go runCheckAlarms(rt)
 	// wait for a cycle to complete startup loop
@@ -99,11 +89,8 @@ func TestCheckAlarmsMixed(t *testing.T) {
 func TestCheckAlarmsCountdown(t *testing.T) {
 	rt, clock, comms := testRuntime()
 
-	// alarms are set for between 6 and 10, so advance the clock to 5:58
+	// alarms are set for between 6 and 10, so advance the clock to 5:57.90
 	clock.Advance(5*time.Hour + 58*time.Minute)
-
-	// make sure to init the led
-	rt.led.init()
 
 	go runCheckAlarms(rt)
 	// wait for a cycle to complete startup loop
