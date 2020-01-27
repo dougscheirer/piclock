@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -112,10 +113,14 @@ func effectReads(t *testing.T, c chan displayEffect, count int) ([]displayEffect
 	return de, nil
 }
 
+func unexpectedVal(channel string, v interface{}) string {
+	return fmt.Sprintf("Got an unexpected value from %s: %v", channel, v)
+}
+
 func effectNoRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	select {
-	case <-c:
-		assert.Assert(t, false, "Got an unexpected value from effect channel")
+	case e := <-c:
+		assert.Assert(t, false, unexpectedVal("effect", e))
 	default:
 	}
 	return displayEffect{}, nil

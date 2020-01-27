@@ -74,8 +74,8 @@ func alarmsLoadedMsg(loadID int, alarms []alarm, report bool) almStateMsg {
 	return almStateMsg{ID: msgLoaded, val: loadedPayload{loadID: loadID, alarms: alarms, report: report}}
 }
 
-func mainButtonAlmMsg(p bool, d time.Duration) almStateMsg {
-	return almStateMsg{ID: msgMainButton, val: buttonInfo{pressed: p, duration: d}}
+func mainButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
+	return almStateMsg{ID: msgMainButton, val: buttonInfo{pressed: pressed, duration: d}}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {

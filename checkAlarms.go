@@ -57,6 +57,7 @@ func runCheckAlarms(rt runtimeConfig) {
 								buttonPressActed = true
 							} else if curAlarm.countdown {
 								comms.effects <- cancelAlarmMode(*curAlarm)
+								curAlarm.started = true
 								buttonPressActed = true
 							} else {
 								// more than 5 seconds is "reload"
@@ -86,7 +87,7 @@ func runCheckAlarms(rt runtimeConfig) {
 			// if alarms[index] != curAlarm, run some effects
 			if curAlarm == nil || !compareAlarms(*curAlarm, alarms[index]) {
 				curAlarm = &alarms[index]
-				comms.effects <- printEffect(fmt.Sprintf("AL:%d", index+1), 1*time.Second)
+				comms.effects <- printEffect("AL:", 1*time.Second)
 				comms.effects <- printEffect(curAlarm.When.Format("15:04"), 2*time.Second)
 				comms.effects <- printEffect(curAlarm.When.Format("01.02"), 2*time.Second)
 				comms.effects <- printEffect(curAlarm.When.Format("2006"), 2*time.Second)

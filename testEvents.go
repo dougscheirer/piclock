@@ -11,6 +11,7 @@ import (
 type testEvents struct {
 	events      calendar.Events
 	errorResult bool
+	almCount    int
 	oldAlarms   int
 	errorCount  int
 	fetches     int
@@ -45,8 +46,13 @@ func (te *testEvents) fetch(rt runtimeConfig) (*calendar.Events, error) {
 	oldDate := "2020-01-25"
 
 	// use a faked list of events
+	// either use the count or 5 if it's 0
+	count := 5
+	if te.almCount != 0 {
+		count = te.almCount
+	}
 	var events calendar.Events
-	events.Items = make([]*calendar.Event, 5)
+	events.Items = make([]*calendar.Event, count)
 	for k := range events.Items {
 		events.Items[k] = &calendar.Event{}
 		var date string
