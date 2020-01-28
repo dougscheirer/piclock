@@ -38,7 +38,6 @@ type led interface {
 }
 
 type events interface {
-	// TODO: probably don't need all of these
 	fetch(rt runtimeConfig) (*calendar.Events, error)
 	getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error)
 	loadAlarms(rt runtimeConfig, loadID int, report bool)

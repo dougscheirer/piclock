@@ -84,7 +84,7 @@ func printEffect(s string, d time.Duration) displayEffect {
 func showLoader(effects chan displayEffect) {
 	info, err := os.Stat(os.Args[0])
 	if err != nil {
-		// TODO: log error?  non-fatal
+		// log error?  non-fatal
 		log.Printf("%v", err)
 		return
 	}
@@ -279,7 +279,8 @@ func runEffects(rt runtimeConfig) {
 			// go back to normal clock mode
 			log.Printf("Got a done signal from playEffect: %v", d)
 			mode = modeClock
-			// TODO: tell checkAlarms that it's over?
+			// tell checkAlarms that it's over?  right
+			// now it does not care, and print messages are now queued
 		case e = <-comms.effects:
 			switch e.id {
 			case eDebug:

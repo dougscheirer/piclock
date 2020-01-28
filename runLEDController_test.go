@@ -36,6 +36,7 @@ func TestLEDControllerModes(t *testing.T) {
 
 	// advance in steps of 1/100 second for 2 seconds
 	for i := 0; i < 200; i++ {
+		// log.Printf("Step %d", i)
 		testBlockDuration(clock, dLEDSleep, 10*time.Millisecond)
 		// #1 is always off
 		assert.Equal(t, leds.leds[1], compareTo(i, 0))
@@ -53,6 +54,8 @@ func TestLEDControllerModes(t *testing.T) {
 		assert.Equal(t, leds.leds[7], compareTo(i, 10))
 	}
 
+	// disable logging
+	leds.disableLog = true
 	// fast-forward 58 seconds and 1 cycle
 	testBlockDuration(clock, dLEDSleep, 58*time.Second+dLEDSleep)
 	// all should be off now (and they don't come back on)
@@ -63,6 +66,26 @@ func TestLEDControllerModes(t *testing.T) {
 	for i := 1; i < 8; i++ {
 		assert.Equal(t, leds.leds[i], false)
 	}
+
+	//done
+	testQuit(rt)
+}
+
+func TestLEDControllerOnForever(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	leds := rt.led.(*logLed)
+
+	go runLEDController(rt)
+
+	// turn an LED on forever
+	comms.leds <- ledOn(2)
+
+	// wait for a while
+	testBlockDuration(clock, dLEDSleep, time.Minute)
+
+	// should have 1 audit message
+	assert.Equal(t, len(leds.audit), 1)
+	assert.Equal(t, leds.leds[2], true)
 
 	//done
 	testQuit(rt)

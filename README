@@ -34,15 +34,4 @@ pi setup:
     form: run configure from web, redirect back to (here), save OAUTH token
   (TODO: service install script)
   (TODO: scripted test setup)
-  
-TODO:
-  add simulation program for testing?
-  
-Testing
-  test each go run... as its own thing
-  TODO: some of them might launch other processes which will do their own sleeps, which makes clock.Block hard to manage
-  runGetAlarms
-  runCheckAlarm
-  runWatchButtons
-  runEffects
-  runLedController
+    

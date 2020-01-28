@@ -180,8 +180,8 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 		buttons = &noButtons{}
 	}
 
-	// TODO: do not build audio on platforms
-	//       that don't have mplayer
+	// do not build audio on platforms
+	//       that don't have mplayer (-tags=noaudio)
 	switch settings.GetBool(sAudio) {
 	case true:
 		sounds = &realSounds{}

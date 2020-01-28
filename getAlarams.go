@@ -120,7 +120,7 @@ func getAlarmsFromCache(rt runtimeConfig) ([]alarm, error) {
 	}
 	// remove any that are in the "handled" map or the time has passed
 	for i := len(alarms) - 1; i >= 0; i-- {
-		// TODO: account for countdown time
+		// TODO: account for countdown time?
 		if alarms[i].When.Sub(rt.clock.Now()) < 0 {
 			// remove is append two slices without the part we don't want
 			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
@@ -243,7 +243,7 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 		alarms, err = getAlarmsFromCache(rt)
 		if err != nil {
 			// very bad, so...delete and try again later?
-			// TODO: more effects
+			// more effects?
 			comms.effects <- alarmError(5 * time.Second)
 			log.Printf("Error reading alarm cache: %s\n", err.Error())
 			return
@@ -297,7 +297,7 @@ func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
 				continue
 			}
 
-			// TODO: account for countdown time?
+			// account for countdown time?
 			if when.Sub(rt.clock.Now()) < 0 {
 				log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
 				log.Println(fmt.Sprintf("NOW: %v", rt.clock.Now()))

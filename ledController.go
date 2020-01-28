@@ -80,7 +80,7 @@ func runLEDController(rt runtimeConfig) {
 				log.Printf("Got a quit signal in runLEDController")
 				return
 			case msg := <-comms.leds:
-				// TODO: find in leds, determine if we need to change the state
+				// find in leds, determine if we need to change the state
 				if val, ok := leds[msg.pin]; ok {
 					// if the state is changed, set the new effect state
 					if val.force || diffLEDEffect(val, msg) {
@@ -131,7 +131,9 @@ func runLEDController(rt runtimeConfig) {
 
 			// duration expired means turn it off
 			if v.duration > 0 && now.Sub(v.startTime) >= v.duration {
-				rt.led.off(v.pin)
+				if v.curMode != modeOff {
+					rt.led.off(v.pin)
+				}
 				// negative duration is expired
 				// TODO: remove from the map to make processing faster
 				v.duration = -1

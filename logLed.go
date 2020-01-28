@@ -1,14 +1,21 @@
 package main
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 type logLed struct {
-	leds []bool
+	leds       []bool
+	audit      []string
+	disableLog bool
 }
 
 func (ll *logLed) init() {
 	// log the init?
 	ll.leds = make([]bool, 32)
+	ll.audit = make([]string, 0)
+
 	for i := range ll.leds {
 		ll.leds[i] = false
 	}
@@ -16,7 +23,10 @@ func (ll *logLed) init() {
 
 func (ll *logLed) set(pinNum int, on bool) {
 	ll.leds[pinNum] = on
-	log.Printf("Set LED %v to %v", pinNum, on)
+	if !ll.disableLog {
+		log.Printf("Set LED %v to %v", pinNum, on)
+	}
+	ll.audit = append(ll.audit, fmt.Sprintf("Set LED %v to %v", pinNum, on))
 }
 
 func (ll *logLed) on(pinNum int) {
