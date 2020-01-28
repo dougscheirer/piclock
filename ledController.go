@@ -63,7 +63,7 @@ func setLEDEffect(effect ledEffect) ledEffect {
 func runLEDController(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
-		log.Printf("Exitings runLEDController")
+		log.Printf("Exiting runLEDController")
 	}()
 
 	comms := rt.comms
@@ -72,32 +72,38 @@ func runLEDController(rt runtimeConfig) {
 	rt.led.init()
 
 	for true {
-		select {
-		case <-comms.quit:
-			log.Printf("Got a quit signal in runLEDController")
-			return
-		case msg := <-comms.leds:
-			// TODO: find in leds, determine if we need to change the state
-			if val, ok := leds[msg.pin]; ok {
-				// if the state is changed, set the new effect state
-				if val.force || diffLEDEffect(val, msg) {
-					log.Printf("Received led message: %v", msg)
-					leds[msg.pin] = setLEDEffect(msg)
+		// read all incoming messages at once
+		keepReading := true
+		for keepReading {
+			select {
+			case <-comms.quit:
+				log.Printf("Got a quit signal in runLEDController")
+				return
+			case msg := <-comms.leds:
+				// TODO: find in leds, determine if we need to change the state
+				if val, ok := leds[msg.pin]; ok {
+					// if the state is changed, set the new effect state
+					if val.force || diffLEDEffect(val, msg) {
+						log.Printf("Received led message: %v", msg)
+						leds[msg.pin] = setLEDEffect(msg)
+					} else {
+						// log.Println("Duplicate message")
+					}
 				} else {
-					// log.Println("Duplicate message")
+					// it's new, add to the leds map?
+					// if it's "turn off" assume that we already did that unless it's "force"
+					if msg.mode != modeOff {
+						log.Printf("Received led message: %v", msg)
+						leds[msg.pin] = setLEDEffect(msg)
+					}
 				}
-			} else {
-				// it's new, add to the leds map?
-				// if it's "turn off" assume that we already did that unless it's "force"
-				if msg.mode != modeOff {
-					log.Printf("Received led message: %v", msg)
-					leds[msg.pin] = setLEDEffect(msg)
-				}
+			default:
+				keepReading = false
 			}
-		default:
 		}
 		// for anything that we're doing blink on, see if it's time to toggle
 		// also anything that is modeUnset needs to be initiated
+		now := rt.clock.Now()
 		for i, v := range leds {
 			// negative duration is "ignore"
 			if v.duration < 0 {
@@ -113,10 +119,10 @@ func runLEDController(rt runtimeConfig) {
 					rt.led.on(v.pin)
 					v.curMode = modeOn
 				}
-				v.lastUpdate = rt.clock.Now()
+				v.lastUpdate = now
 				v.startTime = v.lastUpdate
 				// if it's just "off" or "on" set the duration to -1 so we never re-check
-				if v.mode == modeOff || v.mode == modeOn {
+				if v.mode == modeOff {
 					v.duration = -1
 				}
 				leds[i] = v
@@ -124,28 +130,26 @@ func runLEDController(rt runtimeConfig) {
 			}
 
 			// duration expired means turn it off
-			if v.duration > 0 && rt.clock.Now().Sub(v.startTime) > v.duration {
-				if v.curMode != modeOff {
-					ledOff(v.pin)
-					// negative duration is expired
-					// TODO: remove from the map to make processing faster
-					v.duration = -1
-					v.curMode = modeOff
-					v.lastUpdate = time.Time{}
-					v.startTime = time.Time{}
-					leds[i] = v
-					continue
-				}
+			if v.duration > 0 && now.Sub(v.startTime) >= v.duration {
+				rt.led.off(v.pin)
+				// negative duration is expired
+				// TODO: remove from the map to make processing faster
+				v.duration = -1
+				v.curMode = modeOff
+				v.lastUpdate = time.Time{}
+				v.startTime = time.Time{}
+				leds[i] = v
+				continue
 			}
 
-			timeInState := rt.clock.Now().Sub(v.lastUpdate)
+			timeInState := now.Sub(v.lastUpdate)
 			var upTime, downTime time.Duration
 
 			switch v.mode {
 			case modeBlink10:
 				upTime = 900
 			case modeBlink25:
-				downTime = 250
+				upTime = 750
 			case modeBlink50:
 				upTime = 500
 			case modeBlink75:
@@ -153,6 +157,7 @@ func runLEDController(rt runtimeConfig) {
 			case modeBlink90:
 				upTime = 100
 			case modeOn:
+				upTime = 1000
 			case modeOff:
 			default:
 				// nothing to do
@@ -162,17 +167,17 @@ func runLEDController(rt runtimeConfig) {
 			downTime = 1000 - upTime
 
 			if v.curMode == modeOff {
-				if timeInState > downTime*time.Millisecond {
-					ledOn(v.pin)
+				if timeInState >= downTime*time.Millisecond {
+					rt.led.on(v.pin)
 					v.curMode = modeOn
-					v.lastUpdate = rt.clock.Now()
+					v.lastUpdate = now
 					leds[i] = v
 				}
 			} else {
-				if timeInState > upTime*time.Millisecond {
-					ledOff(v.pin)
+				if upTime < 1000 && timeInState >= upTime*time.Millisecond {
+					rt.led.off(v.pin)
 					v.curMode = modeOff
-					v.lastUpdate = rt.clock.Now()
+					v.lastUpdate = now
 					leds[i] = v
 				}
 			}

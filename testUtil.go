@@ -144,7 +144,7 @@ func testBlockDurationCB(clock clockwork.FakeClock, step time.Duration, d time.D
 		if cb != nil {
 			cb(count)
 		}
-		if clock.Now().Sub(start) > d {
+		if clock.Now().Sub(start) >= d {
 			keepClicking = false
 		}
 	}

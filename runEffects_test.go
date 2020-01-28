@@ -92,8 +92,8 @@ func TestClockModeCountdown(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 900*time.Millisecond)
 
 	// we did 10 and started at 59.9
-	assert.Equal(t, ld.curDisplay, "59.0")
-	assert.Equal(t, len(ld.audit), 10)
+	assert.Equal(t, ld.curDisplay, "59.1")
+	assert.Equal(t, len(ld.audit), 9)
 
 	// now cancel
 	alm.started = true
@@ -147,7 +147,7 @@ func TestClockModePrint(t *testing.T) {
 	assert.Equal(t, ld.curDisplay, "bob")
 
 	// now wait
-	testBlockDuration(clock, dEffectSleep, time.Second)
+	testBlockDuration(clock, dEffectSleep, time.Second+dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// done
@@ -162,7 +162,7 @@ func TestClockModeAlarmOn(t *testing.T) {
 	go runEffects(rt)
 
 	// advance to see the time
-	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// send alarm message
@@ -205,7 +205,7 @@ func TestClockModeAlarmOver(t *testing.T) {
 	go runEffects(rt)
 
 	// advance to see the time
-	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// send alarm message
@@ -249,7 +249,7 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 	go runEffects(rt)
 
 	// advance to see the time
-	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// send alarm message
@@ -289,6 +289,6 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 	assert.Equal(t, ld.curDisplay, "pie")
 
 	// wait for it to clear to the time
-	testBlockDuration(clock, dEffectSleep, 2*time.Second)
+	testBlockDuration(clock, dEffectSleep, 2*time.Second+dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
 }
