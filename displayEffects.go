@@ -11,6 +11,9 @@ import (
 	"time"
 )
 
+const almDisplay1 string = "_-_-"
+const almDisplay2 string = "-_-_"
+
 type displayEffect struct {
 	id  int
 	val interface{}
@@ -65,8 +68,8 @@ func setAlarmMode(alarm alarm) displayEffect {
 	return displayEffect{id: eAlarmOn, val: alarm}
 }
 
-func cancelAlarmMode(alarm alarm) displayEffect {
-	return displayEffect{id: eAlarmOff, val: alarm}
+func cancelAlarmMode() displayEffect {
+	return displayEffect{id: eAlarmOff, val: nil}
 }
 
 func alarmError(d time.Duration) displayEffect {
@@ -187,7 +190,6 @@ func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool, done chan boo
 		musicFile = musicPath + "/" + alm.Extra
 	case almTones:
 		playTones = true
-		return
 	default:
 		// play a random mp3 in the cache
 		s1 := rand.NewSource(rt.clock.Now().UnixNano())
@@ -264,6 +266,7 @@ func runEffects(rt runtimeConfig) {
 	stopAlarm := make(chan bool, 20)
 	done := make(chan bool, 20)
 
+	// TODO: put a keepReading around the channel reader
 	printQueue := list.New()
 
 	for true {
@@ -279,8 +282,9 @@ func runEffects(rt runtimeConfig) {
 			// go back to normal clock mode
 			log.Printf("Got a done signal from playEffect: %v", d)
 			mode = modeClock
-			// tell checkAlarms that it's over?  right
-			// now it does not care, and print messages are now queued
+			// tell checkAlarms that it's over?  it could use
+			// that information to figure out what to do with
+			// button presses
 		case e = <-comms.effects:
 			switch e.id {
 			case eDebug:
@@ -311,9 +315,7 @@ func runEffects(rt runtimeConfig) {
 				playAlarmEffect(rt, alm, stopAlarm, done)
 			case eAlarmOff:
 				mode = modeClock
-				alm, _ := toAlarm(e.val)
 				log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
-				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
 				stopAlarmEffect(stopAlarm)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
@@ -362,7 +364,11 @@ func runEffects(rt runtimeConfig) {
 				rt.display.RefreshOn(true)
 				alarmSegment = (alarmSegment + 1) % 6
 			} else {
-				rt.display.Print("_-_-")
+				if (rt.clock.Now().Second())%2 == 0 {
+					rt.display.Print(almDisplay1)
+				} else {
+					rt.display.Print(almDisplay2)
+				}
 			}
 		default:
 			log.Printf("Unknown mode: '%d'\n", mode)

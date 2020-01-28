@@ -97,7 +97,7 @@ func TestClockModeCountdown(t *testing.T) {
 
 	// now cancel
 	alm.started = true
-	rt.comms.effects <- cancelAlarmMode(alm)
+	rt.comms.effects <- cancelAlarmMode()
 
 	// advance and back to the clock
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
@@ -180,14 +180,18 @@ func TestClockModeAlarmOn(t *testing.T) {
 
 	// now wait
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
-	assert.Equal(t, ld.curDisplay, "_-_-")
+	assert.Equal(t, ld.curDisplay, almDisplay1)
+	// wait for the other one
+	testBlockDuration(clock, dEffectSleep, 3*time.Second)
+	assert.Equal(t, ld.curDisplay, almDisplay2)
+
 	// make sure the alarm effect did fire
 	s := rt.sounds.(*noSounds)
 	assert.Equal(t, s.playMP3Cnt, 1)
 	assert.Equal(t, s.playItCnt, 0)
 
 	// cancel alarm
-	rt.comms.effects <- cancelAlarmMode(alm)
+	rt.comms.effects <- cancelAlarmMode()
 
 	// now wait
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
@@ -231,6 +235,27 @@ func TestClockModeAlarmOver(t *testing.T) {
 
 	// signal the play completed
 	ns := rt.sounds.(*noSounds)
+	ns.done <- true
+
+	// now wait
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, " 9:15")
+
+	// now play tones
+	alm.Effect = almTones
+
+	rt.comms.effects <- setAlarmMode(alm)
+
+	// now wait
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, "_-_-")
+	// make sure the alarm effect did fire
+	s = rt.sounds.(*noSounds)
+	assert.Equal(t, s.playMP3Cnt, 1)
+	assert.Equal(t, s.playItCnt, 1)
+
+	// signal the play completed
+	ns = rt.sounds.(*noSounds)
 	ns.done <- true
 
 	// now wait

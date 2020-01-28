@@ -29,7 +29,8 @@ func piTestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func logCaller(pc uintptr, file string, line int, ok bool) {
+func logCaller(msg string, depth int) {
+	pc, file, line, ok := runtime.Caller(depth + 1)
 	if !ok {
 		file = "?"
 		line = 0
@@ -44,15 +45,16 @@ func logCaller(pc uintptr, file string, line int, ok bool) {
 		fnName = strings.TrimLeft(dotName, ".") + "()"
 	}
 
-	log.Printf("Starting %s (%s:%d)", fnName, filepath.Base(file), line)
+	log.Printf("%s %s (%s:%d)", msg, fnName, filepath.Base(file), line)
 }
 
 func testRuntime() (runtimeConfig, clockwork.FakeClock, commChannels) {
 	// to keep wg from complaining, add extra wg every test
 	// we never wg.Wait in testing so who cares
 	wg.Add(1)
+	// log who is starting the test
+	logCaller("Starting ", 1)
 	// make rt for test, log the start of the test
-	logCaller(runtime.Caller(1))
 	rt := initTestRuntime(testSettings)
 	return rt, rt.clock.(clockwork.FakeClock), rt.comms
 }
@@ -62,6 +64,7 @@ func almStateRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 	case e := <-c:
 		return e, nil
 	default:
+		logCaller("Called from", 1)
 		assert.Assert(t, false, "Nothing to read from alarm channel")
 	}
 	return almStateMsg{}, nil
@@ -70,6 +73,7 @@ func almStateRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 func almStateNoRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 	select {
 	case <-c:
+		logCaller("Called from", 1)
 		assert.Assert(t, false, "Got an unexpected value on alarm channel")
 	default:
 	}
@@ -81,6 +85,7 @@ func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	case e := <-c:
 		return e, nil
 	default:
+		logCaller("Called from", 1)
 		assert.Assert(t, false, "Nothing to read from led channel")
 	}
 	return ledEffect{}, nil
@@ -89,6 +94,7 @@ func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 func ledNoRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	select {
 	case <-c:
+		logCaller("Called from", 1)
 		assert.Assert(t, false, "Got an unexpected value from led channel")
 	default:
 	}
@@ -100,6 +106,7 @@ func effectRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	case e := <-c:
 		return e, nil
 	default:
+		logCaller("Called from", 1)
 		assert.Assert(t, false, "Nothing to read from effect channel")
 	}
 	return displayEffect{}, nil
@@ -120,6 +127,7 @@ func unexpectedVal(channel string, v interface{}) string {
 func effectNoRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
 	select {
 	case e := <-c:
+		logCaller("Called from", 1)
 		assert.Assert(t, false, unexpectedVal("effect", e))
 	default:
 	}

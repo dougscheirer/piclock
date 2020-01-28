@@ -27,7 +27,8 @@ func runCheckAlarms(rt runtimeConfig) {
 	comms := rt.comms
 
 	var lastLogSecond = -1
-	var curAlarm *alarm
+	var curAlarm *alarm // the alarm we are watching
+	var nowAlarm *alarm // the alarm that is running now
 	var buttonPressActed bool = false
 
 	for true {
@@ -42,6 +43,10 @@ func runCheckAlarms(rt runtimeConfig) {
 			case msgLoaded:
 				payload, _ := toLoadedPayload(stateMsg.val)
 				alarms = payload.alarms
+				if payload.report {
+					// poor side-effect, report by resetting "curAlarm"
+					curAlarm = nil
+				}
 			case msgMainButton:
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed {
@@ -49,23 +54,18 @@ func runCheckAlarms(rt runtimeConfig) {
 						log.Println("Ignore button hold")
 					} else {
 						log.Printf("Main button pressed: %dms", info.duration)
-						// use curAlarm to figure out if we're doing an alarm
-						// thing currently
-						if curAlarm != nil {
-							if curAlarm.started {
-								comms.effects <- cancelAlarmMode(*curAlarm)
-								buttonPressActed = true
-							} else if curAlarm.countdown {
-								comms.effects <- cancelAlarmMode(*curAlarm)
-								curAlarm.started = true
-								buttonPressActed = true
+						// only send it for the first press event
+						if info.duration < time.Second {
+							comms.effects <- cancelAlarmMode()
+							if nowAlarm != nil {
+								nowAlarm.started = true
 							}
-						} else {
-							// more than 5 seconds is "reload"
-							if info.duration > 4*time.Second {
-								comms.getAlarms <- reloadMessage()
-								buttonPressActed = true
-							}
+							nowAlarm = nil
+						}
+						// more than 5 seconds is "reload", then forget it
+						if info.duration > 4*time.Second {
+							comms.getAlarms <- reloadMessage()
+							buttonPressActed = true
 						}
 					}
 				} else {
@@ -108,11 +108,15 @@ func runCheckAlarms(rt runtimeConfig) {
 				// start a countdown?
 				countdown := settings.GetDuration(sCountdown)
 				if duration < countdown && !alarms[index].countdown {
+					// remember this one for later
+					nowAlarm = curAlarm
 					comms.effects <- setCountdownMode(alarms[0])
 					alarms[index].countdown = true
 				}
 			} else {
 				// Set alarm mode
+				// remember this one for later
+				nowAlarm = curAlarm
 				comms.effects <- setAlarmMode(alarms[index])
 				// let getAlarms know we handled it (why?)
 				comms.getAlarms <- handledMessage(alarms[index])
