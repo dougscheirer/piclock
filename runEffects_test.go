@@ -1,6 +1,7 @@
 package main
 
 import (
+	"piclock/sevenseg_backpack"
 	"testing"
 	"time"
 
@@ -281,18 +282,32 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 	alm := alarm{
 		ID:        "xoxoxo",
 		Name:      "test alarm",
-		When:      clock.Now(),
+		When:      clock.Now().Add(time.Minute),
 		Effect:    almMusic,
 		Extra:     "pizza",
 		started:   false,
 		countdown: true,
 	}
 
-	rt.comms.effects <- setAlarmMode(alm)
+	rt.comms.effects <- setCountdownMode(alm)
 
-	// now wait
+	// should start the countdown
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, "59.9")
+
+	// advance to the last 10 seconds
+	clock.Advance(50 * time.Second)
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	assert.Equal(t, ld.curDisplay, "9.9")
+	assert.Equal(t, ld.blinkRate, uint8(sevenseg_backpack.BLINK_2HZ))
+
+	// advance to the alarm time, send the alarm
+	clock.Advance(50 * time.Second)
+	rt.comms.effects <- setAlarmMode(alm)
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	assert.Equal(t, ld.curDisplay, "_-_-")
+	assert.Equal(t, ld.blinkRate, uint8(sevenseg_backpack.BLINK_OFF))
+
 	// make sure the alarm effect did fire
 	s := rt.sounds.(*noSounds)
 	assert.Equal(t, s.playMP3Cnt, 1)
@@ -315,5 +330,5 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 
 	// wait for it to clear to the time
 	testBlockDuration(clock, dEffectSleep, 2*time.Second+dEffectSleep)
-	assert.Equal(t, ld.curDisplay, " 9:15")
+	assert.Equal(t, ld.curDisplay, " 9:17")
 }

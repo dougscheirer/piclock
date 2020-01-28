@@ -312,10 +312,12 @@ func runEffects(rt runtimeConfig) {
 				alm, _ := toAlarm(e.val)
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
+				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
 				playAlarmEffect(rt, alm, stopAlarm, done)
 			case eAlarmOff:
 				mode = modeClock
 				log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
+				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
 				stopAlarmEffect(stopAlarm)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
@@ -356,7 +358,6 @@ func runEffects(rt runtimeConfig) {
 			// do a strobing 0, light up segments 0 - 5
 			if settings.GetBool(sStrobe) == true {
 				rt.display.RefreshOn(false)
-				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
 				rt.display.ClearDisplay()
 				for i := 0; i < 4; i++ {
 					rt.display.SegmentOn(byte(i), byte(alarmSegment), true)
