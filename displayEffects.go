@@ -189,7 +189,8 @@ func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool, done chan boo
 	case almFile:
 		musicFile = musicPath + "/" + alm.Extra
 	case almTones:
-		playTones = true
+		// the pi is not great at audio generation
+		musicFile = musicPath + "/tones"
 	default:
 		// play a random mp3 in the cache
 		s1 := rand.NewSource(rt.clock.Now().UnixNano())
