@@ -264,10 +264,11 @@ func runEffects(rt runtimeConfig) {
 	alarmSegment := 0
 	buttonDot := false
 
-	stopAlarm := make(chan bool, 20)
+	// stopAlarm will be re-created
+	var stopAlarm chan bool = nil
 	done := make(chan bool, 20)
 
-	// TODO: put a keepReading around the channel reader
+	// TODO: put a keepReading around the channel reader?
 	printQueue := list.New()
 
 	for true {
@@ -314,12 +315,23 @@ func runEffects(rt runtimeConfig) {
 				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
 				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
 				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
+				// if stopAlarm exists, close it
+				if stopAlarm != nil {
+					stopAlarmEffect(stopAlarm)
+					close(stopAlarm)
+				}
+				stopAlarm = make(chan bool, 1)
 				playAlarmEffect(rt, alm, stopAlarm, done)
 			case eAlarmOff:
 				mode = modeClock
-				log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
+				// if stopAlarm exists, close it
+				if stopAlarm != nil {
+					stopAlarmEffect(stopAlarm)
+					close(stopAlarm)
+					log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
+					stopAlarm = nil
+				}
 				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
-				stopAlarmEffect(stopAlarm)
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed

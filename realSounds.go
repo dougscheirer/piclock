@@ -213,7 +213,7 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 	for {
 		rt.clock.Sleep(dAlarmSleep)
 		select {
-		case <-stop:
+		case v := <-stop:
 			stopPlayback = true
 		case done := <-completed:
 			log.Printf("%v", done)
@@ -222,6 +222,7 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 			}
 			replayMax--
 			log.Println("Replay")
+			cmd = exec.Command("mpg123", fName)
 			go func() {
 				completed <- cmd.Run()
 			}()
