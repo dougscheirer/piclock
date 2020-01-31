@@ -213,7 +213,7 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 	for {
 		rt.clock.Sleep(dAlarmSleep)
 		select {
-		case v := <-stop:
+		case <-stop:
 			stopPlayback = true
 		case done := <-completed:
 			log.Printf("%v", done)
