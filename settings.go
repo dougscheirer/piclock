@@ -16,8 +16,9 @@ type configSettings struct {
 }
 
 type buttonMap struct {
-	pin uint8
-	key string
+	pinNum uint8
+	key    string
+	pullup bool
 }
 
 const sCountdown string = "countdownTime"
@@ -35,6 +36,8 @@ const sBlink string = "blinkTime"
 const sStrobe string = "strobe"
 const sSkipLoader string = "skipLoader"
 const sMainBtn string = "mainButton"
+const sLongBtn string = "longButton"
+const sDblBtn string = "doubleButton"
 const sLEDErr string = "ledErr"
 const sLEDAlm string = "ledAlarm"
 const sDisplay string = "display"
@@ -61,7 +64,9 @@ func defaultSettings() *configSettings {
 	s[sBlink] = true
 	s[sStrobe] = true
 	s[sSkipLoader] = false
-	s[sMainBtn] = buttonMap{pin: 25, key: "a"}
+	s[sMainBtn] = buttonMap{pinNum: 25, key: "a", pullup: true}
+	s[sLongBtn] = buttonMap{pinNum: 26, key: "b", pullup: true}
+	s[sDblBtn] = buttonMap{pinNum: 27, key: "c", pullup: true}
 	s[sLEDErr] = byte(6)
 	s[sLEDAlm] = byte(16)
 
@@ -228,6 +233,19 @@ func (s *configSettings) GetButtonMap(key string) buttonMap {
 		log.Fatalf("Could not convert %T to buttonMap", v)
 		return buttonMap{}
 	}
+}
+
+func (s *configSettings) GetAllButtonNames() []string {
+	result := make([]string, 0)
+	// try to convert every setting into a button, skip failures
+	for k, v := range s.settings {
+		switch v.(type) {
+		case buttonMap:
+			result = append(result, k)
+		default:
+		}
+	}
+	return result
 }
 
 func (s *configSettings) Dump() {

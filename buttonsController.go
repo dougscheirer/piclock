@@ -17,12 +17,12 @@ type pressState struct {
 
 type button struct {
 	button buttonMap
-	pin    rpio.Pin // rpio pin
+	rpin   rpio.Pin
 	state  pressState
 }
 
 const (
-	btnDown = 0 // 0 is pressed, we're GNDing the button (pullup mode)
+	btnDown = 0
 	btnUp   = 1
 )
 
@@ -47,7 +47,26 @@ func checkButtons(rt runtimeConfig) (map[string]button, error) {
 		btn := v
 		btn.state.changed = false
 
-		if res == btnDown {
+		// interpret the high/low state into btnUp or btnDown
+		// based on the pullup value
+		var btnState int
+		if v.button.pullup {
+			// 0 is pressed, 1 is not
+			if res == rpio.High {
+				btnState = btnUp
+			} else {
+				btnState = btnDown
+			}
+		} else {
+			// 1 is pressed, 0 is not
+			if res == rpio.Low {
+				btnState = btnUp
+			} else {
+				btnState = btnDown
+			}
+		}
+
+		if btnState == btnDown {
 			// is this a change from before?
 			if btn.state.pressed {
 				// no button state change, update the duration count
@@ -102,6 +121,8 @@ func runWatchButtons(rt runtimeConfig) {
 
 	pins := make(map[string]buttonMap)
 	pins[sMainBtn] = settings.GetButtonMap(sMainBtn)
+	pins[sLongBtn] = settings.GetButtonMap(sLongBtn)
+	pins[sDblBtn] = settings.GetButtonMap(sDblBtn)
 
 	err = rt.buttons.setupButtons(pins, rt)
 	if err != nil {
@@ -131,9 +152,17 @@ func runWatchButtons(rt runtimeConfig) {
 				diff := time.Duration(v.state.count) * time.Second
 				switch k {
 				case sMainBtn:
-					log.Println("sending main button messages")
+					log.Println("sending main button message")
 					comms.effects <- mainButtonEffect(v.state.pressed, diff)
 					comms.chkAlarms <- mainButtonAlmMsg(v.state.pressed, diff)
+				case sLongBtn:
+					log.Println("sending long button messages")
+					comms.effects <- longButtonEffect(v.state.pressed)
+					comms.chkAlarms <- longButtonAlmMsg(v.state.pressed)
+				case sDblBtn:
+					log.Println("sending double click button message")
+					comms.effects <- doubleButtonEffect(v.state.pressed)
+					comms.chkAlarms <- doubleButtonAlmMsg(v.state.pressed)
 				default:
 					log.Printf("Unhandled button %s", k)
 				}

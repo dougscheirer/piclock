@@ -16,6 +16,17 @@ func compareAlarms(alm1 alarm, alm2 alarm) bool {
 		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
 }
 
+func showNextAlarm(rt runtimeConfig, alm *alarm) {
+	if alm != nil {
+		rt.comms.effects <- printEffect("AL:", 1*time.Second)
+		rt.comms.effects <- printEffect(alm.When.Format("15:04"), 2*time.Second)
+		rt.comms.effects <- printEffect(alm.When.Format("01.02"), 2*time.Second)
+		rt.comms.effects <- printEffect(alm.When.Format("2006"), 2*time.Second)
+	} else {
+		rt.comms.effects <- printEffect("none", 1*time.Second)
+	}
+}
+
 func runCheckAlarms(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -47,6 +58,19 @@ func runCheckAlarms(rt runtimeConfig) {
 					// poor side-effect, report by resetting "curAlarm"
 					curAlarm = nil
 				}
+			case msgDoubleButton:
+				// show next alarm
+				showNextAlarm(rt, curAlarm)
+			case msgLongButton:
+				info := stateMsg.val.(buttonInfo)
+				if info.pressed {
+					if buttonPressActed {
+						log.Println("Ignore long button hold")
+					} else {
+						comms.getAlarms <- reloadMessage()
+						buttonPressActed = true
+					}
+				}
 			case msgMainButton:
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed {
@@ -61,11 +85,6 @@ func runCheckAlarms(rt runtimeConfig) {
 								nowAlarm.started = true
 							}
 							nowAlarm = nil
-						}
-						// more than 5 seconds is "reload", then forget it
-						if info.duration > 4*time.Second {
-							comms.getAlarms <- reloadMessage()
-							buttonPressActed = true
 						}
 					}
 				} else {
@@ -87,10 +106,7 @@ func runCheckAlarms(rt runtimeConfig) {
 			// if alarms[index] != curAlarm, run some effects
 			if curAlarm == nil || !compareAlarms(*curAlarm, alarms[index]) {
 				curAlarm = &alarms[index]
-				comms.effects <- printEffect("AL:", 1*time.Second)
-				comms.effects <- printEffect(curAlarm.When.Format("15:04"), 2*time.Second)
-				comms.effects <- printEffect(curAlarm.When.Format("01.02"), 2*time.Second)
-				comms.effects <- printEffect(curAlarm.When.Format("2006"), 2*time.Second)
+				showNextAlarm(rt, curAlarm)
 			}
 
 			now := rt.clock.Now()

@@ -23,7 +23,14 @@ func (nb *noButtons) setupButtons(pins map[string]buttonMap, rt runtimeConfig) e
 
 	for k, v := range pins {
 		nb.buttons[k] = button{button: v}
-		nb.states[k] = rpio.High // TODO: configurable high/low button press
+		// default this to "not pressed"
+		// for pullup, GND is pressed, +V is open
+		// for !pullup, +V is pressed, GND is open
+		if v.pullup {
+			nb.states[k] = rpio.High
+		} else {
+			nb.states[k] = rpio.Low
+		}
 	}
 	return nil
 }
@@ -35,7 +42,7 @@ func (nb *noButtons) initButtons(settings configSettings) error {
 func (nb *noButtons) closeButtons() {
 }
 
-func (nb *noButtons) set(btns map[string]rpio.State) {
+func (nb *noButtons) setStates(btns map[string]rpio.State) {
 	for k, v := range btns {
 		nb.states[k] = v
 	}
@@ -43,6 +50,11 @@ func (nb *noButtons) set(btns map[string]rpio.State) {
 
 func (nb *noButtons) clear() {
 	for k := range nb.buttons {
-		nb.states[k] = rpio.High
+		// for pullup buttons +V is not pressed
+		if nb.buttons[k].button.pullup {
+			nb.states[k] = rpio.High
+		} else {
+			nb.states[k] = rpio.Low
+		}
 	}
 }

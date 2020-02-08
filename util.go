@@ -125,16 +125,22 @@ func toButtonMap(result interface{}) (buttonMap, error) {
 	case buttonMap:
 		return rt, nil
 	case map[string]interface{}:
-		// get a pin number and a key
+		// get a pin number and a key (TODO: make these s... enums)
 		pin, err := toUInt8(rt["pin"])
 		key, err2 := toString(rt["key"])
+		pullup, err3 := toBool(rt["pullup"])
+
 		if err != nil {
 			return buttonMap{}, err
 		}
 		if err2 != nil {
 			return buttonMap{}, err2
 		}
-		return buttonMap{pin: pin, key: key}, nil
+		if err3 != nil {
+			// pick a default
+			pullup = true
+		}
+		return buttonMap{pinNum: pin, key: key, pullup: pullup}, nil
 	default:
 		return buttonMap{}, fmt.Errorf("Could not convert type %T (%v)", rt, rt)
 	}

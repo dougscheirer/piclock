@@ -33,11 +33,15 @@ func (rb *rpioButtons) setupPinButtons(pins map[string]buttonMap, rt runtimeConf
 		// picking GPIO 4 results in collisions with I2C operations
 		var btn button
 		btn.button = v
-		btn.pin = rpio.Pin(v.pin)
+		btn.rpin = rpio.Pin(v.pinNum)
 
 		// for now we only care about the "low" state
-		btn.pin.Input()  // Input mode
-		btn.pin.PullUp() // GND => button press
+		btn.rpin.Input() // Input mode
+		if v.pullup {
+			btn.rpin.PullUp() // GND => button press
+		} else {
+			btn.rpin.PullDown() // +V -> button press
+		}
 
 		btn.state = pressState{pressed: false, start: now, count: 0, changed: false}
 		rb.buttons[k] = btn
@@ -62,7 +66,7 @@ func (rb *rpioButtons) closeButtons() {
 func (rb *rpioButtons) readButtons(rt runtimeConfig) (map[string]rpio.State, error) {
 	ret := make(map[string]rpio.State)
 	for k, v := range rb.buttons {
-		ret[k] = v.pin.Read() // Read state from pin (High / Low)
+		ret[k] = v.rpin.Read() // Read state from pin (High / Low)
 	}
 
 	return ret, nil

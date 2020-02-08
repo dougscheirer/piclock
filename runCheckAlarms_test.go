@@ -356,15 +356,37 @@ func TestCheckAlarmsReloadButton(t *testing.T) {
 	// wait for a cycle to complete startup loop
 	clock.BlockUntil(1)
 
-	// press and hold for > 5 seconds
-	for i := time.Duration(0); i < 7; i++ {
-		comms.chkAlarms <- mainButtonAlmMsg(true, i*time.Second)
-		testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
-	}
+	// the long hold comes in on another message
+	comms.chkAlarms <- longButtonAlmMsg(true)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
 
 	// should have sent a reload message to getAlarms
 	e, _ := almStateRead(t, rt.comms.getAlarms)
 	assert.Equal(t, e.ID, msgReload)
+
+	testQuit(rt)
+}
+
+func TestCheckAlarmsDoubleClick(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	// events := rt.events.(*testEvents)
+
+	go runCheckAlarms(rt)
+	// wait for a cycle to complete startup loop
+	clock.BlockUntil(1)
+
+	// the long hold comes in on another message
+	comms.chkAlarms <- doubleButtonAlmMsg(true)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+
+	// should have sent effects
+	de, _ := effectReads(t, comms.effects, 4)
+	assert.Equal(t, de[0].id, ePrint)
+	compares := []string{"AL:", "06:00", "01.26", "2020"}
+	for i := range compares {
+		assert.Equal(t, de[i].id, ePrint)
+		assert.Equal(t, de[i].val.(displayPrint).s, compares[i])
+	}
 
 	testQuit(rt)
 }

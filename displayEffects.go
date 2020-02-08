@@ -42,6 +42,8 @@ const (
 	eClock = iota
 	eDebug
 	eMainButton
+	eLongButton
+	eDoubleButton
 	eAlarmError
 	eTerminate
 	ePrint
@@ -58,6 +60,14 @@ func init() {
 // channel messaging functions
 func mainButtonEffect(p bool, d time.Duration) displayEffect {
 	return displayEffect{id: eMainButton, val: buttonInfo{pressed: p, duration: d}}
+}
+
+func longButtonEffect(p bool) displayEffect {
+	return displayEffect{id: eLongButton, val: buttonInfo{pressed: p, duration: 0}}
+}
+
+func doubleButtonEffect(p bool) displayEffect {
+	return displayEffect{id: eDoubleButton, val: buttonInfo{pressed: p, duration: 0}}
 }
 
 func setCountdownMode(alarm alarm) displayEffect {
@@ -335,6 +345,8 @@ func runEffects(rt runtimeConfig) {
 			case eMainButton:
 				info, _ := toButtonInfo(e.val)
 				buttonDot = info.pressed
+			case eLongButton:
+			case eDoubleButton:
 			default:
 				log.Printf("Unhandled %d\n", e.id)
 			}
