@@ -70,6 +70,9 @@ func runCheckAlarms(rt runtimeConfig) {
 						comms.getAlarms <- reloadMessage()
 						buttonPressActed = true
 					}
+				} else {
+					log.Printf("Long button released")
+					buttonPressActed = false
 				}
 			case msgMainButton:
 				info := stateMsg.val.(buttonInfo)

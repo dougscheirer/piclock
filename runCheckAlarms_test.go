@@ -359,9 +359,20 @@ func TestCheckAlarmsReloadButton(t *testing.T) {
 	// the long hold comes in on another message
 	comms.chkAlarms <- longButtonAlmMsg(true)
 	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	comms.chkAlarms <- longButtonAlmMsg(false)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
 
 	// should have sent a reload message to getAlarms
 	e, _ := almStateRead(t, rt.comms.getAlarms)
+	assert.Equal(t, e.ID, msgReload)
+
+	// try it again, just to make sure that the state reset properly
+	comms.chkAlarms <- longButtonAlmMsg(true)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	comms.chkAlarms <- longButtonAlmMsg(false)
+
+	// should have sent a reload message to getAlarms
+	e, _ = almStateRead(t, rt.comms.getAlarms)
 	assert.Equal(t, e.ID, msgReload)
 
 	testQuit(rt)
