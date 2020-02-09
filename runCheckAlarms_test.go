@@ -375,22 +375,46 @@ func TestCheckAlarmsDoubleClick(t *testing.T) {
 	// wait for a cycle to complete startup loop
 	clock.BlockUntil(1)
 
-	// the long hold comes in on another message
+	// the double click event comes in on another message
+	comms.chkAlarms <- doubleButtonAlmMsg(true)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+
+	// should have sent effects
+	d, _ := effectRead(t, comms.effects)
+	assert.Equal(t, d.id, ePrint)
+	assert.Equal(t, d.val.(displayPrint).s, "none")
+
+	testQuit(rt)
+}
+
+func TestCheckAlarmsDoubleClickPending(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	events := rt.events.(*testEvents)
+	// pretend we loaded some alarms, all or old
+	events.oldAlarms = 3
+	alarms, _ := getAlarmsFromService(rt)
+	comms.chkAlarms <- alarmsLoadedMsg(1, alarms, true)
+
+	go runCheckAlarms(rt)
+	// wait for a cycle to complete startup loop
+	clock.BlockUntil(1)
+
+	// clear the effects channel of all the loading stuff
+	effectReadAll(comms.effects)
+
+	// the double click event comes in on another message
 	comms.chkAlarms <- doubleButtonAlmMsg(true)
 	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
 
 	// should have sent effects
 	de, _ := effectReads(t, comms.effects, 4)
-	assert.Equal(t, de[0].id, ePrint)
-	compares := []string{"AL:", "06:00", "01.26", "2020"}
+
+	compares := []string{"AL:", "09:00", "01.26", "2020"}
 	for i := range compares {
 		assert.Equal(t, de[i].id, ePrint)
 		assert.Equal(t, de[i].val.(displayPrint).s, compares[i])
 	}
-
-	testQuit(rt)
 }
-
 func TestCheckAlarmsReloadButtonAlarmsAtStart(t *testing.T) {
 	rt, clock, comms := testRuntime()
 	events := rt.events.(*testEvents)
@@ -404,11 +428,10 @@ func TestCheckAlarmsReloadButtonAlarmsAtStart(t *testing.T) {
 	// wait for a cycle to complete startup loop
 	clock.BlockUntil(1)
 
-	// press and hold for > 5 seconds
-	for i := time.Duration(0); i < 7; i++ {
-		comms.chkAlarms <- mainButtonAlmMsg(true, i*time.Second)
-		testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
-	}
+	// send the long press message
+	comms.chkAlarms <- longButtonAlmMsg(true)
+	testBlockDuration(clock, dAlarmSleep, 3*dAlarmSleep)
+	comms.chkAlarms <- longButtonAlmMsg(false)
 
 	// should have sent a reload message to getAlarms
 	e, _ := almStateRead(t, rt.comms.getAlarms)

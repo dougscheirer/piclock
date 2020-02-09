@@ -120,6 +120,17 @@ func effectReads(t *testing.T, c chan displayEffect, count int) ([]displayEffect
 	return de, nil
 }
 
+func effectReadAll(c chan displayEffect) {
+	for true {
+		select {
+		case <-c:
+			continue
+		default:
+			return
+		}
+	}
+}
+
 func unexpectedVal(channel string, v interface{}) string {
 	return fmt.Sprintf("Got an unexpected value from %s: %v", channel, v)
 }
