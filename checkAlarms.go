@@ -59,22 +59,19 @@ func runCheckAlarms(rt runtimeConfig) {
 					curAlarm = nil
 				}
 			case msgDoubleButton:
-				// show next alarm
-				showNextAlarm(rt, curAlarm)
-			case msgLongButton:
+				// show next alarm on the 0th one only
 				info := stateMsg.val.(buttonInfo)
-				if info.pressed {
-					if buttonPressActed {
-						log.Println("Ignore long button hold")
-					} else {
-						comms.getAlarms <- reloadMessage()
-						buttonPressActed = true
-					}
-				} else {
-					log.Printf("Long button released")
-					buttonPressActed = false
+				if info.pressed == true && info.duration == 0 {
+					showNextAlarm(rt, curAlarm)
+				}
+			case msgLongButton:
+				// reload on the 0th one only
+				info := stateMsg.val.(buttonInfo)
+				if info.pressed == true && info.duration == 0 {
+					comms.getAlarms <- reloadMessage()
 				}
 			case msgMainButton:
+				// TODO: cancel on the 0th one only
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed {
 					if buttonPressActed {

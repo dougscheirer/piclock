@@ -80,12 +80,12 @@ func mainButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
 	return almStateMsg{ID: msgMainButton, val: buttonInfo{pressed: pressed, duration: d}}
 }
 
-func longButtonAlmMsg(pressed bool) almStateMsg {
-	return almStateMsg{ID: msgLongButton, val: buttonInfo{pressed: pressed, duration: 0}}
+func longButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
+	return almStateMsg{ID: msgLongButton, val: buttonInfo{pressed: pressed, duration: d}}
 }
 
-func doubleButtonAlmMsg(pressed bool) almStateMsg {
-	return almStateMsg{ID: msgDoubleButton, val: buttonInfo{pressed: pressed, duration: 0}}
+func doubleButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
+	return almStateMsg{ID: msgDoubleButton, val: buttonInfo{pressed: pressed, duration: d}}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {

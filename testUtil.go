@@ -120,29 +120,22 @@ func effectReads(t *testing.T, c chan displayEffect, count int) ([]displayEffect
 	return de, nil
 }
 
-func effectReadAll(c chan displayEffect) {
+func effectReadAll(c chan displayEffect) []displayEffect {
+	ret := make([]displayEffect, 0)
 	for true {
 		select {
-		case <-c:
+		case e := <-c:
+			ret = append(ret, e)
 			continue
 		default:
-			return
+			return ret
 		}
 	}
+	return nil
 }
 
 func unexpectedVal(channel string, v interface{}) string {
 	return fmt.Sprintf("Got an unexpected value from %s: %v", channel, v)
-}
-
-func effectNoRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
-	select {
-	case e := <-c:
-		logCaller("Called from", 1)
-		assert.Assert(t, false, unexpectedVal("effect", e))
-	default:
-	}
-	return displayEffect{}, nil
 }
 
 type stepCallback func(step int)

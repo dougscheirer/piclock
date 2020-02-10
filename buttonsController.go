@@ -157,12 +157,12 @@ func runWatchButtons(rt runtimeConfig) {
 					comms.chkAlarms <- mainButtonAlmMsg(v.state.pressed, diff)
 				case sLongBtn:
 					log.Println("sending long button messages")
-					comms.effects <- longButtonEffect(v.state.pressed)
-					comms.chkAlarms <- longButtonAlmMsg(v.state.pressed)
+					comms.effects <- longButtonEffect(v.state.pressed, diff)
+					comms.chkAlarms <- longButtonAlmMsg(v.state.pressed, diff)
 				case sDblBtn:
 					log.Println("sending double click button message")
-					comms.effects <- doubleButtonEffect(v.state.pressed)
-					comms.chkAlarms <- doubleButtonAlmMsg(v.state.pressed)
+					comms.effects <- doubleButtonEffect(v.state.pressed, diff)
+					comms.chkAlarms <- doubleButtonAlmMsg(v.state.pressed, diff)
 				default:
 					log.Printf("Unhandled button %s", k)
 				}

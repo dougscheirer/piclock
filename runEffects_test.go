@@ -332,3 +332,32 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 2*time.Second+dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:17")
 }
+
+func TestClockModeDoubleClick(t *testing.T) {
+	rt, clock, _ := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	go runEffects(rt)
+
+	// wait for a cycle (the display loop is a little weird)
+	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
+
+	// check the logDisplay
+	assert.Equal(t, ld.curDisplay, " 0:00")
+
+	// press the button
+	rt.comms.effects <- doubleButtonEffect(true, 0)
+	testBlockDuration(clock, dEffectSleep, 1)
+
+	// should be time with no dot
+	assert.Equal(t, ld.curDisplay, " 0:00")
+
+	// un-press
+	rt.comms.effects <- doubleButtonEffect(false, time.Second)
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	// should be time with a dot
+	assert.Equal(t, ld.curDisplay, " 0:00")
+
+	// done
+	testQuit(rt)
+}

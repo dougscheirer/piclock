@@ -178,7 +178,8 @@ func TestCheckAlarmsCountdownCancel(t *testing.T) {
 	})
 
 	// should *not* have started the alarm effect
-	e, _ = effectNoRead(t, rt.comms.effects)
+	eA := effectReadAll(rt.comms.effects)
+	assert.Equal(t, len(eA), 0)
 
 	// cancel with a button press (and release)
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
@@ -195,7 +196,8 @@ func TestCheckAlarmsCountdownCancel(t *testing.T) {
 		le, _ = ledRead(t, rt.comms.leds)
 	})
 
-	e, _ = effectNoRead(t, rt.comms.effects)
+	eA = effectReadAll(rt.comms.effects)
+	assert.Equal(t, len(eA), 0)
 
 	// done
 	testQuit(rt)
@@ -244,7 +246,8 @@ func TestCheckAlarmsCountdownMultiCancel(t *testing.T) {
 	})
 
 	// should *not* have started the alarm effect
-	e, _ = effectNoRead(t, rt.comms.effects)
+	eA := effectReadAll(rt.comms.effects)
+	assert.Equal(t, len(eA), 0)
 
 	// cancel with a button press (and release)
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
@@ -357,9 +360,9 @@ func TestCheckAlarmsReloadButton(t *testing.T) {
 	clock.BlockUntil(1)
 
 	// the long hold comes in on another message
-	comms.chkAlarms <- longButtonAlmMsg(true)
+	comms.chkAlarms <- longButtonAlmMsg(true, 0)
 	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
-	comms.chkAlarms <- longButtonAlmMsg(false)
+	comms.chkAlarms <- longButtonAlmMsg(false, time.Second)
 	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
 
 	// should have sent a reload message to getAlarms
@@ -367,9 +370,9 @@ func TestCheckAlarmsReloadButton(t *testing.T) {
 	assert.Equal(t, e.ID, msgReload)
 
 	// try it again, just to make sure that the state reset properly
-	comms.chkAlarms <- longButtonAlmMsg(true)
+	comms.chkAlarms <- longButtonAlmMsg(true, 0)
 	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
-	comms.chkAlarms <- longButtonAlmMsg(false)
+	comms.chkAlarms <- longButtonAlmMsg(false, time.Second)
 
 	// should have sent a reload message to getAlarms
 	e, _ = almStateRead(t, rt.comms.getAlarms)
@@ -387,13 +390,20 @@ func TestCheckAlarmsDoubleClick(t *testing.T) {
 	clock.BlockUntil(1)
 
 	// the double click event comes in on another message
-	comms.chkAlarms <- doubleButtonAlmMsg(true)
-	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	// the duration is longs than the checker, so make sure
+	// that we only get 1 effect message
+	testBlockDurationCB(clock, dAlarmSleep, time.Second, func(cnt int) {
+		comms.chkAlarms <- doubleButtonAlmMsg(true, time.Duration(cnt-1)*dAlarmSleep)
+	})
 
 	// should have sent effects
 	d, _ := effectRead(t, comms.effects)
 	assert.Equal(t, d.id, ePrint)
 	assert.Equal(t, d.val.(displayPrint).s, "none")
+
+	// just the one though
+	eA := effectReadAll(comms.effects)
+	assert.Equal(t, len(eA), 0)
 
 	testQuit(rt)
 }
@@ -414,7 +424,7 @@ func TestCheckAlarmsDoubleClickPending(t *testing.T) {
 	effectReadAll(comms.effects)
 
 	// the double click event comes in on another message
-	comms.chkAlarms <- doubleButtonAlmMsg(true)
+	comms.chkAlarms <- doubleButtonAlmMsg(true, 0)
 	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
 
 	// should have sent effects
@@ -440,9 +450,9 @@ func TestCheckAlarmsReloadButtonAlarmsAtStart(t *testing.T) {
 	clock.BlockUntil(1)
 
 	// send the long press message
-	comms.chkAlarms <- longButtonAlmMsg(true)
+	comms.chkAlarms <- longButtonAlmMsg(true, 0)
 	testBlockDuration(clock, dAlarmSleep, 3*dAlarmSleep)
-	comms.chkAlarms <- longButtonAlmMsg(false)
+	comms.chkAlarms <- longButtonAlmMsg(false, time.Second)
 
 	// should have sent a reload message to getAlarms
 	e, _ := almStateRead(t, rt.comms.getAlarms)
@@ -503,7 +513,8 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 	assert.Equal(t, es[0].val.(displayPrint).s, "AL:")
 
 	// should not have started countdown
-	effectNoRead(t, rt.comms.effects)
+	eA := effectReadAll(rt.comms.effects)
+	assert.Equal(t, len(eA), 0)
 
 	// advance until after the alarm starts
 	testBlockDurationCB(clock, dAlarmSleep, 2*time.Minute, func(int) {
@@ -535,7 +546,8 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 		le, _ = ledRead(t, rt.comms.leds)
 	})
 
-	e, _ = effectNoRead(t, rt.comms.effects)
+	eA = effectReadAll(rt.comms.effects)
+	assert.Equal(t, len(eA), 0)
 
 	// TODO:advance to the next alarm and retest
 

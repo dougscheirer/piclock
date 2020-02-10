@@ -71,7 +71,8 @@ func DoTestButtonPress(pullup bool, btnName string, eid int, t *testing.T) {
 	// should be buttonInfo
 	btnInfo, _ := effect.val.(buttonInfo)
 	assert.Equal(t, btnInfo.pressed, true)
-	effectNoRead(t, comms.effects)
+	eA := effectReadAll(comms.effects)
+	assert.Equal(t, len(eA), 0)
 
 	// let it go for a second so we get a duration
 	testBlockDuration(clock, dButtonSleep, time.Second)
@@ -90,12 +91,7 @@ func DoTestButtonPress(pullup bool, btnName string, eid int, t *testing.T) {
 	assert.Equal(t, effect.id, eid, "Got wrong button effect")
 	btnInfo, _ = effect.val.(buttonInfo)
 	assert.Equal(t, btnInfo.pressed, true)
-	// only the main button gets a duration, the others are really single events
-	if btnName == sMainBtn {
-		assert.Assert(t, btnInfo.duration > 0)
-	} else {
-		assert.Assert(t, btnInfo.duration == 0)
-	}
+	assert.Assert(t, btnInfo.duration > 0)
 
 	// we also should get a release message
 	effect, _ = effectRead(t, comms.effects)

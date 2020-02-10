@@ -62,12 +62,12 @@ func mainButtonEffect(p bool, d time.Duration) displayEffect {
 	return displayEffect{id: eMainButton, val: buttonInfo{pressed: p, duration: d}}
 }
 
-func longButtonEffect(p bool) displayEffect {
-	return displayEffect{id: eLongButton, val: buttonInfo{pressed: p, duration: 0}}
+func longButtonEffect(p bool, d time.Duration) displayEffect {
+	return displayEffect{id: eLongButton, val: buttonInfo{pressed: p, duration: d}}
 }
 
-func doubleButtonEffect(p bool) displayEffect {
-	return displayEffect{id: eDoubleButton, val: buttonInfo{pressed: p, duration: 0}}
+func doubleButtonEffect(p bool, d time.Duration) displayEffect {
+	return displayEffect{id: eDoubleButton, val: buttonInfo{pressed: p, duration: d}}
 }
 
 func setCountdownMode(alarm alarm) displayEffect {
