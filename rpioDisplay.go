@@ -1,6 +1,6 @@
 package main
 
-import "piclock/sevenseg_backpack"
+import "sevenseg_backpack"
 
 type rpioDisplay struct {
 	ssb *sevenseg_backpack.Sevenseg

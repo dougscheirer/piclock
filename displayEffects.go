@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"piclock/sevenseg_backpack"
+	"sevenseg_backpack"
 	"time"
 )
 
