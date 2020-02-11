@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
+	"net"
+	"strings"
 	"time"
 )
 
@@ -27,6 +30,34 @@ func showNextAlarm(rt runtimeConfig, alm *alarm) {
 	}
 }
 
+// Get preferred outbound ip of this machine
+func GetOutboundIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP
+}
+
+func showLoginInfo(rt runtimeConfig) {
+	// show a secret code and our IP address
+	// TODO: remember this for more than an instant
+	s1 := rand.NewSource(rt.clock.Now().UnixNano())
+	r1 := rand.New(s1)
+	secret := r1.Intn(0xFFFF)
+	rt.comms.effects <- printEffect("sec", 3*time.Second)
+	rt.comms.effects <- printEffect(fmt.Sprintf("%04x", secret), 3*time.Second)
+	rt.comms.effects <- printEffect("IP:", 3*time.Second)
+	parts := strings.Split(GetOutboundIP().String(), ".")
+	for i := range parts {
+		rt.comms.effects <- printEffect(parts[i], 3*time.Second)
+	}
+}
+
 func runCheckAlarms(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -41,6 +72,7 @@ func runCheckAlarms(rt runtimeConfig) {
 	var curAlarm *alarm // the alarm we are watching
 	var nowAlarm *alarm // the alarm that is running now
 	var buttonPressActed bool = false
+	var configError bool = false
 
 	for true {
 		// log.Printf("Read loop")
@@ -58,11 +90,18 @@ func runCheckAlarms(rt runtimeConfig) {
 					// poor side-effect, report by resetting "curAlarm"
 					curAlarm = nil
 				}
+			case msgConfgError:
+				configError = stateMsg.val.(bool)
 			case msgDoubleButton:
 				// show next alarm on the 0th one only
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed == true && info.duration == 0 {
-					showNextAlarm(rt, curAlarm)
+					// are we in a bad state?
+					if configError {
+						showLoginInfo(rt)
+					} else {
+						showNextAlarm(rt, curAlarm)
+					}
 				}
 			case msgLongButton:
 				// reload on the 0th one only

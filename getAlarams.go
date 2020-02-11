@@ -43,6 +43,7 @@ const (
 	msgMainButton
 	msgLongButton
 	msgDoubleButton
+	msgConfgError
 )
 
 type almStateMsg struct {
@@ -86,6 +87,10 @@ func longButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
 
 func doubleButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
 	return almStateMsg{ID: msgDoubleButton, val: buttonInfo{pressed: pressed, duration: d}}
+}
+
+func configError(err bool) almStateMsg {
+	return almStateMsg{ID: msgConfgError, val: err}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {
@@ -248,6 +253,7 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 	alarms, err := getAlarmsFromService(rt)
 	if err != nil {
 		comms.effects <- alarmError(5 * time.Second)
+		comms.chkAlarms <- configError(true)
 		log.Println(err.Error())
 		// try the backup
 		alarms, err = getAlarmsFromCache(rt)
@@ -260,6 +266,7 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 		}
 		return
 	}
+	comms.chkAlarms <- configError(false)
 	comms.leds <- ledOff(settings.GetInt(sLEDErr))
 
 	msg := alarmsLoadedMsg(loadID, alarms, report)
