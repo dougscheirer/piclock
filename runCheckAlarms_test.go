@@ -554,3 +554,22 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 	// done
 	testQuit(rt)
 }
+
+func TestCheckAlarmsErrorDoubleClick(t *testing.T) {
+	rt, clock, comms := testRuntime()
+
+	go runCheckAlarms(rt)
+
+	// send a msgConfigError into the events
+	comms.chkAlarms <- configError(true)
+	// wait to process
+	testBlockDuration(clock, dAlarmSleep, 4*dAlarmSleep)
+
+	// should be a bunch of prints
+	dE := effectReadAll(comms.effects)
+	assert.Equal(t, len(dE), 1010)
+
+	// check for secret and IP address
+
+	testQuit(rt)
+}

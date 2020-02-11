@@ -15,15 +15,19 @@ func TestCalendarLoadEvents(t *testing.T) {
 
 	// block for 1 sleeps
 	clock.BlockUntil(1)
-	clock.Advance(dAlarmSleep)
+	clock.Advance(2 * dAlarmSleep)
 	// signal stop
 	close(rt.comms.quit)
 	clock.Advance(dAlarmSleep)
 
 	// read the chkAlarms comm channel for messages
-	state, _ := almStateRead(t, comms.chkAlarms)
-	assert.Equal(t, state.ID, msgLoaded)
-	switch v := state.val.(type) {
+	states := almStateReadAll(comms.chkAlarms)
+	// should be a non-error config msg and a loaded msg
+	assert.Equal(t, len(states), 2)
+	assert.Equal(t, states[0].ID, msgConfigError)
+	assert.Equal(t, states[0].val.(bool), false)
+
+	switch v := states[1].val.(type) {
 	case loadedPayload:
 		assert.Equal(t, len(v.alarms), 5)
 		assert.Equal(t, v.loadID, 1)
@@ -57,13 +61,17 @@ func TestCalendarLoadEventsFailed(t *testing.T) {
 	close(comms.quit)
 	clock.Advance(dAlarmSleep)
 
-	// read the comm channel for (no) messages
-	almStateNoRead(t, comms.chkAlarms)
+	// read the comm channel for messages
+	aA := almStateReadAll(comms.chkAlarms)
+	assert.Equal(t, len(aA), 1)
+	assert.Equal(t, aA[0].ID, msgConfigError)
+	assert.Equal(t, aA[0].val.(bool), true)
 
 	// expect 1 led messages, one for turning on the error blink, none to turn it off
 	ledBlink, _ := ledRead(t, comms.leds)
 	assert.Equal(t, ledBlink, ledMessage(rt.settings.GetInt(sLEDErr), modeBlink75, 0))
-	ledNoRead(t, comms.leds)
+	lA := ledReadAll(comms.leds)
+	assert.Equal(t, len(lA), 0)
 
 	// done
 	testQuit(rt)
@@ -80,12 +88,17 @@ func TestCalendarLoadEventsFailedThenOK(t *testing.T) {
 
 	// block for 1 sleeps
 	clock.BlockUntil(1)
-	// read the comm channel for (no) messages
-	almStateNoRead(t, comms.chkAlarms)
+	// read the comm channel for error message
+	aA := almStateReadAll(comms.chkAlarms)
+	assert.Equal(t, len(aA), 1)
+	assert.Equal(t, aA[0].ID, msgConfigError)
+	assert.Equal(t, aA[0].val.(bool), true)
+
 	// expect 1 led messages, one for turning on the error blink, none to turn it off
 	ledBlink, _ := ledRead(t, comms.leds)
 	assert.Equal(t, ledBlink, ledMessage(rt.settings.GetInt(sLEDErr), modeBlink75, 0))
-	ledNoRead(t, comms.leds)
+	lA := ledReadAll(comms.leds)
+	assert.Equal(t, len(lA), 0)
 
 	// advance beyond the refresh time
 	clock.Advance(dAlarmSleep)
@@ -99,9 +112,13 @@ func TestCalendarLoadEventsFailedThenOK(t *testing.T) {
 
 	// now expect that it's fixed
 	// read the chkAlarms comm channel for messages
-	state, _ := almStateRead(t, rt.comms.chkAlarms)
-	assert.Equal(t, state.ID, msgLoaded)
-	switch v := state.val.(type) {
+	states := almStateReadAll(rt.comms.chkAlarms)
+	assert.Equal(t, len(states), 2)
+	assert.Equal(t, states[0].ID, msgConfigError)
+	assert.Equal(t, states[0].val.(bool), false)
+
+	assert.Equal(t, states[1].ID, msgLoaded)
+	switch v := states[1].val.(type) {
 	case loadedPayload:
 		assert.Equal(t, len(v.alarms), 5)
 		assert.Equal(t, v.loadID, 2)
@@ -135,9 +152,13 @@ func TestCalendarLoadOldEvents(t *testing.T) {
 	clock.Advance(dAlarmSleep)
 
 	// read the chkAlarms comm channel for messages
-	state, _ := almStateRead(t, comms.chkAlarms)
-	assert.Equal(t, state.ID, msgLoaded)
-	switch v := state.val.(type) {
+	states := almStateReadAll(comms.chkAlarms)
+	assert.Equal(t, len(states), 2)
+	assert.Equal(t, states[0].ID, msgConfigError)
+	assert.Equal(t, states[0].val.(bool), false)
+
+	assert.Equal(t, states[1].ID, msgLoaded)
+	switch v := states[1].val.(type) {
 	case loadedPayload:
 		assert.Equal(t, len(v.alarms), 3)
 		assert.Equal(t, v.loadID, 1)

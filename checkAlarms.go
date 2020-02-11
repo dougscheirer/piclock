@@ -90,7 +90,7 @@ func runCheckAlarms(rt runtimeConfig) {
 					// poor side-effect, report by resetting "curAlarm"
 					curAlarm = nil
 				}
-			case msgConfgError:
+			case msgConfigError:
 				configError = stateMsg.val.(bool)
 			case msgDoubleButton:
 				// show next alarm on the 0th one only

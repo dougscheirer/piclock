@@ -70,14 +70,17 @@ func almStateRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
 	return almStateMsg{}, nil
 }
 
-func almStateNoRead(t *testing.T, c chan almStateMsg) (almStateMsg, error) {
-	select {
-	case <-c:
-		logCaller("Called from", 1)
-		assert.Assert(t, false, "Got an unexpected value on alarm channel")
-	default:
+func almStateReadAll(c chan almStateMsg) []almStateMsg {
+	ret := make([]almStateMsg, 0)
+	for true {
+		select {
+		case a := <-c:
+			ret = append(ret, a)
+		default:
+			return ret
+		}
 	}
-	return almStateMsg{}, nil
+	return ret
 }
 
 func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
@@ -91,14 +94,17 @@ func ledRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
 	return ledEffect{}, nil
 }
 
-func ledNoRead(t *testing.T, c chan ledEffect) (ledEffect, error) {
-	select {
-	case <-c:
-		logCaller("Called from", 1)
-		assert.Assert(t, false, "Got an unexpected value from led channel")
-	default:
+func ledReadAll(c chan ledEffect) []ledEffect {
+	ret := make([]ledEffect, 0)
+	for true {
+		select {
+		case e := <-c:
+			ret = append(ret, e)
+		default:
+			return ret
+		}
 	}
-	return ledEffect{}, nil
+	return ret
 }
 
 func effectRead(t *testing.T, c chan displayEffect) (displayEffect, error) {
@@ -126,7 +132,6 @@ func effectReadAll(c chan displayEffect) []displayEffect {
 		select {
 		case e := <-c:
 			ret = append(ret, e)
-			continue
 		default:
 			return ret
 		}

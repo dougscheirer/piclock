@@ -43,7 +43,7 @@ const (
 	msgMainButton
 	msgLongButton
 	msgDoubleButton
-	msgConfgError
+	msgConfigError
 )
 
 type almStateMsg struct {
@@ -90,7 +90,7 @@ func doubleButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
 }
 
 func configError(err bool) almStateMsg {
-	return almStateMsg{ID: msgConfgError, val: err}
+	return almStateMsg{ID: msgConfigError, val: err}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {
