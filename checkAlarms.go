@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"strings"
 	"time"
@@ -43,14 +42,10 @@ func GetOutboundIP() net.IP {
 	return localAddr.IP
 }
 
-func showLoginInfo(rt runtimeConfig) {
+func showLoginInfo(rt runtimeConfig, secret string) {
 	// show a secret code and our IP address
-	// TODO: remember this for more than an instant
-	s1 := rand.NewSource(rt.clock.Now().UnixNano())
-	r1 := rand.New(s1)
-	secret := r1.Intn(0xFFFF)
 	rt.comms.effects <- printEffect("sec", 3*time.Second)
-	rt.comms.effects <- printEffect(fmt.Sprintf("%04x", secret), 3*time.Second)
+	rt.comms.effects <- printEffect(secret, 3*time.Second)
 	rt.comms.effects <- printEffect("IP:", 3*time.Second)
 	parts := strings.Split(GetOutboundIP().String(), ".")
 	for i := range parts {
@@ -72,7 +67,7 @@ func runCheckAlarms(rt runtimeConfig) {
 	var curAlarm *alarm // the alarm we are watching
 	var nowAlarm *alarm // the alarm that is running now
 	var buttonPressActed bool = false
-	var configError bool = false
+	var cfgErr configError
 
 	for true {
 		// log.Printf("Read loop")
@@ -91,16 +86,17 @@ func runCheckAlarms(rt runtimeConfig) {
 					curAlarm = nil
 				}
 			case msgConfigError:
-				configError = stateMsg.val.(bool)
+				cfgErr = stateMsg.val.(configError)
 			case msgDoubleButton:
 				// show next alarm on the 0th one only
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed == true && info.duration == 0 {
 					// are we in a bad state?
-					if configError {
-						showLoginInfo(rt)
+					if cfgErr.err {
+						showLoginInfo(rt, cfgErr.secret)
 					} else {
 						showNextAlarm(rt, curAlarm)
+						showLoginInfo(rt, cfgErr.secret)
 					}
 				}
 			case msgLongButton:

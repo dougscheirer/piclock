@@ -42,4 +42,10 @@ type events interface {
 	getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error)
 	loadAlarms(rt runtimeConfig, loadID int, report bool)
 	downloadMusicFiles(settings configSettings, cE chan displayEffect)
+	generateSecret(rt runtimeConfig) string
+}
+
+type configService interface {
+	launch(handler *myHandler, addr string)
+	stop()
 }

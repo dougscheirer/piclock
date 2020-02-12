@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -156,10 +157,11 @@ func (ge *gcalEvents) downloadMusicFilesLater(settings configSettings, cE chan d
 
 func (ge *gcalEvents) loadAlarms(rt runtimeConfig, loadID int, report bool) {
 	// spin up another thread in real life
-	defer func() {
-		log.Println("returning from loadAlarms")
-	}()
-
-	// call the testable method
 	go loadAlarmsImpl(rt, loadID, report)
+}
+
+func (ge *gcalEvents) generateSecret(rt runtimeConfig) string {
+	s1 := rand.NewSource(rt.clock.Now().UnixNano())
+	r1 := rand.New(s1)
+	return fmt.Sprintf("%04x", r1.Intn(0xFFFF))
 }

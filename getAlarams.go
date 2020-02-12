@@ -89,8 +89,13 @@ func doubleButtonAlmMsg(pressed bool, d time.Duration) almStateMsg {
 	return almStateMsg{ID: msgDoubleButton, val: buttonInfo{pressed: pressed, duration: d}}
 }
 
-func configError(err bool) almStateMsg {
-	return almStateMsg{ID: msgConfigError, val: err}
+type configError struct {
+	secret string
+	err    bool
+}
+
+func configErrorMsg(err bool, secret string) almStateMsg {
+	return almStateMsg{ID: msgConfigError, val: configError{secret: secret, err: err}}
 }
 
 func writeAlarms(alarms []alarm, fname string) error {
@@ -249,11 +254,15 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 	// set error LED now, it should go out almost right away
 	comms.leds <- ledMessage(settings.GetInt(sLEDErr), modeBlink75, 0)
 
+	// make a new config secret
+	secret := rt.events.generateSecret(rt)
+
 	// TODO: handled alarms are no longer considered, need testing
 	alarms, err := getAlarmsFromService(rt)
 	if err != nil {
 		comms.effects <- alarmError(5 * time.Second)
-		comms.chkAlarms <- configError(true)
+		comms.chkAlarms <- configErrorMsg(true, secret)
+		comms.configSvc <- configSvcMsg{secret: secret}
 		log.Println(err.Error())
 		// try the backup
 		alarms, err = getAlarmsFromCache(rt)
@@ -266,7 +275,9 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 		}
 		return
 	}
-	comms.chkAlarms <- configError(false)
+	comms.chkAlarms <- configErrorMsg(false, secret)
+	comms.configSvc <- configSvcMsg{secret: secret}
+
 	comms.leds <- ledOff(settings.GetInt(sLEDErr))
 
 	msg := alarmsLoadedMsg(loadID, alarms, report)

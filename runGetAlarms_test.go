@@ -25,7 +25,7 @@ func TestCalendarLoadEvents(t *testing.T) {
 	// should be a non-error config msg and a loaded msg
 	assert.Equal(t, len(states), 2)
 	assert.Equal(t, states[0].ID, msgConfigError)
-	assert.Equal(t, states[0].val.(bool), false)
+	assert.Equal(t, states[0].val.(configError).err, false)
 
 	switch v := states[1].val.(type) {
 	case loadedPayload:
@@ -65,7 +65,8 @@ func TestCalendarLoadEventsFailed(t *testing.T) {
 	aA := almStateReadAll(comms.chkAlarms)
 	assert.Equal(t, len(aA), 1)
 	assert.Equal(t, aA[0].ID, msgConfigError)
-	assert.Equal(t, aA[0].val.(bool), true)
+	assert.Equal(t, aA[0].val.(configError).err, true)
+	assert.Equal(t, aA[0].val.(configError).secret, "0001")
 
 	// expect 1 led messages, one for turning on the error blink, none to turn it off
 	ledBlink, _ := ledRead(t, comms.leds)
@@ -92,7 +93,8 @@ func TestCalendarLoadEventsFailedThenOK(t *testing.T) {
 	aA := almStateReadAll(comms.chkAlarms)
 	assert.Equal(t, len(aA), 1)
 	assert.Equal(t, aA[0].ID, msgConfigError)
-	assert.Equal(t, aA[0].val.(bool), true)
+	assert.Equal(t, aA[0].val.(configError).err, true)
+	assert.Equal(t, aA[0].val.(configError).secret, "0001")
 
 	// expect 1 led messages, one for turning on the error blink, none to turn it off
 	ledBlink, _ := ledRead(t, comms.leds)
@@ -115,7 +117,8 @@ func TestCalendarLoadEventsFailedThenOK(t *testing.T) {
 	states := almStateReadAll(rt.comms.chkAlarms)
 	assert.Equal(t, len(states), 2)
 	assert.Equal(t, states[0].ID, msgConfigError)
-	assert.Equal(t, states[0].val.(bool), false)
+	assert.Equal(t, states[0].val.(configError).err, false)
+	assert.Equal(t, states[0].val.(configError).secret, "0002")
 
 	assert.Equal(t, states[1].ID, msgLoaded)
 	switch v := states[1].val.(type) {
@@ -155,7 +158,7 @@ func TestCalendarLoadOldEvents(t *testing.T) {
 	states := almStateReadAll(comms.chkAlarms)
 	assert.Equal(t, len(states), 2)
 	assert.Equal(t, states[0].ID, msgConfigError)
-	assert.Equal(t, states[0].val.(bool), false)
+	assert.Equal(t, states[0].val.(configError).err, false)
 
 	assert.Equal(t, states[1].ID, msgLoaded)
 	switch v := states[1].val.(type) {

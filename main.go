@@ -85,6 +85,7 @@ func main() {
 	go runGetAlarms(rt)
 	go runCheckAlarms(rt)
 	go runWatchButtons(rt)
+	go runConfigService(rt)
 
 	wg.Wait()
 }

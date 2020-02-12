@@ -18,17 +18,19 @@ type commChannels struct {
 	effects   chan displayEffect
 	getAlarms chan almStateMsg
 	leds      chan ledEffect
+	configSvc chan configSvcMsg
 }
 
 type runtimeConfig struct {
-	settings configSettings
-	comms    commChannels
-	clock    clockwork.Clock
-	sounds   sounds
-	buttons  buttons
-	display  display
-	led      led
-	events   events
+	settings      configSettings
+	comms         commChannels
+	clock         clockwork.Clock
+	sounds        sounds
+	buttons       buttons
+	display       display
+	led           led
+	events        events
+	configService configService
 }
 
 const dAlarmSleep time.Duration = 100 * time.Millisecond
@@ -152,6 +154,7 @@ func initCommChannels() commChannels {
 	effectChannel := make(chan displayEffect, 100)
 	loaderChannel := make(chan almStateMsg, 10)
 	leds := make(chan ledEffect, 100)
+	configSvc := make(chan configSvcMsg, 10)
 
 	return commChannels{
 		quit:      quit,
@@ -159,6 +162,7 @@ func initCommChannels() commChannels {
 		effects:   effectChannel,
 		getAlarms: loaderChannel,
 		leds:      leds,
+		configSvc: configSvc,
 	}
 }
 
@@ -196,28 +200,30 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 	}
 
 	return runtimeConfig{
-		settings: settings,
-		comms:    initCommChannels(),
-		clock:    clockwork.NewRealClock(),
-		sounds:   sounds,
-		buttons:  buttons,
-		display:  display,
-		led:      led,
-		events:   &gcalEvents{},
+		settings:      settings,
+		comms:         initCommChannels(),
+		clock:         clockwork.NewRealClock(),
+		sounds:        sounds,
+		buttons:       buttons,
+		display:       display,
+		led:           led,
+		events:        &gcalEvents{},
+		configService: &httpConfigService{},
 	}
 }
 
 func initTestRuntime(settings configSettings) runtimeConfig {
 	// use test modules for sounds/buttons/display/led/events interfaces
 	return runtimeConfig{
-		settings: settings,
-		comms:    initCommChannels(),
-		clock:    clockwork.NewFakeClockAt(time.Date(2020, 01, 26, 0, 0, 0, 0, time.UTC)),
-		sounds:   &noSounds{},
-		buttons:  &noButtons{},
-		display:  &logDisplay{},
-		led:      &logLed{},
-		events:   &testEvents{},
+		settings:      settings,
+		comms:         initCommChannels(),
+		clock:         clockwork.NewFakeClockAt(time.Date(2020, 01, 26, 0, 0, 0, 0, time.UTC)),
+		sounds:        &noSounds{},
+		buttons:       &noButtons{},
+		display:       &logDisplay{},
+		led:           &logLed{},
+		events:        &testEvents{},
+		configService: &testConfigService{},
 	}
 }
 

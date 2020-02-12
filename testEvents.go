@@ -15,6 +15,8 @@ type testEvents struct {
 	oldAlarms   int
 	errorCount  int
 	fetches     int
+	secret      string
+	secretCalls int
 }
 
 const infinite int = -2
@@ -88,4 +90,13 @@ func (te *testEvents) downloadMusicFiles(settings configSettings, display chan d
 func (te *testEvents) loadAlarms(rt runtimeConfig, loadID int, report bool) {
 	// do the thing in realtime for testing
 	loadAlarmsImpl(rt, loadID, report)
+}
+
+func (te *testEvents) generateSecret(rt runtimeConfig) string {
+	te.secretCalls++
+	if te.secret != "" {
+		return te.secret
+	} else {
+		return fmt.Sprintf("%04x", te.secretCalls)
+	}
 }

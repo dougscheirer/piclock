@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -385,6 +386,11 @@ func TestCheckAlarmsDoubleClick(t *testing.T) {
 	rt, clock, comms := testRuntime()
 	// events := rt.events.(*testEvents)
 
+	// send pretend like getAlarms ran
+	secret := rt.events.generateSecret(rt)
+	// send a config error and then a double click into checkAlarms
+	comms.chkAlarms <- configErrorMsg(false, secret)
+
 	go runCheckAlarms(rt)
 	// wait for a cycle to complete startup loop
 	clock.BlockUntil(1)
@@ -396,14 +402,24 @@ func TestCheckAlarmsDoubleClick(t *testing.T) {
 		comms.chkAlarms <- doubleButtonAlmMsg(true, time.Duration(cnt-1)*dAlarmSleep)
 	})
 
-	// should have sent effects
-	d, _ := effectRead(t, comms.effects)
-	assert.Equal(t, d.id, ePrint)
-	assert.Equal(t, d.val.(displayPrint).s, "none")
+	// should be a bunch of prints
+	dE := effectReadAll(comms.effects)
 
-	// just the one though
-	eA := effectReadAll(comms.effects)
-	assert.Equal(t, len(eA), 0)
+	// also look for the config output
+	compares := make([]string, 8)
+	compares[0] = "none"
+	compares[1] = "sec"
+	compares[2] = "0001"
+	compares[3] = "IP:"
+	for i, v := range strings.Split(GetOutboundIP().String(), ".") {
+		compares[4+i] = v
+	}
+
+	for i := range compares {
+		assert.Equal(t, ePrint, dE[i].id)
+		assert.Equal(t, compares[i], dE[i].val.(displayPrint).s)
+	}
+	assert.Equal(t, len(compares), len(dE))
 
 	testQuit(rt)
 }
@@ -435,7 +451,9 @@ func TestCheckAlarmsDoubleClickPending(t *testing.T) {
 		assert.Equal(t, de[i].id, ePrint)
 		assert.Equal(t, de[i].val.(displayPrint).s, compares[i])
 	}
+	assert.Equal(t, len(compares), len(de))
 }
+
 func TestCheckAlarmsReloadButtonAlarmsAtStart(t *testing.T) {
 	rt, clock, comms := testRuntime()
 	events := rt.events.(*testEvents)
@@ -555,21 +573,34 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 	testQuit(rt)
 }
 
-func TestCheckAlarmsErrorDoubleClick(t *testing.T) {
+func TestCheckAlarmsConfigError(t *testing.T) {
 	rt, clock, comms := testRuntime()
 
 	go runCheckAlarms(rt)
 
-	// send a msgConfigError into the events
-	comms.chkAlarms <- configError(true)
+	secret := rt.events.generateSecret(rt)
+	// send a config error and then a double click into checkAlarms
+	comms.chkAlarms <- configErrorMsg(true, secret)
+	comms.chkAlarms <- doubleButtonAlmMsg(true, 0)
+	comms.chkAlarms <- doubleButtonAlmMsg(false, 0)
 	// wait to process
 	testBlockDuration(clock, dAlarmSleep, 4*dAlarmSleep)
 
 	// should be a bunch of prints
 	dE := effectReadAll(comms.effects)
-	assert.Equal(t, len(dE), 1010)
-
 	// check for secret and IP address
+	compares := make([]string, 7)
+	compares[0] = "sec"
+	compares[1] = secret
+	compares[2] = "IP:"
+	for i, v := range strings.Split(GetOutboundIP().String(), ".") {
+		compares[3+i] = v
+	}
+
+	for i := range compares {
+		assert.Equal(t, ePrint, dE[i].id)
+		assert.Equal(t, compares[i], dE[i].val.(displayPrint).s)
+	}
 
 	testQuit(rt)
 }
