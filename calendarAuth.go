@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,7 +20,7 @@ type gcalEvents struct {
 
 // getClient uses a Context and Config to retrieve a Token
 // then generate a Client. It returns the generated Client.
-func getClient(ctx context.Context, config *oauth2.Config, prompt bool) *http.Client {
+func getClient(ctx context.Context, config *oauth2.Config, prompt bool) (*http.Client, error) {
 	cacheFile, err := tokenCacheFile()
 	if err != nil {
 		log.Printf("Unable to get path to cached credential file. %v", err)
@@ -31,7 +32,7 @@ func getClient(ctx context.Context, config *oauth2.Config, prompt bool) *http.Cl
 			saveToken(cacheFile, tok)
 		} else {
 			// run with -oauth to generate the token
-			return nil
+			return nil, err
 		}
 	} else {
 		if prompt != false {
@@ -39,7 +40,7 @@ func getClient(ctx context.Context, config *oauth2.Config, prompt bool) *http.Cl
 		}
 	}
 
-	return config.Client(ctx, tok)
+	return config.Client(ctx, tok), nil
 }
 
 // getTokenFromWeb uses Config to request a Token.
@@ -79,7 +80,8 @@ func tokenCacheFile() (string, error) {
 func tokenFromFile(file string) (*oauth2.Token, error) {
 	f, err := os.OpenFile(file, os.O_RDONLY, 0600)
 	if err != nil {
-		return nil, err
+		log.Printf("error opening credential file: %v", err)
+		return nil, errors.New("Could not use google calendar credentials, re-authenticate")
 	}
 	t := &oauth2.Token{}
 	err = json.NewDecoder(f).Decode(t)

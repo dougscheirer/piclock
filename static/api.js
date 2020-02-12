@@ -5,7 +5,7 @@ var initPage = function() {
 
   $.getJSON( "/api/status", function(data) {
     console.log(data)
-    $("#statusDiv")[0].textContent = data.response;
+    $("#statusDiv")[0].textContent = data.response + (!!data.error ? ": " + data.error : "");
   }, function(success) {
     console.log(success)
   })

@@ -78,12 +78,16 @@ func (ge *gcalEvents) getCalendarService(settings configSettings, prompt bool) (
 		log.Printf("Unable to parse client secret file to config: %v", err)
 		return nil, err
 	}
-	client := getClient(ctx, config, prompt)
-
-	srv, err := calendar.New(client)
+	client, err := getClient(ctx, config, prompt)
 	if err != nil {
 		log.Printf("Unable to retrieve calendar Client %v", err)
 		return nil, err
+	}
+
+	srv, err2 := calendar.New(client)
+	if err2 != nil {
+		log.Printf("Unable to retrieve calendar Client %v", err2)
+		return nil, err2
 	}
 
 	return srv, nil

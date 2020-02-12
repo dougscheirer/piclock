@@ -16,7 +16,7 @@ func init() {
 // TODO: figure this out
 type configResponse struct {
 	Response string  `json:"response"`
-	Error    error   `json:"error"`
+	Error    string  `json:"error"`
 	Alarms   []alarm `json:"alarms"`
 }
 
@@ -73,7 +73,7 @@ func (m *myHandler) getStatus() configResponse {
 	// run a getAlarmsFromService
 	alarms, err := getAlarmsFromService(m.rt)
 	if err != nil {
-		return configResponse{Response: "BAD", Error: err}
+		return configResponse{Response: "BAD", Error: err.Error()}
 	} else {
 		// return the alarms list too
 		return configResponse{Response: "OK", Alarms: alarms}

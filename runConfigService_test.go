@@ -32,7 +32,7 @@ func TestAPIStatusGood(t *testing.T) {
 
 	status := testHandler.handler.getStatus()
 	assert.Equal(t, status.Response, "OK")
-	assert.Equal(t, status.Error, nil)
+	assert.Equal(t, status.Error, "")
 	assert.Equal(t, len(status.Alarms), 5)
 
 	testQuit(rt)
@@ -51,7 +51,7 @@ func TestAPIStatusBad(t *testing.T) {
 
 	status := testHandler.handler.getStatus()
 	assert.Equal(t, status.Response, "BAD")
-	assert.Error(t, status.Error, "Bad fetch error")
+	assert.Equal(t, status.Error, "Bad fetch error")
 	assert.Equal(t, len(status.Alarms), 0)
 
 	testQuit(rt)
