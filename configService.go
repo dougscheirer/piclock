@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 func init() {
@@ -24,15 +22,15 @@ type configSvcMsg struct {
 	secret string
 }
 
-type myHandler struct {
+type apiHandler struct {
 	rt     runtimeConfig
 	secret string
 	user   string
 	realm  string
 }
 
-func NewHandler(rt runtimeConfig) myHandler {
-	return myHandler{
+func NewHandler(rt runtimeConfig) apiHandler {
+	return apiHandler{
 		rt:     rt,
 		secret: rt.clock.Now().String(),
 		user:   "piclock",
@@ -42,19 +40,19 @@ func NewHandler(rt runtimeConfig) myHandler {
 
 // BasicAuth binds to a object instance, and without accessors it
 // will bind the string values instead of references
-func (m *myHandler) getUser() string {
+func (m *apiHandler) getUser() string {
 	return m.user
 }
 
-func (m *myHandler) getSecret() string {
+func (m *apiHandler) getSecret() string {
 	return m.secret
 }
 
-func (m *myHandler) getRealm() string {
+func (m *apiHandler) getRealm() string {
 	return m.realm
 }
 
-func (m *myHandler) BasicAuth(next http.Handler) http.Handler {
+func (m *apiHandler) BasicAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, pass, ok := r.BasicAuth()
 		// log.Printf("cur: %s / %s, got: %s / %s", m.getUser(), m.getSecret(), user, pass)
@@ -69,7 +67,7 @@ func (m *myHandler) BasicAuth(next http.Handler) http.Handler {
 	})
 }
 
-func (m *myHandler) getStatus() configResponse {
+func (m *apiHandler) getStatus() configResponse {
 	// run a getAlarmsFromService
 	alarms, err := getAlarmsFromService(m.rt)
 	if err != nil {
@@ -83,27 +81,27 @@ func (m *myHandler) getStatus() configResponse {
 func writeAnswer(w http.ResponseWriter, cr configResponse) {
 	output, _ := json.Marshal(cr)
 	w.Write(output)
-	w.WriteHeader(200)
 }
 
-func (m *myHandler) apiHandler(w http.ResponseWriter, r *http.Request) {
-	// parse the command
-	log.Printf("%s", r.URL)
+func (m *apiHandler) apiSecret(w http.ResponseWriter, r *http.Request) {
+	m.apiError(w, r)
+}
 
-	vars := mux.Vars(r)
-	switch vars["cmd"] {
-	case "status":
-		writeAnswer(w, m.getStatus())
-		return
-	case "oauth":
-	}
+func (m *apiHandler) apiOauth(w http.ResponseWriter, r *http.Request) {
 
+}
+
+func (m *apiHandler) apiStatus(w http.ResponseWriter, r *http.Request) {
+	writeAnswer(w, m.getStatus())
+}
+
+func (m *apiHandler) apiError(w http.ResponseWriter, r *http.Request) {
 	// default is to return (?500))
 	w.WriteHeader(500)
 	w.Write([]byte("Error\n"))
 }
 
-func (m *myHandler) rootHandler(w http.ResponseWriter, r *http.Request) {
+func (m *apiHandler) rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/static/index.html", 301)
 }
 

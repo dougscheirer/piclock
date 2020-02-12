@@ -43,12 +43,15 @@ func getClient(ctx context.Context, config *oauth2.Config, prompt bool) (*http.C
 	return config.Client(ctx, tok), nil
 }
 
+func getAuthUrl(config *oauth2.Config) string {
+	return config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+}
+
 // getTokenFromWeb uses Config to request a Token.
 // It returns the retrieved Token.
 func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
+		"authorization code: \n%v\n", getAuthUrl(config))
 
 	var code string
 	if _, err := fmt.Scan(&code); err != nil {

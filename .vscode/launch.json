@@ -51,7 +51,7 @@
       "program": "${workspaceRoot}",
       "env": {},
       "args": ["-oauth", "-config","./piclock.vscode.conf"],
-      "buildFlags": ""
+      "buildFlags": "-tags=noaudio"
     }
   ]
 }

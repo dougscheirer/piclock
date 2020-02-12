@@ -1,11 +1,11 @@
 package main
 
 type testConfigService struct {
-	handler *myHandler
+	handler *apiHandler
 	addr    string
 }
 
-func (t *testConfigService) launch(handler *myHandler, addr string) {
+func (t *testConfigService) launch(handler *apiHandler, addr string) {
 	t.handler = handler
 	t.addr = addr
 }
