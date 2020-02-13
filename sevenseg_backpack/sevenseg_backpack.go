@@ -76,7 +76,7 @@ var digitValues = map[byte]byte{
 	'o': 0x5C,
 	'O': 0x3F,
 	'S': 0x6D,
-	'i': 0x04,
+	'i': 0x06,
 	'P': 0x73,
 }
 
@@ -111,7 +111,7 @@ var inverseDigitValues = map[byte]byte{
 	'o': 0x56,
 	'O': 0x3F,
 	'S': 0x6D,
-	'I': 0x04,
+	'I': 0x06,
 	'P': 0x73,
 }
 

@@ -44,12 +44,12 @@ func GetOutboundIP() net.IP {
 
 func showLoginInfo(rt runtimeConfig, secret string) {
 	// show a secret code and our IP address
-	rt.comms.effects <- printEffect("sec", 3*time.Second)
+	rt.comms.effects <- printEffect("sec ", 3*time.Second)
 	rt.comms.effects <- printEffect(secret, 3*time.Second)
-	rt.comms.effects <- printEffect("IP:", 3*time.Second)
+	rt.comms.effects <- printEffect("IP:  ", 3*time.Second)
 	parts := strings.Split(GetOutboundIP().String(), ".")
 	for i := range parts {
-		rt.comms.effects <- printEffect(parts[i], 3*time.Second)
+		rt.comms.effects <- printEffect(parts[i]+".", 3*time.Second)
 	}
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -408,15 +409,16 @@ func TestCheckAlarmsDoubleClick(t *testing.T) {
 	// also look for the config output
 	compares := make([]string, 8)
 	compares[0] = "none"
-	compares[1] = "sec"
+	compares[1] = "sec "
 	compares[2] = "0001"
-	compares[3] = "IP:"
+	compares[3] = "IP:  "
 	for i, v := range strings.Split(GetOutboundIP().String(), ".") {
-		compares[4+i] = v
+		compares[4+i] = v + "."
 	}
 
 	for i := range compares {
 		assert.Equal(t, ePrint, dE[i].id)
+		log.Printf("%d / %d", len(compares[i]), len(dE[i].val.(displayPrint).s))
 		assert.Equal(t, compares[i], dE[i].val.(displayPrint).s)
 	}
 	assert.Equal(t, len(compares), len(dE))
@@ -590,11 +592,11 @@ func TestCheckAlarmsConfigError(t *testing.T) {
 	dE := effectReadAll(comms.effects)
 	// check for secret and IP address
 	compares := make([]string, 7)
-	compares[0] = "sec"
+	compares[0] = "sec "
 	compares[1] = secret
-	compares[2] = "IP:"
+	compares[2] = "IP:  "
 	for i, v := range strings.Split(GetOutboundIP().String(), ".") {
-		compares[3+i] = v
+		compares[3+i] = v + "."
 	}
 
 	for i := range compares {
