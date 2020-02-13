@@ -184,7 +184,10 @@ func displayCountdown(rt runtimeConfig, alarm *alarm, dot bool) bool {
 		blinkRate = sevenseg_backpack.BLINK_2HZ
 	}
 	rt.display.SetBlinkRate(blinkRate)
-	rt.display.Print(s)
+	err := rt.display.Print(s)
+	if err != nil {
+		log.Printf("Error: %s\n", err.Error())
+	}
 	return true
 }
 
@@ -241,7 +244,11 @@ func stopAlarmEffect(stop chan bool) {
 
 func printDisplay(rt runtimeConfig, e displayPrint) {
 	log.Printf("Print: %s (%d)", e.s, e.d)
-	rt.display.Print(e.s)
+	err := rt.display.Print(e.s)
+	if err != nil {
+		log.Printf("Error: %s\n", err.Error())
+		return
+	}
 	rt.clock.Sleep(e.d)
 }
 
@@ -308,9 +315,13 @@ func runEffects(rt runtimeConfig) {
 				mode = modeCountdown
 				countdown, _ = toAlarm(e.val)
 			case eAlarmError:
-				rt.display.Print("Err")
-				d, _ := toDuration(e.val)
-				rt.clock.Sleep(d)
+				err := rt.display.Print("Err")
+				if err != nil {
+					log.Printf("Error: %s\n", err.Error())
+				} else {
+					d, _ := toDuration(e.val)
+					rt.clock.Sleep(d)
+				}
 			case eTerminate:
 				log.Println("terminate")
 				return
@@ -376,7 +387,10 @@ func runEffects(rt runtimeConfig) {
 			}
 		case modeAlarmError:
 			log.Printf("Error: %d\n", errorID)
-			rt.display.Print("Err")
+			err := rt.display.Print("Err")
+			if err != nil {
+				log.Printf("Error: %s\n", err.Error())
+			}
 		case modeOutput:
 			// do nothing
 		case modeAlarm:
@@ -390,10 +404,14 @@ func runEffects(rt runtimeConfig) {
 				rt.display.RefreshOn(true)
 				alarmSegment = (alarmSegment + 1) % 6
 			} else {
+				var err error
 				if (rt.clock.Now().Second())%2 == 0 {
-					rt.display.Print(almDisplay1)
+					err = rt.display.Print(almDisplay1)
 				} else {
-					rt.display.Print(almDisplay2)
+					err = rt.display.Print(almDisplay2)
+				}
+				if err != nil {
+					log.Printf("Error: %s\n", err.Error())
 				}
 			}
 		default:

@@ -62,31 +62,29 @@ var digitValues = map[byte]byte{
 	'9': 0x6F,
 	'A': 0x77,
 	'B': 0x7C,
-	'b': 0x7C,
 	'C': 0x39,
 	'c': 0x58,
 	'D': 0x5E,
-	'd': 0x5E,
-	'e': 0x79,
 	'E': 0x79,
 	'F': 0x71,
 	'R': 0x50,
-	'r': 0x50,
 	'H': 0x76,
 	'h': 0x74,
 	'l': 0x06,
 	'L': 0x38,
 	'n': 0x54,
-	'N': 0x54,
 	'o': 0x5C,
 	'O': 0x3F,
+	'S': 0x6D,
+	'i': 0x04,
+	'P': 0x73,
 }
 
 // TODO: support inverse
 var inverseDigitValues = map[byte]byte{
 	' ': 0x00,
 	'-': 0x40,
-	'_': 0x08, // TODO: TBD
+	'_': 0x08, // TODO: support these
 	'0': 0x3F,
 	'1': 0x30,
 	'2': 0x5B,
@@ -99,23 +97,22 @@ var inverseDigitValues = map[byte]byte{
 	'9': 0x7D,
 	'A': 0x7E,
 	'B': 0x67,
-	'b': 0x67,
 	'C': 0x0F,
 	'c': 0x43,
 	'D': 0x73,
-	'd': 0x73,
 	'E': 0x4F,
 	'F': 0x4E,
 	'R': 0x42,
-	'r': 0x42,
 	'H': 0x76,
 	'h': 0x66,
 	'l': 0x30,
 	'L': 0x70,
 	'n': 0x52,
-	'N': 0x52,
 	'o': 0x56,
 	'O': 0x3F,
+	'S': 0x6D,
+	'I': 0x04,
+	'P': 0x73,
 }
 
 // one address byte, plus 7-seg skips bytes for each display element
@@ -355,6 +352,14 @@ func (this *Sevenseg) SegmentOn(position byte, segment byte, on bool) error {
 	return this.refresh_display()
 }
 
+func altCase(char uint8) uint8 {
+	if char >= 'A' && char <= 'Z' {
+		return char + 'a' - 'A'
+	} else if char >= 'a' && char <= 'z' {
+		return char + 'A' - 'a'
+	}
+	return char
+}
 func (this *Sevenseg) getMask(char uint8, decimalOn bool) (byte, error) {
 	// TODO: inverse support
 	var val uint8
@@ -365,7 +370,15 @@ func (this *Sevenseg) getMask(char uint8, decimalOn bool) (byte, error) {
 		val, ok = inverseDigitValues[char]
 	}
 	if !ok {
-		return 0, errors.New(fmt.Sprintf("Bad value: %d", char))
+		// try alternate cases
+		if !this.inverted {
+			val, ok = digitValues[altCase(char)]
+		} else {
+			val, ok = inverseDigitValues[altCase(char)]
+		}
+	}
+	if !ok {
+		return 0, errors.New(fmt.Sprintf("Bad value: %s", string(char)))
 	}
 	if decimalOn {
 		val |= (1 << LED_DECIMAL)

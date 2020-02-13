@@ -26,7 +26,7 @@ type display interface {
 	Print(e string) error
 	SetBlinkRate(r uint8) error
 	RefreshOn(on bool) error
-	ClearDisplay() error
+	ClearDisplay()
 	SegmentOn(pos byte, seg byte, on bool) error
 }
 

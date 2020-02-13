@@ -35,6 +35,7 @@ func TestClockMode(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 4*time.Minute)
 
 	assert.Equal(t, ld.curDisplay, " 9:19")
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
@@ -64,6 +65,7 @@ func TestClockModeButton(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 1)
 	// should be time with a dot
 	assert.Equal(t, ld.curDisplay, " 9:15")
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
@@ -108,6 +110,7 @@ func TestClockModeCountdown(t *testing.T) {
 	s := rt.sounds.(*noSounds)
 	assert.Equal(t, s.playMP3Cnt, 0)
 	assert.Equal(t, s.playItCnt, 0)
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
@@ -129,6 +132,7 @@ func TestClockModeAlarmError(t *testing.T) {
 	// now wait
 	testBlockDuration(clock, dEffectSleep, 3*time.Second)
 	assert.Equal(t, ld.curDisplay, " 9:15")
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
@@ -150,6 +154,7 @@ func TestClockModePrint(t *testing.T) {
 	// now wait
 	testBlockDuration(clock, dEffectSleep, time.Second+dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
@@ -197,6 +202,7 @@ func TestClockModeAlarmOn(t *testing.T) {
 	// now wait
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
@@ -262,6 +268,7 @@ func TestClockModeAlarmOver(t *testing.T) {
 	// now wait
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
@@ -331,6 +338,9 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 	// wait for it to clear to the time
 	testBlockDuration(clock, dEffectSleep, 2*time.Second+dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:17")
+	assert.Equal(t, len(ld.auditErrors), 0)
+
+	testQuit(rt)
 }
 
 func TestClockModeDoubleClick(t *testing.T) {
@@ -357,7 +367,22 @@ func TestClockModeDoubleClick(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	// should be time with a dot
 	assert.Equal(t, ld.curDisplay, " 0:00")
+	assert.Equal(t, len(ld.auditErrors), 0)
 
 	// done
 	testQuit(rt)
+}
+
+func TestBadPrint(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	// print something with a character that is impossible
+	comms.effects <- printEffect("pizz", 0)
+
+	go runEffects(rt)
+
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+
+	assert.Equal(t, len(ld.auditErrors), 1)
 }

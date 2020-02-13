@@ -3,18 +3,21 @@ package main
 import (
 	"fmt"
 	"log"
+	"piclock/sevenseg_backpack"
 )
 
 type logDisplay struct {
-	i2cBus     int
-	curDisplay string
-	debugDump  bool
-	brightness uint8
-	displayOn  bool
-	blinkRate  uint8
-	refreshOn  bool
-	segments   [8][8]bool
-	audit      []string
+	i2cBus      int
+	curDisplay  string
+	debugDump   bool
+	brightness  uint8
+	displayOn   bool
+	blinkRate   uint8
+	refreshOn   bool
+	segments    [8][8]bool
+	audit       []string
+	auditErrors []error
+	ssb         *sevenseg_backpack.Sevenseg
 }
 
 func (ld *logDisplay) OpenDisplay(settings configSettings) error {
@@ -26,20 +29,30 @@ func (ld *logDisplay) OpenDisplay(settings configSettings) error {
 	ld.blinkRate = 0
 	ld.refreshOn = false
 	ld.audit = []string{}
+	ld.auditErrors = []error{}
+	// open the display in simulated mode
+	ld.ssb, _ = sevenseg_backpack.Open(0, 0, true)
+
 	return nil
 }
 
 func (ld *logDisplay) DebugDump(on bool) {
 	ld.debugDump = on
+	ld.ssb.DebugDump(on)
 }
 
 func (ld *logDisplay) SetBrightness(b uint8) error {
 	ld.brightness = b
-	return nil
+	err := ld.ssb.SetBrightness(b)
+	if err != nil {
+		ld.auditErrors = append(ld.auditErrors, err)
+	}
+	return err
 }
 
 func (ld *logDisplay) DisplayOn(on bool) {
 	ld.displayOn = on
+	ld.ssb.DisplayOn(on)
 }
 
 func (ld *logDisplay) Print(e string) error {
@@ -48,22 +61,34 @@ func (ld *logDisplay) Print(e string) error {
 		ld.audit = append(ld.audit, e)
 	}
 	ld.curDisplay = e
-	return nil
+	err := ld.ssb.Print(e)
+	if err != nil {
+		ld.auditErrors = append(ld.auditErrors, err)
+	}
+	return err
 }
 
 func (ld *logDisplay) SetBlinkRate(r uint8) error {
 	ld.blinkRate = r
-	return nil
+	err := ld.ssb.SetBlinkRate(r)
+	if err != nil {
+		ld.auditErrors = append(ld.auditErrors, err)
+	}
+	return err
 }
 
 func (ld *logDisplay) RefreshOn(on bool) error {
 	ld.refreshOn = on
-	return nil
+	err := ld.ssb.RefreshOn(on)
+	if err != nil {
+		ld.auditErrors = append(ld.auditErrors, err)
+	}
+	return err
 }
 
-func (ld *logDisplay) ClearDisplay() error {
+func (ld *logDisplay) ClearDisplay() {
 	ld.curDisplay = ""
-	return nil
+	ld.ssb.ClearDisplay()
 }
 
 func (ld *logDisplay) SegmentOn(pos byte, seg byte, on bool) error {
@@ -72,5 +97,9 @@ func (ld *logDisplay) SegmentOn(pos byte, seg byte, on bool) error {
 	// debug output?
 	log.Printf("%d/%d set to %v\n", pos, seg, on)
 	ld.audit = append(ld.audit, fmt.Sprintf("seg %d/%d %v", pos, seg, on))
-	return nil
+	err := ld.ssb.SegmentOn(pos, seg, on)
+	if err != nil {
+		ld.auditErrors = append(ld.auditErrors, err)
+	}
+	return err
 }

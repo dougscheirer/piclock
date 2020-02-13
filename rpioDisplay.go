@@ -39,8 +39,8 @@ func (ss *rpioDisplay) RefreshOn(on bool) error {
 	return ss.ssb.RefreshOn(on)
 }
 
-func (ss *rpioDisplay) ClearDisplay() error {
-	return ss.ClearDisplay()
+func (ss *rpioDisplay) ClearDisplay() {
+	ss.ClearDisplay()
 }
 
 func (ss *rpioDisplay) SegmentOn(pos byte, seg byte, on bool) error {

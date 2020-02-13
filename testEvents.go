@@ -96,7 +96,6 @@ func (te *testEvents) generateSecret(rt runtimeConfig) string {
 	te.secretCalls++
 	if te.secret != "" {
 		return te.secret
-	} else {
-		return fmt.Sprintf("%04x", te.secretCalls)
 	}
+	return fmt.Sprintf("%04x", te.secretCalls)
 }
