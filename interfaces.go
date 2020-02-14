@@ -24,6 +24,7 @@ type display interface {
 	SetBrightness(b uint8) error
 	DisplayOn(on bool)
 	Print(e string) error
+	PrintOffset(e string, offset int) (string, error)
 	SetBlinkRate(r uint8) error
 	RefreshOn(on bool) error
 	ClearDisplay()

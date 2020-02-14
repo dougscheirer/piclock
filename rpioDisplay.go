@@ -31,6 +31,10 @@ func (ss *rpioDisplay) Print(e string) error {
 	return ss.ssb.Print(e)
 }
 
+func (ss *rpioDisplay) PrintOffset(e string, offset int) (string, error) {
+	return ss.ssb.PrintOffset(e, offset)
+}
+
 func (ss *rpioDisplay) SetBlinkRate(r uint8) error {
 	return ss.ssb.SetBlinkRate(r)
 }

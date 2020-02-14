@@ -361,6 +361,11 @@ func altCase(char uint8) uint8 {
 	return char
 }
 func (this *Sevenseg) getMask(char uint8, decimalOn bool) (byte, error) {
+	if char == '.' {
+		// pretend it's a space
+		char = ' '
+	}
+
 	// TODO: inverse support
 	var val uint8
 	var ok bool
@@ -376,9 +381,9 @@ func (this *Sevenseg) getMask(char uint8, decimalOn bool) (byte, error) {
 		} else {
 			val, ok = inverseDigitValues[altCase(char)]
 		}
-	}
-	if !ok {
-		return 0, errors.New(fmt.Sprintf("Bad value: %s", string(char)))
+		if !ok {
+			return 0, errors.New(fmt.Sprintf("Bad value: %s", string(char)))
+		}
 	}
 	if decimalOn {
 		val |= (1 << LED_DECIMAL)
@@ -465,6 +470,43 @@ func (this *Sevenseg) PrintColon(msg string) error {
 	return this.refresh_display()
 }
 
+// Given a string and a start point, print as much as you can (left -> right)
+func (this *Sevenseg) PrintOffset(msg string, offset int) (string, error) {
+	// TODO: adjust for inverse using displayPos and direction
+	display := getClearDisplay()
+	var displayPos = 0
+	var inc = +1
+	var bound = 4
+	if this.inverted {
+		displayPos = 0
+		inc = -1
+		bound = -1
+	}
+	var i int
+	for i = offset; i < len(msg) && displayPos != bound; i++ {
+		// map msg[i] to a character
+		target := msg[i]
+		dotOn := false
+		if target == '.' {
+			dotOn = true
+			target = ' '
+		} else if i+1 < len(msg) && msg[i+1] == '.' {
+			dotOn = true
+			i++
+		}
+		// is it in our table?
+		mask, err := this.getMask(target, dotOn)
+		if err != nil {
+			return "", err
+		}
+		display[getDisplayPos(byte(displayPos))] = mask
+		displayPos += inc
+	}
+	// set the display
+	this.display = display
+	return msg[offset:i], this.refresh_display()
+}
+
 func (this *Sevenseg) Print(msg string) error {
 	if strings.Contains(msg, ":") {
 		return this.PrintColon(msg)
@@ -484,13 +526,26 @@ func (this *Sevenseg) Print(msg string) error {
 	var i = len(msg) - 1
 	for ; i >= 0 && displayPos != bound; i-- {
 		// map msg[i] to a character or dot
+		target := msg[i]
 		dotOn := false
 		if msg[i] == '.' {
 			dotOn = true
+			// if the char before this is also a '.', don't skip
+			// assume that there is a space between them
 			i--
+			if i >= 0 {
+				if msg[i] == '.' {
+					target = ' '
+				} else {
+					target = msg[i]
+				}
+			} else {
+				target = ' '
+				i = 0
+			}
 		}
 		// is it in our table?
-		mask, err := this.getMask(msg[i], dotOn)
+		mask, err := this.getMask(target, dotOn)
 		if err != nil {
 			return err
 		}
@@ -499,47 +554,6 @@ func (this *Sevenseg) Print(msg string) error {
 	}
 	// did we get it all?
 	if i != -1 {
-		return errors.New("Too many characters: " + msg)
-	}
-	// set the display
-	this.display = display
-	return this.refresh_display()
-}
-
-func (this *Sevenseg) PrintOffset(msg string, position int) error {
-	if strings.Contains(msg, ":") {
-		return this.PrintColon(msg)
-	}
-	// string can only contain chars in our map and decimals
-	// assume it's left justified (forward walk) with an offset
-	display := getClearDisplay()
-	var displayPos = position
-	var inc = +1
-	var bound = 4
-	if this.inverted {
-		displayPos = 3 - position
-		inc = -1
-		bound = -1
-	}
-
-	var i = 0
-	for ; i < len(msg) && displayPos != bound; i++ {
-		// map msg[i] to a character or dot
-		// with a dot?
-		dotOn := false
-		if i < len(msg)-1 && msg[i+1] == '.' {
-			dotOn = true
-		}
-		// is it in our table?
-		mask, err := this.getMask(msg[i], dotOn)
-		if err != nil {
-			return err
-		}
-		display[getDisplayPos(byte(displayPos))] = mask
-		displayPos += inc
-	}
-	// did we get it all?
-	if i != len(msg) {
 		return errors.New("Too many characters: " + msg)
 	}
 	// set the display

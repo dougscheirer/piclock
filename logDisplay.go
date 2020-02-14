@@ -68,6 +68,19 @@ func (ld *logDisplay) Print(e string) error {
 	return err
 }
 
+func (ld *logDisplay) PrintOffset(e string, offset int) (string, error) {
+	if e != ld.curDisplay {
+		log.Printf("%s / %d", e, offset)
+	}
+	cur, err := ld.ssb.PrintOffset(e, offset)
+	ld.curDisplay = cur
+	ld.audit = append(ld.audit, cur)
+	if err != nil {
+		ld.auditErrors = append(ld.auditErrors, err)
+	}
+	return cur, err
+}
+
 func (ld *logDisplay) SetBlinkRate(r uint8) error {
 	ld.blinkRate = r
 	err := ld.ssb.SetBlinkRate(r)
