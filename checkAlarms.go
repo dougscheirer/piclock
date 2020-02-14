@@ -44,7 +44,7 @@ func GetOutboundIP() net.IP {
 
 func showLoginInfo(rt runtimeConfig, secret string) {
 	// show a secret code and our IP address
-	rt.comms.effects <- printEffect("sec ", 3*time.Second)
+	rt.comms.effects <- printRollingEffect("secret", 500*time.Millisecond)
 	rt.comms.effects <- printEffect(secret, 3*time.Second)
 	rt.comms.effects <- printEffect("IP:  ", 3*time.Second)
 	parts := strings.Split(GetOutboundIP().String(), ".")
@@ -68,8 +68,16 @@ func runCheckAlarms(rt runtimeConfig) {
 	var nowAlarm *alarm // the alarm that is running now
 	var buttonPressActed bool = false
 	var cfgErr configError
+	var noTime time.Time
+	var cancelMode time.Time
 
 	for true {
+		// ignore a cancel request?
+		if cancelMode != noTime && rt.clock.Now().Sub(cancelMode) >= 5*time.Second {
+			cancelMode = noTime // ignore it, show the next alarm
+			showNextAlarm(rt, curAlarm)
+		}
+
 		// log.Printf("Read loop")
 		// try reading from our channel
 		select {
@@ -88,15 +96,22 @@ func runCheckAlarms(rt runtimeConfig) {
 			case msgConfigError:
 				cfgErr = stateMsg.val.(configError)
 			case msgDoubleButton:
-				// show next alarm on the 0th one only
-				info := stateMsg.val.(buttonInfo)
-				if info.pressed == true && info.duration == 0 {
-					// are we in a bad state?
-					if cfgErr.err {
-						showLoginInfo(rt, cfgErr.secret)
-					} else {
-						showNextAlarm(rt, curAlarm)
-						showLoginInfo(rt, cfgErr.secret)
+				// if there is a pending alarm ask to cancel
+				if curAlarm != nil {
+					comms.effects <- printRollingEffect("cancel", 500*time.Millisecond)
+					comms.effects <- printEffect("Y : n", 5*time.Second)
+					cancelMode = rt.clock.Now()
+				} else {
+					// show next alarm on the 0th one only
+					info := stateMsg.val.(buttonInfo)
+					if info.pressed == true && info.duration == 0 {
+						// are we in a bad state?
+						if cfgErr.err {
+							showLoginInfo(rt, cfgErr.secret)
+						} else {
+							showNextAlarm(rt, curAlarm)
+							showLoginInfo(rt, cfgErr.secret)
+						}
 					}
 				}
 			case msgLongButton:
@@ -109,6 +124,12 @@ func runCheckAlarms(rt runtimeConfig) {
 				// TODO: cancel on the 0th one only
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed {
+					if cancelMode != noTime {
+						comms.effects <- printRollingEffect("cancelled", 500*time.Millisecond)
+						curAlarm.started = true
+						nowAlarm = nil
+						cancelMode = noTime
+					}
 					if buttonPressActed {
 						log.Println("Ignore button hold")
 					} else {
