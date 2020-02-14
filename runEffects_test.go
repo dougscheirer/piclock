@@ -405,3 +405,21 @@ func TestPrintRolling(t *testing.T) {
 
 	assert.Equal(t, len(ld.auditErrors), 0)
 }
+
+func TestPrintRolling2(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	longString := "build"
+	comms.effects <- printRollingEffect(longString, 100*time.Millisecond) // the duration is the time between each roll
+
+	go runEffects(rt)
+
+	testBlockDuration(clock, 100*time.Millisecond, 100*time.Millisecond*time.Duration(len(longString)+5)) // len(string) + blanks on both ends
+
+	assert.Equal(t, len(ld.auditErrors), 0)
+
+	assert.Equal(t, len(ld.audit), len(longString)+5)
+	assert.Equal(t, ld.audit[0], "    ")
+	assert.Equal(t, ld.audit[5], "uild")
+}

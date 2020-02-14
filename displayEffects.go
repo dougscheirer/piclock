@@ -107,7 +107,7 @@ func showLoader(effects chan displayEffect) {
 		return
 	}
 
-	effects <- printEffect("bLd.", 1500*time.Millisecond)
+	effects <- printRollingEffect("build", 250*time.Millisecond)
 	effects <- printEffect("----", 500*time.Millisecond)
 	effects <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
 	effects <- printEffect("----", 500*time.Millisecond)
