@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"piclock/i2c"
 	"strings"
+
+	"dscheirer.com/piclock/i2c"
 )
 
 // commands we support

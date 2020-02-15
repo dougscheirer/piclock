@@ -1,9 +1,10 @@
 package main
 
 import (
-	"piclock/sevenseg_backpack"
 	"testing"
 	"time"
+
+	"dscheirer.com/piclock/sevenseg_backpack"
 
 	"gotest.tools/assert"
 )

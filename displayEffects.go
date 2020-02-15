@@ -7,8 +7,9 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"piclock/sevenseg_backpack"
 	"time"
+
+	"dscheirer.com/piclock/sevenseg_backpack"
 )
 
 const almDisplay1 string = "_-_-"
@@ -47,7 +48,6 @@ const (
 	eAlarmError
 	eTerminate
 	ePrint
-	ePrintRolling
 	eAlarmOn
 	eAlarmOff
 	eCountdown
@@ -95,10 +95,6 @@ func printEffect(s string, d time.Duration) displayEffect {
 	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d}}
 }
 
-func printRollingEffect(s string, d time.Duration) displayEffect {
-	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d}}
-}
-
 func showLoader(effects chan displayEffect) {
 	info, err := os.Stat(os.Args[0])
 	if err != nil {
@@ -107,7 +103,7 @@ func showLoader(effects chan displayEffect) {
 		return
 	}
 
-	effects <- printRollingEffect("build", 250*time.Millisecond)
+	effects <- printEffect("bLd.", 1500*time.Millisecond)
 	effects <- printEffect("----", 500*time.Millisecond)
 	effects <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
 	effects <- printEffect("----", 500*time.Millisecond)
@@ -189,10 +185,7 @@ func displayCountdown(rt runtimeConfig, alarm *alarm, dot bool) bool {
 		blinkRate = sevenseg_backpack.BLINK_2HZ
 	}
 	rt.display.SetBlinkRate(blinkRate)
-	err := rt.display.Print(s)
-	if err != nil {
-		log.Printf("Error: %s\n", err.Error())
-	}
+	rt.display.Print(s)
 	return true
 }
 
@@ -249,27 +242,8 @@ func stopAlarmEffect(stop chan bool) {
 
 func printDisplay(rt runtimeConfig, e displayPrint) {
 	log.Printf("Print: %s (%d)", e.s, e.d)
-	err := rt.display.Print(e.s)
-	if err != nil {
-		log.Printf("Error: %s\n", err.Error())
-		return
-	}
+	rt.display.Print(e.s)
 	rt.clock.Sleep(e.d)
-}
-
-func printRolling(rt runtimeConfig, e displayPrint) {
-	log.Printf("Rolling print: %s (%d)", e.s, e.d)
-	// pre/postpend 4/8 spaces, then rotate trhough the string
-	// with e.d as the duration on each
-	toprint := "    " + e.s + "    "
-	for i := 0; i <= len(toprint)-4; i++ {
-		_, err := rt.display.PrintOffset(toprint, i)
-		if err != nil {
-			log.Printf("Error: %s\n", err.Error())
-			return
-		}
-		rt.clock.Sleep(e.d)
-	}
 }
 
 func runEffects(rt runtimeConfig) {
@@ -335,26 +309,17 @@ func runEffects(rt runtimeConfig) {
 				mode = modeCountdown
 				countdown, _ = toAlarm(e.val)
 			case eAlarmError:
-				err := rt.display.Print("Err")
-				if err != nil {
-					log.Printf("Error: %s\n", err.Error())
-				} else {
-					d, _ := toDuration(e.val)
-					rt.clock.Sleep(d)
-				}
+				rt.display.Print("Err")
+				d, _ := toDuration(e.val)
+				rt.clock.Sleep(d)
 			case eTerminate:
 				log.Println("terminate")
 				return
 			case ePrint:
 				v, _ := toPrint(e.val)
 				// queue it for later
-				printQueue.PushBack(e)
+				printQueue.PushBack(v)
 				log.Printf("Queued print: %s (%d)", v.s, v.d)
-			case ePrintRolling:
-				v, _ := toPrint(e.val)
-				// queue it for later
-				printQueue.PushBack(e)
-				log.Printf("Queued rolling print: %s (%d)", v.s, v.d)
 			case eAlarmOn:
 				mode = modeAlarm
 				alm, _ := toAlarm(e.val)
@@ -399,15 +364,9 @@ func runEffects(rt runtimeConfig) {
 		switch mode {
 		case modeClock:
 			if printQueue.Len() > 0 {
-				log.Printf("Print from queue (%d)", printQueue.Len())
 				e := printQueue.Front()
-				v := e.Value.(displayEffect)
-				switch v.id {
-				case ePrint:
-					printDisplay(rt, v.val.(displayPrint))
-				case ePrintRolling:
-					printRolling(rt, v.val.(displayPrint))
-				}
+				log.Printf("Print from queue (%d)", printQueue.Len())
+				printDisplay(rt, *e.Value.(*displayPrint))
 				printQueue.Remove(e)
 			} else {
 				displayClock(rt, settings.GetBool(sBlink), buttonDot)
@@ -418,10 +377,7 @@ func runEffects(rt runtimeConfig) {
 			}
 		case modeAlarmError:
 			log.Printf("Error: %d\n", errorID)
-			err := rt.display.Print("Err")
-			if err != nil {
-				log.Printf("Error: %s\n", err.Error())
-			}
+			rt.display.Print("Err")
 		case modeOutput:
 			// do nothing
 		case modeAlarm:
@@ -435,14 +391,10 @@ func runEffects(rt runtimeConfig) {
 				rt.display.RefreshOn(true)
 				alarmSegment = (alarmSegment + 1) % 6
 			} else {
-				var err error
 				if (rt.clock.Now().Second())%2 == 0 {
-					err = rt.display.Print(almDisplay1)
+					rt.display.Print(almDisplay1)
 				} else {
-					err = rt.display.Print(almDisplay2)
-				}
-				if err != nil {
-					log.Printf("Error: %s\n", err.Error())
+					rt.display.Print(almDisplay2)
 				}
 			}
 		default:

@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"piclock/sevenseg_backpack"
+
+	"dscheirer.com/piclock/sevenseg_backpack"
 )
 
 type logDisplay struct {

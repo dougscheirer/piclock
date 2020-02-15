@@ -3,55 +3,73 @@ package sevenseg_backpack
 import (
 	"fmt"
 	"log"
-	"piclock/sevenseg_backpack"
-	"rt"
+	"runtime"
+	"sort"
+	"testing"
 	"time"
+
+	"gotest.tools/assert"
 )
 
-func main2() {
+func isSimulated() bool {
 	simulated := true
-	if rt.GOARCH == "arm" {
+	if runtime.GOARCH == "arm" {
 		simulated = false
 	}
+	return simulated
+}
 
-	display, err := sevenseg_backpack.Open(0x70, 0, simulated) // set to false when on a PI
+func setup(t *testing.T) *Sevenseg {
+	simulated := isSimulated()
+	display, err := Open(0x70, 0, simulated) // set to false when on a PI
 	display.DebugDump(simulated)
 
 	if err != nil {
 		log.Printf("Failed to open: %s\n", err.Error())
+		assert.Assert(t, false)
+	}
+
+	return display
+}
+
+func sleeper(d time.Duration) {
+	if isSimulated() {
 		return
 	}
 
-	runTests(display, false)
-	runTests(display, true)
+	time.Sleep(d)
 }
 
-func runTests(display *sevenseg_backpack.Sevenseg, inverted bool) {
+func TestBasicDisplay(t *testing.T) {
+	runBasicDisplayImpl(t, true)
+	runBasicDisplayImpl(t, false)
+}
+
+func runBasicDisplayImpl(t *testing.T, inverted bool) {
+	display := setup(t)
+
 	display.ClearDisplay()
 	display.SetInverted(inverted)
 
-	knownChars := []byte{' ', '-', '_', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-		'A', 'B', 'C', 'c', 'D', 'd', 'E', 'F', 'R', 'r', 'H', 'h', 'L', 'l', 'X'}
-
 	// init
 	display.Print("8.8.:8.8.")
-	time.Sleep(2 * time.Second)
+	sleeper(2 * time.Second)
 	// apply brightness levels
 	for i := 0; i < 16; i++ {
 		display.SetBrightness(uint8(i))
-		time.Sleep(450 * time.Millisecond)
+		sleeper(450 * time.Millisecond)
 	}
 	// try some blink rates
 	for i := 1; i < 4; i++ {
 		display.SetBlinkRate(uint8(i))
-		time.Sleep(5000 * time.Millisecond)
+		sleeper(5000 * time.Millisecond)
 	}
 	// no blink please
 	display.SetBlinkRate(0)
 	// ramp down brightness
 	for i := 15; i >= 0; i-- {
 		display.SetBrightness(uint8(i))
-		time.Sleep(450 * time.Millisecond)
+		sleeper(450 * time.Millisecond)
 	}
 
 	// mid-bright please
@@ -64,46 +82,66 @@ func runTests(display *sevenseg_backpack.Sevenseg, inverted bool) {
 			on = false
 		}
 		display.DisplayOn(on)
-		time.Sleep(250 * time.Millisecond)
+		sleeper(250 * time.Millisecond)
 	}
 
 	display.DisplayOn(true)
+}
+
+func TestCharOutput(t *testing.T) {
+	runTestCharOutput(t, false)
+	runTestCharOutput(t, true)
+}
+
+func runTestCharOutput(t *testing.T, inverted bool) {
+	display := setup(t)
+
+	var knownChars map[byte]byte = digitValues
+	if inverted {
+		knownChars = inverseDigitValues
+	}
 
 	// run the print offset tests
-	for i := 0; i < len(knownChars); i++ {
-		log.Printf("print '%c'", knownChars[i])
-		display.PrintOffset(fmt.Sprintf("%c", knownChars[i]), i%4)
-		time.Sleep(450 * time.Millisecond)
+	// get all the keys and sort them
+	keys := []int{}
+	for k := range knownChars {
+		keys = append(keys, int(k))
 	}
-	// now in reverse
-	for i := len(knownChars) - 1; i >= 0; i-- {
-		log.Printf("print '%c'", knownChars[i])
-		display.PrintOffset(fmt.Sprintf("%c", knownChars[i]), i%4)
-		time.Sleep(450 * time.Millisecond)
+	sort.Ints(keys)
+
+	i := 0
+	for _, v := range keys {
+		log.Printf("print '%c'", v)
+		display.PrintOffset(fmt.Sprintf("%c", v), i%4)
+		sleeper(450 * time.Millisecond)
+		i++
 	}
 
 	// print all the things we know
-	for i := 0; i < len(knownChars); i++ {
-		c := knownChars[i]
-		s := fmt.Sprintf("%c.%c.:%c.%c.", c, c, c, c)
+	for _, v := range keys {
+		s := fmt.Sprintf("%c.%c.:%c.%c.", v, v, v, v)
 		log.Println(s)
 		display.Print(s)
-		time.Sleep(450 * time.Millisecond)
-	}
-	for i := 999; i >= -999; i-- {
-		display.Print(fmt.Sprintf("%d", i))
-		time.Sleep(25 * time.Millisecond)
+		sleeper(450 * time.Millisecond)
 	}
 
+	for i := 999; i >= -999; i-- {
+		display.Print(fmt.Sprintf("%d", i))
+		sleeper(25 * time.Millisecond)
+	}
+}
+
+func TestSegments(t *testing.T) {
+	display := setup(t)
 	segmentOrder := []byte{
-		sevenseg_backpack.LED_TOP,
-		sevenseg_backpack.LED_TOPR,
-		sevenseg_backpack.LED_BOTR,
-		sevenseg_backpack.LED_BOT,
-		sevenseg_backpack.LED_BOTL,
-		sevenseg_backpack.LED_TOPL,
-		sevenseg_backpack.LED_MID,
-		sevenseg_backpack.LED_DECIMAL}
+		LED_TOP,
+		LED_TOPR,
+		LED_BOTR,
+		LED_BOT,
+		LED_BOTL,
+		LED_TOPL,
+		LED_MID,
+		LED_DECIMAL}
 
 	for j := 0; j < 100; j++ {
 		for i := 0; i < len(segmentOrder); i++ {
