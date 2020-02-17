@@ -48,6 +48,7 @@ const (
 	eAlarmError
 	eTerminate
 	ePrint
+	ePrintRolling
 	eAlarmOn
 	eAlarmOff
 	eCountdown
@@ -93,6 +94,10 @@ func toggleDebugDump(on bool) displayEffect {
 
 func printEffect(s string, d time.Duration) displayEffect {
 	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d}}
+}
+
+func printRollingEffect(s string, d time.Duration) displayEffect {
+	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d}}
 }
 
 func showLoader(effects chan displayEffect) {
@@ -246,6 +251,21 @@ func printDisplay(rt runtimeConfig, e displayPrint) {
 	rt.clock.Sleep(e.d)
 }
 
+func printRolling(rt runtimeConfig, e displayPrint) {
+	log.Printf("Rolling print: %s (%d)", e.s, e.d)
+	// pre/postpend 4/8 spaces, then rotate trhough the string
+	// with e.d as the duration on each
+	toprint := "    " + e.s + "    "
+	for i := 0; i <= len(toprint)-4; i++ {
+		_, err := rt.display.PrintOffset(toprint, i)
+		if err != nil {
+			log.Printf("Error: %s\n", err.Error())
+			return
+		}
+		rt.clock.Sleep(e.d)
+	}
+}
+
 func runEffects(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
@@ -315,10 +335,15 @@ func runEffects(rt runtimeConfig) {
 			case eTerminate:
 				log.Println("terminate")
 				return
+			case ePrintRolling:
+				v, _ := toPrint(e.val)
+				// queue it for later
+				printQueue.PushBack(e)
+				log.Printf("Queued rolling print: %s (%d)", v.s, v.d)
 			case ePrint:
 				v, _ := toPrint(e.val)
 				// queue it for later
-				printQueue.PushBack(v)
+				printQueue.PushBack(e)
 				log.Printf("Queued print: %s (%d)", v.s, v.d)
 			case eAlarmOn:
 				mode = modeAlarm
@@ -364,9 +389,15 @@ func runEffects(rt runtimeConfig) {
 		switch mode {
 		case modeClock:
 			if printQueue.Len() > 0 {
-				e := printQueue.Front()
 				log.Printf("Print from queue (%d)", printQueue.Len())
-				printDisplay(rt, *e.Value.(*displayPrint))
+				e := printQueue.Front()
+				v := e.Value.(displayEffect)
+				switch v.id {
+				case ePrint:
+					printDisplay(rt, v.val.(displayPrint))
+				case ePrintRolling:
+					printRolling(rt, v.val.(displayPrint))
+				}
 				printQueue.Remove(e)
 			} else {
 				displayClock(rt, settings.GetBool(sBlink), buttonDot)
