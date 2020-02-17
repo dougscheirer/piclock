@@ -112,7 +112,7 @@ func runTestCharOutput(t *testing.T, inverted bool) {
 	i := 0
 	for _, v := range keys {
 		log.Printf("print '%c'", v)
-		display.PrintOffset(fmt.Sprintf("%c", v), i%4)
+		display.PrintFromPosition(fmt.Sprintf("%c", v), i%4)
 		sleeper(450 * time.Millisecond)
 		i++
 	}

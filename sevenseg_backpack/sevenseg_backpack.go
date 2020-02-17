@@ -481,6 +481,47 @@ func (this *Sevenseg) PrintColon(msg string) error {
 	return this.refresh_display()
 }
 
+func (this *Sevenseg) PrintFromPosition(msg string, position int) error {
+	if strings.Contains(msg, ":") {
+		return this.PrintColon(msg)
+	}
+	// string can only contain chars in our map and decimals
+	// assume it's left justified (forward walk) with an offset
+	display := getClearDisplay()
+	var displayPos = position
+	var inc = +1
+	var bound = 4
+	if this.inverted {
+		displayPos = 3 - position
+		inc = -1
+		bound = -1
+	}
+
+	var i = 0
+	for ; i < len(msg) && displayPos != bound; i++ {
+		// map msg[i] to a character or dot
+		// with a dot?
+		dotOn := false
+		if i < len(msg)-1 && msg[i+1] == '.' {
+			dotOn = true
+		}
+		// is it in our table?
+		mask, err := this.getMask(msg[i], dotOn)
+		if err != nil {
+			return err
+		}
+		display[getDisplayPos(byte(displayPos))] = mask
+		displayPos += inc
+	}
+	// did we get it all?
+	if i != len(msg) {
+		return errors.New("Too many characters: " + msg)
+	}
+	// set the display
+	this.display = display
+	return this.refresh_display()
+}
+
 // Given a string and a start point, print as much as you can (left -> right)
 func (this *Sevenseg) PrintOffset(msg string, offset int) (string, error) {
 	// TODO: adjust for inverse using displayPos and direction
