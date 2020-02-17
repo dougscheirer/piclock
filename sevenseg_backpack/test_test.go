@@ -21,7 +21,7 @@ func isSimulated() bool {
 
 func setup(t *testing.T) *Sevenseg {
 	simulated := isSimulated()
-	display, err := Open(0x70, 0, simulated) // set to false when on a PI
+	display, err := Open(0x70, 1, simulated) // set to false when on a PI
 	display.DebugDump(simulated)
 
 	if err != nil {
@@ -41,7 +41,7 @@ func sleeper(d time.Duration) {
 }
 
 func TestBasicDisplay(t *testing.T) {
-	runBasicDisplayImpl(t, true)
+	// runBasicDisplayImpl(t, true)
 	runBasicDisplayImpl(t, false)
 }
 
@@ -57,7 +57,7 @@ func runBasicDisplayImpl(t *testing.T, inverted bool) {
 	// apply brightness levels
 	for i := 0; i < 16; i++ {
 		display.SetBrightness(uint8(i))
-		sleeper(450 * time.Millisecond)
+		sleeper(150 * time.Millisecond)
 	}
 	// try some blink rates
 	for i := 1; i < 4; i++ {
@@ -69,7 +69,7 @@ func runBasicDisplayImpl(t *testing.T, inverted bool) {
 	// ramp down brightness
 	for i := 15; i >= 0; i-- {
 		display.SetBrightness(uint8(i))
-		sleeper(450 * time.Millisecond)
+		sleeper(150 * time.Millisecond)
 	}
 
 	// mid-bright please
@@ -90,7 +90,7 @@ func runBasicDisplayImpl(t *testing.T, inverted bool) {
 
 func TestCharOutput(t *testing.T) {
 	runTestCharOutput(t, false)
-	runTestCharOutput(t, true)
+	// runTestCharOutput(t, true)
 }
 
 func runTestCharOutput(t *testing.T, inverted bool) {
@@ -125,9 +125,11 @@ func runTestCharOutput(t *testing.T, inverted bool) {
 		sleeper(450 * time.Millisecond)
 	}
 
-	for i := 999; i >= -999; i-- {
-		display.Print(fmt.Sprintf("%d", i))
-		sleeper(25 * time.Millisecond)
+	// test the offset print
+	buffer := "test...test...test...done"
+	for i:=0;i<len(buffer);i++ {
+		display.PrintOffset(buffer, i)
+		sleeper(150*time.Millisecond)
 	}
 }
 

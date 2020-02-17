@@ -82,7 +82,7 @@ var digitValues = map[byte]byte{
 	'u': 0x1C,
 	'i': 0x04,
 	'U': 0x3E,
-	't': 0x38,
+	't': 0x78,
 	'Y': 0x6E,
 }
 
@@ -122,7 +122,7 @@ var inverseDigitValues = map[byte]byte{
 	'P': 0x73,
 	'u': 0x1C,
 	'U': 0x3E,
-	't': 0x38,
+	't': 0x78,
 	'Y': 0x6E,
 }
 
