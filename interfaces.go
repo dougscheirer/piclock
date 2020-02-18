@@ -47,6 +47,6 @@ type events interface {
 }
 
 type configService interface {
-	launch(handler *apiHandler, addr string)
+	launch(handler *APIHandler, addr string)
 	stop()
 }

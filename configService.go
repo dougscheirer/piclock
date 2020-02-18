@@ -22,15 +22,17 @@ type configSvcMsg struct {
 	secret string
 }
 
-type apiHandler struct {
+// APIHandler - settings for the thing that handles HTTP requests
+type APIHandler struct {
 	rt     runtimeConfig
 	secret string
 	user   string
 	realm  string
 }
 
-func NewHandler(rt runtimeConfig) apiHandler {
-	return apiHandler{
+// NewHandler - create a new API handler
+func NewHandler(rt runtimeConfig) APIHandler {
+	return APIHandler{
 		rt:     rt,
 		secret: rt.clock.Now().String(),
 		user:   "piclock",
@@ -40,19 +42,20 @@ func NewHandler(rt runtimeConfig) apiHandler {
 
 // BasicAuth binds to a object instance, and without accessors it
 // will bind the string values instead of references
-func (m *apiHandler) getUser() string {
+func (m *APIHandler) getUser() string {
 	return m.user
 }
 
-func (m *apiHandler) getSecret() string {
+func (m *APIHandler) getSecret() string {
 	return m.secret
 }
 
-func (m *apiHandler) getRealm() string {
+func (m *APIHandler) getRealm() string {
 	return m.realm
 }
 
-func (m *apiHandler) BasicAuth(next http.Handler) http.Handler {
+// BasicAuth - provide a middleware to authenticate users
+func (m *APIHandler) BasicAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, pass, ok := r.BasicAuth()
 		// log.Printf("cur: %s / %s, got: %s / %s", m.getUser(), m.getSecret(), user, pass)
@@ -61,21 +64,19 @@ func (m *apiHandler) BasicAuth(next http.Handler) http.Handler {
 			w.WriteHeader(401)
 			w.Write([]byte("Unauthorised.\n"))
 			return
-		} else {
-			next.ServeHTTP(w, r)
 		}
+		next.ServeHTTP(w, r)
 	})
 }
 
-func (m *apiHandler) getStatus() configResponse {
+func (m *APIHandler) getStatus() configResponse {
 	// run a getAlarmsFromService
 	alarms, err := getAlarmsFromService(m.rt)
 	if err != nil {
 		return configResponse{Response: "BAD", Error: err.Error()}
-	} else {
-		// return the alarms list too
-		return configResponse{Response: "OK", Alarms: alarms}
 	}
+	// return the alarms list too
+	return configResponse{Response: "OK", Alarms: alarms}
 }
 
 func writeAnswer(w http.ResponseWriter, cr configResponse) {
@@ -83,25 +84,25 @@ func writeAnswer(w http.ResponseWriter, cr configResponse) {
 	w.Write(output)
 }
 
-func (m *apiHandler) apiSecret(w http.ResponseWriter, r *http.Request) {
+func (m *APIHandler) apiSecret(w http.ResponseWriter, r *http.Request) {
 	m.apiError(w, r)
 }
 
-func (m *apiHandler) apiOauth(w http.ResponseWriter, r *http.Request) {
+func (m *APIHandler) apiOauth(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (m *apiHandler) apiStatus(w http.ResponseWriter, r *http.Request) {
+func (m *APIHandler) apiStatus(w http.ResponseWriter, r *http.Request) {
 	writeAnswer(w, m.getStatus())
 }
 
-func (m *apiHandler) apiError(w http.ResponseWriter, r *http.Request) {
+func (m *APIHandler) apiError(w http.ResponseWriter, r *http.Request) {
 	// default is to return (?500))
 	w.WriteHeader(500)
 	w.Write([]byte("Error\n"))
 }
 
-func (m *apiHandler) rootHandler(w http.ResponseWriter, r *http.Request) {
+func (m *APIHandler) rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/static/index.html", 301)
 }
 

@@ -10,10 +10,10 @@ import (
 
 type httpConfigService struct {
 	srv     http.Server
-	handler *apiHandler
+	handler *APIHandler
 }
 
-func (h *httpConfigService) launch(handler *apiHandler, addr string) {
+func (h *httpConfigService) launch(handler *APIHandler, addr string) {
 	h.handler = handler
 	// start a web server that handles JSON and static content
 	r := mux.NewRouter()

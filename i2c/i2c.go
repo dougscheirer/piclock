@@ -24,9 +24,9 @@ func (this *I2C) logWrite(buf []uint8) error {
 	}
 	log.Println("Write : ")
 	for i := 0; i < len(buf); i++ {
-		log.Println("%02x ", buf[i])
+		log.Printf("%02x ", buf[i])
 	}
-	log.Println("\n")
+	log.Println()
 	return nil
 }
 

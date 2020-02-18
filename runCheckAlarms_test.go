@@ -465,7 +465,7 @@ func TestCheckAlarmsDoubleClickPendingThenCacnel(t *testing.T) {
 
 	// now cancel the pending alarm
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
-	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	testBlockDuration(clock, dAlarmSleep, time.Second)
 
 	// should have sent cancel prompt
 	de = effectReadAll(comms.effects)
