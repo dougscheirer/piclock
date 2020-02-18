@@ -16,6 +16,11 @@ const sampleRate = 44100
 type realSounds struct {
 }
 
+func (rs *realSounds) playIt(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool, done chan bool) {
+	// TODO: make this work without pulseaudio
+	log.Printf("playIt is not really implemented")
+}
+
 func (rs *realSounds) playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool, done chan bool) {
 	go rs.playMP3Later(rt, fName, loop, stop, done)
 }

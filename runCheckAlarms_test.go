@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"strings"
 	"testing"
 	"time"
 
@@ -407,24 +406,19 @@ func TestCheckAlarmsDoubleClick(t *testing.T) {
 	dE := effectReadAll(comms.effects)
 
 	// also look for the config output
-	compares := make([]string, 8)
+	compares := make([]string, 5)
 	prints := []int{
 		ePrint,
 		ePrintRolling,
 		ePrint,
 		ePrint,
-		ePrint,
-		ePrint,
-		ePrint,
-		ePrint,
+		ePrintRolling,
 	}
 	compares[0] = "none"
 	compares[1] = "secret"
 	compares[2] = "0001"
 	compares[3] = "IP:  "
-	for i, v := range strings.Split(GetOutboundIP().String(), ".") {
-		compares[4+i] = v + "."
-	}
+	compares[4] = GetOutboundIP().String()
 
 	for i := range compares {
 		assert.Equal(t, prints[i], dE[i].id)
@@ -470,7 +464,7 @@ func TestCheckAlarmsDoubleClickPendingThenCacnel(t *testing.T) {
 	// should have sent cancel prompt
 	de = effectReadAll(comms.effects)
 	assert.Equal(t, de[0].id, ePrintRolling)
-	assert.Equal(t, de[0].val.(displayPrint).s, "cancelled")
+	assert.Equal(t, de[0].val.(displayPrint).s, "--cancelled--")
 
 	testQuit(rt)
 }
@@ -615,7 +609,9 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 
 	// cancel with a button press (and release)
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
-	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	comms.chkAlarms <- doubleButtonAlmMsg(true, time.Second)
+	comms.chkAlarms <- doubleButtonAlmMsg(true, 2*time.Second)
+	testBlockDuration(clock, dAlarmSleep, 3*dAlarmSleep)
 	comms.chkAlarms <- mainButtonAlmMsg(false, 0)
 	testBlockDuration(clock, dAlarmSleep, 2*dAlarmSleep)
 
@@ -646,29 +642,26 @@ func TestCheckAlarmsConfigError(t *testing.T) {
 	// send a config error and then a double click into checkAlarms
 	comms.chkAlarms <- configErrorMsg(true, secret)
 	comms.chkAlarms <- doubleButtonAlmMsg(true, 0)
+	comms.chkAlarms <- doubleButtonAlmMsg(true, time.Second)
+	comms.chkAlarms <- doubleButtonAlmMsg(true, 2*time.Second)
 	comms.chkAlarms <- doubleButtonAlmMsg(false, 0)
 	// wait to process
-	testBlockDuration(clock, dAlarmSleep, 4*dAlarmSleep)
+	testBlockDuration(clock, dAlarmSleep, 5*dAlarmSleep)
 
 	// should be a bunch of prints
 	dE := effectReadAll(comms.effects)
 	// check for secret and IP address
-	compares := make([]string, 7)
+	compares := make([]string, 4)
 	prints := []int{
 		ePrintRolling,
 		ePrint,
 		ePrint,
-		ePrint,
-		ePrint,
-		ePrint,
-		ePrint,
+		ePrintRolling,
 	}
 	compares[0] = "secret"
 	compares[1] = secret
 	compares[2] = "IP:  "
-	for i, v := range strings.Split(GetOutboundIP().String(), ".") {
-		compares[3+i] = v + "."
-	}
+	compares[3] = GetOutboundIP().String()
 
 	for i := range compares {
 		assert.Equal(t, prints[i], dE[i].id)

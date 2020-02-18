@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strings"
 	"time"
 )
 
@@ -47,10 +46,7 @@ func showLoginInfo(rt runtimeConfig, secret string) {
 	rt.comms.effects <- printRollingEffect("secret", 500*time.Millisecond)
 	rt.comms.effects <- printEffect(secret, 3*time.Second)
 	rt.comms.effects <- printEffect("IP:  ", 3*time.Second)
-	parts := strings.Split(GetOutboundIP().String(), ".")
-	for i := range parts {
-		rt.comms.effects <- printEffect(parts[i]+".", 3*time.Second)
-	}
+	rt.comms.effects <- printRollingEffect(GetOutboundIP().String(), 500*time.Millisecond)
 }
 
 func runCheckAlarms(rt runtimeConfig) {
@@ -97,14 +93,13 @@ func runCheckAlarms(rt runtimeConfig) {
 				cfgErr = stateMsg.val.(configError)
 			case msgDoubleButton:
 				// if there is a pending alarm ask to cancel
-				if curAlarm != nil {
-					comms.effects <- printRollingEffect("cancel", 500*time.Millisecond)
-					comms.effects <- printEffect("Y : n", 5*time.Second)
-					cancelMode = rt.clock.Now()
-				} else {
-					// show next alarm on the 0th one only
-					info := stateMsg.val.(buttonInfo)
-					if info.pressed == true && info.duration == 0 {
+				info := stateMsg.val.(buttonInfo)
+				if info.pressed == true && info.duration == 0 {
+					if curAlarm != nil {
+						comms.effects <- printRollingEffect("cancel", 500*time.Millisecond)
+						comms.effects <- printEffect("Y : n", 5*time.Second)
+						cancelMode = rt.clock.Now()
+					} else {
 						// are we in a bad state?
 						if cfgErr.err {
 							showLoginInfo(rt, cfgErr.secret)
@@ -125,7 +120,7 @@ func runCheckAlarms(rt runtimeConfig) {
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed {
 					if cancelMode != noTime {
-						comms.effects <- printRollingEffect("cancelled", 500*time.Millisecond)
+						comms.effects <- printRollingEffect("--cancelled--", 500*time.Millisecond)
 						curAlarm.started = true
 						nowAlarm = nil
 						cancelMode = noTime
