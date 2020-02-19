@@ -67,9 +67,12 @@ func runCheckAlarms(rt runtimeConfig) {
 	var noTime time.Time
 	var cancelMode time.Time
 
+	cancelPrint := make(chan bool, 10)
+	cancelTimeout := 5 * time.Second
+
 	for true {
 		// ignore a cancel request?
-		if cancelMode != noTime && rt.clock.Now().Sub(cancelMode) >= 5*time.Second {
+		if cancelMode != noTime && rt.clock.Now().Sub(cancelMode) >= cancelTimeout {
 			cancelMode = noTime // ignore it, show the next alarm
 			showNextAlarm(rt, curAlarm)
 		}
@@ -94,18 +97,22 @@ func runCheckAlarms(rt runtimeConfig) {
 			case msgDoubleButton:
 				// if there is a pending alarm ask to cancel
 				info := stateMsg.val.(buttonInfo)
-				if info.pressed == true && info.duration == 0 {
-					if curAlarm != nil {
-						comms.effects <- printRollingEffect("cancel", 500*time.Millisecond)
-						comms.effects <- printEffect("Y : n", 5*time.Second)
-						cancelMode = rt.clock.Now()
+				if info.pressed == true {
+					if info.duration > 0 {
+						log.Println("Ignoring duplicate doubleclick")
 					} else {
-						// are we in a bad state?
-						if cfgErr.err {
-							showLoginInfo(rt, cfgErr.secret)
+						if curAlarm != nil {
+							comms.effects <- printRollingEffect("cancel", 500*time.Millisecond)
+							comms.effects <- printCancelableEffect("Y : n", cancelTimeout, cancelPrint)
+							cancelMode = rt.clock.Now()
 						} else {
-							showNextAlarm(rt, curAlarm)
-							showLoginInfo(rt, cfgErr.secret)
+							// are we in a bad state?
+							if cfgErr.err {
+								showLoginInfo(rt, cfgErr.secret)
+							} else {
+								showNextAlarm(rt, curAlarm)
+								showLoginInfo(rt, cfgErr.secret)
+							}
 						}
 					}
 				}
@@ -116,11 +123,13 @@ func runCheckAlarms(rt runtimeConfig) {
 					comms.getAlarms <- reloadMessage()
 				}
 			case msgMainButton:
-				// TODO: cancel on the 0th one only
 				info := stateMsg.val.(buttonInfo)
+				log.Printf("Check alarms got main button msg: %v", info)
 				if info.pressed {
 					if cancelMode != noTime {
-						comms.effects <- printRollingEffect("--cancelled--", 500*time.Millisecond)
+						log.Println("Cancel next alarm")
+						cancelPrint <- true
+						comms.effects <- printRollingEffect("-- cancelled --", 500*time.Millisecond)
 						curAlarm.started = true
 						nowAlarm = nil
 						cancelMode = noTime

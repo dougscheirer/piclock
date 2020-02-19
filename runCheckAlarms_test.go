@@ -456,6 +456,7 @@ func TestCheckAlarmsDoubleClickPendingThenCacnel(t *testing.T) {
 	assert.Equal(t, de[0].val.(displayPrint).s, "cancel")
 	assert.Equal(t, de[1].id, ePrint)
 	assert.Equal(t, de[1].val.(displayPrint).s, "Y : n")
+	assert.Assert(t, de[1].val.(displayPrint).cancel != nil)
 
 	// now cancel the pending alarm
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
@@ -464,7 +465,7 @@ func TestCheckAlarmsDoubleClickPendingThenCacnel(t *testing.T) {
 	// should have sent cancel prompt
 	de = effectReadAll(comms.effects)
 	assert.Equal(t, de[0].id, ePrintRolling)
-	assert.Equal(t, de[0].val.(displayPrint).s, "--cancelled--")
+	assert.Equal(t, de[0].val.(displayPrint).s, "-- cancelled --")
 
 	testQuit(rt)
 }

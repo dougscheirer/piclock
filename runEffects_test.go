@@ -14,6 +14,7 @@ case eClock:
 case eCountdown:
 case eAlarmError:
 case ePrint:
+case ePrintRolling:
 case eAlarmOn:
 case eAlarmOff:
 case eMainButton:
@@ -27,7 +28,7 @@ func TestClockMode(t *testing.T) {
 	go runEffects(rt)
 
 	// wait for two cycles (the display loop is a little weird)
-	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 
 	// check the logDisplay
 	assert.Equal(t, ld.curDisplay, " 9:15")
@@ -49,8 +50,7 @@ func TestClockModeButton(t *testing.T) {
 	clock.Advance(9*time.Hour + 15*time.Minute)
 	go runEffects(rt)
 
-	// wait for two cycles (the display loop is a little weird)
-	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 
 	// check the logDisplay
 	assert.Equal(t, ld.curDisplay, " 9:15")
@@ -169,7 +169,7 @@ func TestClockModeAlarmOn(t *testing.T) {
 	go runEffects(rt)
 
 	// advance to see the time
-	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// send alarm message
@@ -283,7 +283,7 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 	go runEffects(rt)
 
 	// advance to see the time
-	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	assert.Equal(t, ld.curDisplay, " 9:15")
 
 	// send alarm message
@@ -350,8 +350,7 @@ func TestClockModeDoubleClick(t *testing.T) {
 
 	go runEffects(rt)
 
-	// wait for a cycle (the display loop is a little weird)
-	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep)
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 
 	// check the logDisplay
 	assert.Equal(t, ld.curDisplay, " 0:00")
@@ -423,4 +422,52 @@ func TestPrintRolling2(t *testing.T) {
 	assert.Equal(t, len(ld.audit), len(longString)+5)
 	assert.Equal(t, ld.audit[0], "    ")
 	assert.Equal(t, ld.audit[5], "uild")
+}
+
+func TestPrintWithCancel(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	print := "99:99"
+	cancel := make(chan bool, 1)
+	comms.effects <- printCancelableEffect(print, 5*time.Second, cancel)
+
+	go runEffects(rt)
+
+	// sleep for 1 second, cancel, sleep for a dEffectSleep and check the display
+	testBlockDuration(clock, dEffectSleep, time.Second)
+	cancel <- true
+	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep) // sleep for 2, one for the cancel handler, one for the next clock refresh
+
+	// audit log should be 99:99, then current time (0:00)
+	assert.Equal(t, len(ld.audit), 2)
+	assert.Equal(t, ld.audit[0], "99:99")
+	assert.Equal(t, ld.audit[1], " 0:00")
+
+	assert.Equal(t, len(ld.auditErrors), 0)
+}
+
+func TestPrintRollingWithCancel(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	print := "99:99"
+	cancel := make(chan bool, 1)
+	comms.effects <- printCancelableRollingEffect(print, 500*time.Millisecond, cancel)
+
+	go runEffects(rt)
+
+	// sleep for 1 second, cancel, sleep for a dEffectSleep and check the display
+	testBlockDuration(clock, dEffectSleep, time.Second)
+	cancel <- true
+	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep) // sleep for 2, one for the cancel handler, one for the next clock refresh
+
+	// audit log should be 3 prints then the current time (0:00)
+	assert.Equal(t, len(ld.audit), 4)
+	assert.Equal(t, ld.audit[0], "    ")
+	assert.Equal(t, ld.audit[1], "   9")
+	assert.Equal(t, ld.audit[2], "  99")
+	assert.Equal(t, ld.audit[3], " 0:00")
+
+	assert.Equal(t, len(ld.auditErrors), 0)
 }

@@ -21,8 +21,9 @@ type displayEffect struct {
 }
 
 type displayPrint struct {
-	s string
-	d time.Duration
+	s      string
+	d      time.Duration
+	cancel chan bool
 }
 
 // one of the interface types for displayEffect
@@ -96,8 +97,16 @@ func printEffect(s string, d time.Duration) displayEffect {
 	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d}}
 }
 
+func printCancelableEffect(s string, d time.Duration, cancel chan bool) displayEffect {
+	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d, cancel: cancel}}
+}
+
 func printRollingEffect(s string, d time.Duration) displayEffect {
 	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d}}
+}
+
+func printCancelableRollingEffect(s string, d time.Duration, cancel chan bool) displayEffect {
+	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d, cancel: cancel}}
 }
 
 func showLoader(effects chan displayEffect) {
@@ -248,7 +257,24 @@ func stopAlarmEffect(stop chan bool) {
 func printDisplay(rt runtimeConfig, e displayPrint) {
 	log.Printf("Print: %s (%d)", e.s, e.d)
 	rt.display.Print(e.s)
-	rt.clock.Sleep(e.d)
+	// either sleep the entire duration or chunk it out waiting for a cancel
+	if e.cancel == nil {
+		rt.clock.Sleep(e.d)
+	} else {
+		start := rt.clock.Now()
+		for true {
+			select {
+			case c := <-e.cancel:
+				log.Printf("Got print cancel: %v", c)
+				return
+			default:
+			}
+			if rt.clock.Now().Sub(start) > e.d {
+				return
+			}
+			rt.clock.Sleep(dEffectSleep)
+		}
+	}
 }
 
 func printRolling(rt runtimeConfig, e displayPrint) {
@@ -261,6 +287,12 @@ func printRolling(rt runtimeConfig, e displayPrint) {
 		if err != nil {
 			log.Printf("Error: %s\n", err.Error())
 			return
+		}
+		select {
+		case c := <-e.cancel:
+			log.Printf("Got rolling print cancel: %v", c)
+			return
+		default:
 		}
 		rt.clock.Sleep(e.d)
 	}
@@ -304,8 +336,6 @@ func runEffects(rt runtimeConfig) {
 
 	for true {
 		var e displayEffect
-
-		skip := false
 
 		select {
 		case <-comms.quit:
@@ -378,12 +408,6 @@ func runEffects(rt runtimeConfig) {
 			}
 		default:
 			// nothing?
-			rt.clock.Sleep(dEffectSleep)
-		}
-
-		// skip the mode stuff?
-		if skip {
-			continue
 		}
 
 		switch mode {
@@ -431,6 +455,8 @@ func runEffects(rt runtimeConfig) {
 		default:
 			log.Printf("Unknown mode: '%d'\n", mode)
 		}
+
+		rt.clock.Sleep(dEffectSleep)
 	}
 
 	rt.display.DisplayOn(false)
