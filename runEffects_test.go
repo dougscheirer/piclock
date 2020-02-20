@@ -453,7 +453,7 @@ func TestPrintRollingWithCancel(t *testing.T) {
 
 	print := "99:99"
 	cancel := make(chan bool, 1)
-	comms.effects <- printCancelableRollingEffect(print, 500*time.Millisecond, cancel)
+	comms.effects <- printCancelableRollingEffect(print, dRollingPrint, cancel)
 
 	go runEffects(rt)
 

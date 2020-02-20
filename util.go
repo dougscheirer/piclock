@@ -37,6 +37,7 @@ const dAlarmSleep time.Duration = 100 * time.Millisecond
 const dButtonSleep time.Duration = 10 * time.Millisecond
 const dEffectSleep time.Duration = 10 * time.Millisecond
 const dLEDSleep time.Duration = 10 * time.Millisecond
+const dRollingPrint time.Duration = 500 * time.Millisecond
 
 func toBool(val interface{}) (bool, error) {
 	switch v := val.(type) {

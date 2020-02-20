@@ -13,16 +13,26 @@ func init() {
 
 // return true if they look the same
 func compareAlarms(alm1 alarm, alm2 alarm) bool {
-	return (alm1.When == alm2.When && alm1.Effect == alm2.Effect &&
+	return (alm1.ID == alm2.ID && alm1.When == alm2.When && alm1.Effect == alm2.Effect &&
 		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
 }
 
 func showNextAlarm(rt runtimeConfig, alm *alarm) {
 	if alm != nil {
-		rt.comms.effects <- printEffect("AL:", 1*time.Second)
-		rt.comms.effects <- printEffect(alm.When.Format("15:04"), 2*time.Second)
-		rt.comms.effects <- printEffect(alm.When.Format("01.02"), 2*time.Second)
-		rt.comms.effects <- printEffect(alm.When.Format("2006"), 2*time.Second)
+		rt.comms.effects <- printRollingEffect("next AL...", 1*time.Second)
+		// calculate days/hours/minutes
+		now := rt.clock.Now()
+		diff := alm.When.Sub(now)
+		days := int(diff.Hours() / 24)
+		diff = diff - time.Duration(days*24)*time.Hour
+		hours := int(diff.Hours())
+		diff = diff - time.Duration(hours)*time.Hour
+		if days > 999 {
+			rt.comms.effects <- printRollingEffect(fmt.Sprintf("%dd", days), dRollingPrint)
+		} else if days > 0 {
+			rt.comms.effects <- printEffect(fmt.Sprintf("%dd", days), 3*time.Second)
+		}
+		rt.comms.effects <- printEffect(fmt.Sprintf("%2d:%02d", hours, int(diff.Minutes())), 3*time.Second)
 	} else {
 		rt.comms.effects <- printEffect("none", 1*time.Second)
 	}
@@ -43,10 +53,14 @@ func GetOutboundIP() net.IP {
 
 func showLoginInfo(rt runtimeConfig, secret string) {
 	// show a secret code and our IP address
-	rt.comms.effects <- printRollingEffect("secret", 500*time.Millisecond)
+	rt.comms.effects <- printRollingEffect("secret", dRollingPrint)
 	rt.comms.effects <- printEffect(secret, 3*time.Second)
 	rt.comms.effects <- printEffect("IP:  ", 3*time.Second)
-	rt.comms.effects <- printRollingEffect(GetOutboundIP().String(), 500*time.Millisecond)
+	rt.comms.effects <- printRollingEffect(GetOutboundIP().String(), dRollingPrint)
+}
+
+func mergeAlarms(rt runtimeConfig, oldAlarms []alarm, newAlarms []alarm) []alarm {
+	return newAlarms
 }
 
 func runCheckAlarms(rt runtimeConfig) {
@@ -59,6 +73,7 @@ func runCheckAlarms(rt runtimeConfig) {
 	alarms := make([]alarm, 0)
 	comms := rt.comms
 
+	// TODO: this should probably be in a FSM
 	var lastLogSecond = -1
 	var curAlarm *alarm // the alarm we are watching
 	var nowAlarm *alarm // the alarm that is running now
@@ -87,7 +102,7 @@ func runCheckAlarms(rt runtimeConfig) {
 			switch stateMsg.ID {
 			case msgLoaded:
 				payload, _ := toLoadedPayload(stateMsg.val)
-				alarms = payload.alarms
+				alarms = mergeAlarms(rt, alarms, payload.alarms)
 				if payload.report {
 					// poor side-effect, report by resetting "curAlarm"
 					curAlarm = nil
@@ -102,8 +117,8 @@ func runCheckAlarms(rt runtimeConfig) {
 						log.Println("Ignoring duplicate doubleclick")
 					} else {
 						if curAlarm != nil {
-							comms.effects <- printRollingEffect("cancel", 500*time.Millisecond)
-							comms.effects <- printCancelableEffect("Y : n", cancelTimeout, cancelPrint)
+							comms.effects <- printCancelableRollingEffect("cancel", dRollingPrint, cancelPrint)
+							comms.effects <- printCancelableEffect("Y : n", dRollingPrint, cancelPrint)
 							cancelMode = rt.clock.Now()
 						} else {
 							// are we in a bad state?
@@ -120,6 +135,10 @@ func runCheckAlarms(rt runtimeConfig) {
 				// reload on the 0th one only
 				info := stateMsg.val.(buttonInfo)
 				if info.pressed == true && info.duration == 0 {
+					// manual reloads reset our existing list
+					alarms = nil
+					curAlarm = nil
+					nowAlarm = nil
 					comms.getAlarms <- reloadMessage()
 				}
 			case msgMainButton:
@@ -129,7 +148,7 @@ func runCheckAlarms(rt runtimeConfig) {
 					if cancelMode != noTime {
 						log.Println("Cancel next alarm")
 						cancelPrint <- true
-						comms.effects <- printRollingEffect("-- cancelled --", 500*time.Millisecond)
+						comms.effects <- printRollingEffect("-- cancelled --", dRollingPrint)
 						curAlarm.started = true
 						nowAlarm = nil
 						cancelMode = noTime

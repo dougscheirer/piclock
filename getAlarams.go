@@ -336,7 +336,7 @@ func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
 			alm := alarm{ID: i.Id, Name: i.Summary, When: when, started: false}
 
 			// look for hashtags (does not work ATM, the gAPI is broken I think)
-			log.Printf("Event: %s", i.Summary)
+
 			// priority is arbitrary except for random (default)
 			if m, _ := regexp.MatchString("[Mm]usic .*", i.Summary); m {
 				alm.Effect = almMusic
@@ -350,6 +350,7 @@ func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
 				alm.Effect = almRandom
 			}
 
+			log.Printf("Alarm: %v", alm)
 			alarms = append(alarms, alm)
 		}
 
