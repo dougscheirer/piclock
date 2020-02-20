@@ -84,6 +84,7 @@ var digitValues = map[byte]byte{
 	'U': 0x3E,
 	't': 0x78,
 	'Y': 0x6E,
+	'X': 0x76,
 }
 
 // TODO: support inverse
@@ -124,6 +125,7 @@ var inverseDigitValues = map[byte]byte{
 	'U': 0x3E,
 	't': 0x78,
 	'Y': 0x6E,
+	'X': 0x76,
 }
 
 // one address byte, plus 7-seg skips bytes for each display element

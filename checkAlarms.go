@@ -19,7 +19,7 @@ func compareAlarms(alm1 alarm, alm2 alarm) bool {
 
 func showNextAlarm(rt runtimeConfig, alm *alarm) {
 	if alm != nil {
-		rt.comms.effects <- printRollingEffect("next AL...", 1*time.Second)
+		rt.comms.effects <- printRollingEffect(dNextAL, dRollingPrint)
 		// calculate days/hours/minutes
 		now := rt.clock.Now()
 		diff := alm.When.Sub(now)
