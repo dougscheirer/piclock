@@ -118,7 +118,7 @@ func runCheckAlarms(rt runtimeConfig) {
 					} else {
 						if curAlarm != nil {
 							comms.effects <- printCancelableRollingEffect("cancel", dRollingPrint, cancelPrint)
-							comms.effects <- printCancelableEffect("Y : n", dRollingPrint, cancelPrint)
+							comms.effects <- printCancelableEffect("Y : n", 3*time.Second, cancelPrint)
 							cancelMode = rt.clock.Now()
 						} else {
 							// are we in a bad state?

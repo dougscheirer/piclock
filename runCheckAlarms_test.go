@@ -456,12 +456,17 @@ func TestCheckAlarmsDoubleClickPendingThenCacnel(t *testing.T) {
 
 	// should have sent cancel prompt
 	de := effectReadAll(comms.effects)
-
+	assert.Equal(t, len(de), 2)
 	assert.Equal(t, de[0].id, ePrintRolling)
 	assert.Equal(t, de[0].val.(displayPrint).s, "cancel")
 	assert.Equal(t, de[1].id, ePrint)
 	assert.Equal(t, de[1].val.(displayPrint).s, "Y : n")
 	assert.Assert(t, de[1].val.(displayPrint).cancel != nil)
+
+	testBlockDuration(clock, dAlarmSleep, time.Second)
+	// make sure it still says Y : n
+	de = effectReadAll(comms.effects)
+	assert.Equal(t, len(de), 0)
 
 	// now cancel the pending alarm
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)

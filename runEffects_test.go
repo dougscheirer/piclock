@@ -436,12 +436,13 @@ func TestPrintWithCancel(t *testing.T) {
 
 	// sleep for 1 second, cancel, sleep for a dEffectSleep and check the display
 	testBlockDuration(clock, dEffectSleep, time.Second)
+	assert.Equal(t, len(ld.audit), 1)
+	assert.Equal(t, ld.audit[0], "99:99")
 	cancel <- true
 	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep) // sleep for 2, one for the cancel handler, one for the next clock refresh
 
-	// audit log should be 99:99, then current time (0:00)
+	testBlockDuration(clock, dEffectSleep, time.Second)
 	assert.Equal(t, len(ld.audit), 2)
-	assert.Equal(t, ld.audit[0], "99:99")
 	assert.Equal(t, ld.audit[1], " 0:00")
 
 	assert.Equal(t, len(ld.auditErrors), 0)
@@ -451,23 +452,24 @@ func TestPrintRollingWithCancel(t *testing.T) {
 	rt, clock, comms := testRuntime()
 	ld := rt.display.(*logDisplay)
 
-	print := "99:99"
+	print := "9999"
 	cancel := make(chan bool, 1)
 	comms.effects <- printCancelableRollingEffect(print, dRollingPrint, cancel)
 
 	go runEffects(rt)
 
-	// sleep for 1 second, cancel, sleep for a dEffectSleep and check the display
-	testBlockDuration(clock, dEffectSleep, time.Second)
+	// sleep for 1 second, cancel, sleep for a 3 rolling print cycles and check the display
+	testBlockDuration(clock, dEffectSleep, 3*dRollingPrint)
 	cancel <- true
 	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep) // sleep for 2, one for the cancel handler, one for the next clock refresh
 
 	// audit log should be 3 prints then the current time (0:00)
-	assert.Equal(t, len(ld.audit), 4)
+	assert.Equal(t, len(ld.audit), 5)
 	assert.Equal(t, ld.audit[0], "    ")
 	assert.Equal(t, ld.audit[1], "   9")
 	assert.Equal(t, ld.audit[2], "  99")
-	assert.Equal(t, ld.audit[3], " 0:00")
+	assert.Equal(t, ld.audit[3], " 999")
+	assert.Equal(t, ld.audit[4], " 0:00")
 
 	assert.Equal(t, len(ld.auditErrors), 0)
 }
