@@ -76,7 +76,7 @@ func main() {
 	// loader messages?
 	if !settings.GetBool(sSkipLoader) {
 		// print the date and time of this build
-		showLoader(rt.comms.effects)
+		showLoader(rt)
 	} else {
 		rt.clock.Sleep(250 * time.Millisecond)
 	}

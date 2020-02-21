@@ -109,13 +109,14 @@ func printCancelableRollingEffect(s string, d time.Duration, cancel chan bool) d
 	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d, cancel: cancel}}
 }
 
-func showLoader(effects chan displayEffect) {
+func showLoader(rt runtimeConfig) {
 	info, err := os.Stat(os.Args[0])
 	if err != nil {
 		// log error?  non-fatal
 		log.Printf("%v", err)
 		return
 	}
+	effects := rt.comms.effects
 
 	effects <- printEffect("bLd.", 1500*time.Millisecond)
 	effects <- printEffect("----", 500*time.Millisecond)
@@ -125,6 +126,8 @@ func showLoader(effects chan displayEffect) {
 	effects <- printEffect("----", 500*time.Millisecond)
 	effects <- printEffect(info.ModTime().Format("2006"), 1500*time.Millisecond)
 	effects <- printEffect("----", 500*time.Millisecond)
+	// also sleep for a few seconds
+	rt.clock.Sleep(3 * time.Second)
 }
 
 func replaceAtIndex(in string, r rune, i int) string {
