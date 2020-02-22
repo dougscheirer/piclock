@@ -272,7 +272,8 @@ func printDisplay(rt runtimeConfig, e displayPrint) {
 				return
 			default:
 			}
-			if rt.clock.Now().Sub(start) > e.d {
+			// a zero duration is "until cancelled"
+			if e.d > 0 && rt.clock.Now().Sub(start) > e.d {
 				return
 			}
 			rt.clock.Sleep(dEffectSleep)

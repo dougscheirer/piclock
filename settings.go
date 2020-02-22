@@ -45,6 +45,7 @@ const sButtons string = "buttons"
 const sKeyboard string = "keys"
 const sRPi string = "rpi"
 const sAudio string = "audio"
+const sConfigSvc string = "configService"
 
 func defaultSettings() *configSettings {
 	s := make(map[string]interface{})
@@ -69,6 +70,7 @@ func defaultSettings() *configSettings {
 	s[sDblBtn] = buttonMap{pinNum: 27, key: "c", pullup: true}
 	s[sLEDErr] = byte(6)
 	s[sLEDAlm] = byte(16)
+	s[sConfigSvc] = 8080 // port for the config service to run on, 0 -> no service
 
 	if runtime.GOARCH == "arm" {
 		s[sButtons] = sRPi

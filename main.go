@@ -85,7 +85,10 @@ func main() {
 	go runGetAlarms(rt)
 	go runCheckAlarms(rt)
 	go runWatchButtons(rt)
-	go runConfigService(rt)
+	// optional config service
+	if settings.GetInt(sConfigSvc) > 0 {
+		go runConfigService(rt)
+	}
 
 	wg.Wait()
 }

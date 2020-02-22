@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -111,7 +112,7 @@ func runConfigService(rt runtimeConfig) {
 
 	handler := NewHandler(rt)
 
-	rt.configService.launch(&handler, ":8080")
+	rt.configService.launch(&handler, fmt.Sprintf(":%d", rt.settings.GetInt(sConfigSvc)))
 
 	log.Println("starting config service comms loop")
 	comms := rt.comms

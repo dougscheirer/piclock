@@ -38,7 +38,9 @@ const dButtonSleep time.Duration = 10 * time.Millisecond
 const dEffectSleep time.Duration = 10 * time.Millisecond
 const dLEDSleep time.Duration = 10 * time.Millisecond
 const dRollingPrint time.Duration = 250 * time.Millisecond
-const dNextAL string = "next AL in..."
+const sNextAL string = "next AL in..."
+const sYorN string = "Y : n"
+const sCancel string = "cancel"
 
 func toBool(val interface{}) (bool, error) {
 	switch v := val.(type) {

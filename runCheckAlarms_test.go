@@ -117,7 +117,7 @@ func TestCheckAlarmsCountdown(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
@@ -167,13 +167,13 @@ func TestCheckAlarmsCountdownCancel(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
 
 	// advance for a bit, but not too far
-	testBlockDurationCB(clock, dAlarmSleep, time.Minute, func(int) {
+	testBlockDurationCB(clock, dAlarmSleep, time.Minute, func(count int) {
 		le, _ = ledRead(t, rt.comms.leds)
 	})
 
@@ -196,8 +196,10 @@ func TestCheckAlarmsCountdownCancel(t *testing.T) {
 		le, _ = ledRead(t, rt.comms.leds)
 	})
 
+	// should have said "none"
 	eA = effectReadAll(rt.comms.effects)
-	assert.Equal(t, len(eA), 0)
+	assert.Equal(t, len(eA), 1)
+	assert.Equal(t, eA[0].val.(displayPrint).s, "none")
 
 	// done
 	testQuit(rt)
@@ -234,7 +236,7 @@ func TestCheckAlarmsCountdownMultiCancel(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
@@ -267,7 +269,7 @@ func TestCheckAlarmsCountdownMultiCancel(t *testing.T) {
 	es = effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 1:00
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 1:00")
 
 	// done
@@ -306,7 +308,7 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
@@ -320,11 +322,23 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 	e, _ := effectRead(t, rt.comms.effects)
 	assert.Equal(t, e.id, eAlarmOn)
 
-	// should have gotten a bunch of prints
+	// should not have gotten a bunch of prints
+	es = effectReadAll(rt.comms.effects)
+	assert.Equal(t, len(es), 0)
+
+	// cancel the alarm firing, wait for a cycle to process
+	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+
+	// should have gotten the cancel
+	e, _ = effectRead(t, rt.comms.effects)
+	assert.Equal(t, e.id, eAlarmOff)
+
+	// also the next alarm msg
 	es = effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 0:59
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:59")
 
 	// wait another minute and make sure the alarm did *not* fire
@@ -345,13 +359,20 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 	e, _ = effectRead(t, rt.comms.effects)
 	assert.Equal(t, e.id, eAlarmOn)
 
-	// should get another alarm notice
-	// should have gotten a bunch of prints
+	// cancel the alarm firing, wait for a cycle to process
+	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+
+	// should have gotten the cancel
+	e, _ = effectRead(t, rt.comms.effects)
+	assert.Equal(t, e.id, eAlarmOff)
+
+	// also the next alarm msg
 	es = effectReadAll(rt.comms.effects)
-	assert.Equal(t, len(es), 2) // next Al... 0:59
+	assert.Equal(t, len(es), 2) // next Al... 0:58
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
-	assert.Equal(t, es[1].val.(displayPrint).s, " 0:59")
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[1].val.(displayPrint).s, " 0:58")
 
 	// done
 	testQuit(rt)
@@ -458,9 +479,9 @@ func TestCheckAlarmsDoubleClickPendingThenCacnel(t *testing.T) {
 	de := effectReadAll(comms.effects)
 	assert.Equal(t, len(de), 2)
 	assert.Equal(t, de[0].id, ePrintRolling)
-	assert.Equal(t, de[0].val.(displayPrint).s, "cancel")
+	assert.Equal(t, de[0].val.(displayPrint).s, sCancel)
 	assert.Equal(t, de[1].id, ePrint)
-	assert.Equal(t, de[1].val.(displayPrint).s, "Y : n")
+	assert.Equal(t, de[1].val.(displayPrint).s, sYorN)
 	assert.Assert(t, de[1].val.(displayPrint).cancel != nil)
 
 	testBlockDuration(clock, dAlarmSleep, time.Second)
@@ -478,6 +499,21 @@ func TestCheckAlarmsDoubleClickPendingThenCacnel(t *testing.T) {
 	assert.Equal(t, de[0].val.(displayPrint).s, "-- cancelled --")
 
 	testQuit(rt)
+}
+
+func readTrue(c chan bool) bool {
+	// should have gotten a cancel print msg on the channel
+	cancelled := false
+	select {
+	case cancelled = <-c:
+		// we got it
+	default:
+	}
+	return cancelled
+}
+
+func readFalse(c chan bool) bool {
+	return !readTrue(c)
 }
 
 func TestCheckAlarmsDoubleClickPendingNoCancel(t *testing.T) {
@@ -503,18 +539,26 @@ func TestCheckAlarmsDoubleClickPendingNoCancel(t *testing.T) {
 	de := effectReadAll(comms.effects)
 
 	assert.Equal(t, de[0].id, ePrintRolling)
-	assert.Equal(t, de[0].val.(displayPrint).s, "cancel")
+	assert.Equal(t, de[0].val.(displayPrint).s, sCancel)
 	assert.Equal(t, de[1].id, ePrint)
-	assert.Equal(t, de[1].val.(displayPrint).s, "Y : n")
+	assert.Equal(t, de[1].val.(displayPrint).s, sYorN)
+	cancelChan := de[1].val.(displayPrint).cancel
+	assert.Assert(t, cancelChan != nil)
 
-	// now wait
-	testBlockDuration(clock, dAlarmSleep, 5*time.Second)
+	// now wait for 10/11 of the cancel and spaces and the Y or n timeout
+	testBlockDuration(clock, dAlarmSleep, 5*time.Second+10*dRollingPrint)
+	// should be just short of cancel
+	assert.Assert(t, readFalse(cancelChan))
+	// one more rolling print cycle
+	testBlockDuration(clock, dAlarmSleep, dRollingPrint)
+	// read a cancel value
+	assert.Assert(t, readTrue(cancelChan))
 
-	// should get next alarm report
+	// should get next alarm report effects
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 8:59
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 8:59")
 
 	testQuit(rt)
@@ -556,7 +600,7 @@ func TestCheckAlarmsReloadButtonAlarmsAtStart(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 5:59
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 5:59")
 
 	testQuit(rt)
@@ -596,7 +640,7 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 0:00
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:00")
 
 	// should not have started countdown
@@ -608,14 +652,11 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 		le, _ = ledRead(t, rt.comms.leds)
 	})
 
-	// should see a play signal and bunch of prints that will get queued
+	// should see a play signal and no prints
 	e, _ := effectRead(t, rt.comms.effects)
 	assert.Equal(t, e.id, eAlarmOn)
 	es = effectReadAll(rt.comms.effects)
-	assert.Equal(t, len(es), 2) // next Al... 0:59
-	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, dNextAL)
-	assert.Equal(t, es[1].val.(displayPrint).s, " 0:59")
+	assert.Equal(t, len(es), 0)
 
 	// cancel with a button press (and release)
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
@@ -625,9 +666,9 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 	comms.chkAlarms <- mainButtonAlmMsg(false, 0)
 	testBlockDuration(clock, dAlarmSleep, 2*dAlarmSleep)
 
-	// should see the cancel effect
-	e, _ = effectRead(t, rt.comms.effects)
-	assert.Equal(t, e.id, eAlarmOff)
+	// should see the cancel effect and the next alarm
+	es = effectReadAll(rt.comms.effects)
+	assert.Equal(t, len(es), 3) // cancel + next al in ... + time
 
 	// wait another minute and make sure nothing else happens
 	testBlockDurationCB(clock, dAlarmSleep, time.Minute+time.Second, func(int) {
