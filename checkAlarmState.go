@@ -102,6 +102,7 @@ func (state *rca) hasNextAlarm() bool {
 
 func (state *rca) driveState(forceReport bool) {
 	if state.mode.mode == modeCancelStarted && state.rt.clock.Now().Sub(state.mode.startCancel) >= dCancelTimeout {
+		log.Println("Cancel timed out")
 		state.cancelPrint <- true
 		state.mode.mode = modeDefault
 		state.reportNextAlarm(forceReport)

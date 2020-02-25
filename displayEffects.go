@@ -348,77 +348,81 @@ func runEffects(rt runtimeConfig) {
 	for true {
 		var e displayEffect
 
-		select {
-		case <-comms.quit:
-			log.Println("quit from runEffects")
-			return
-		case d := <-done:
-			// go back to normal clock mode
-			log.Printf("Got a done signal from playEffect: %v", d)
-			mode = modeClock
-			// tell checkAlarms that it's over?  it could use
-			// that information to figure out what to do with
-			// button presses
-		case e = <-comms.effects:
-			switch e.id {
-			case eDebug:
-				v, _ := toBool(e.val)
-				rt.display.DebugDump(v)
-			case eClock:
-				mode = modeClock
-			case eCountdown:
-				mode = modeCountdown
-				countdown, _ = toAlarm(e.val)
-			case eAlarmError:
-				rt.display.Print("Err")
-				d, _ := toDuration(e.val)
-				rt.clock.Sleep(d)
-			case eTerminate:
-				log.Println("terminate")
+		stopReading := false
+		for !stopReading {
+			select {
+			case <-comms.quit:
+				log.Println("quit from runEffects")
 				return
-			case ePrintRolling:
-				v, _ := toPrint(e.val)
-				// queue it for later
-				printQueue.PushBack(e)
-				log.Printf("Queued rolling print: %s (%d)", v.s, v.d)
-			case ePrint:
-				v, _ := toPrint(e.val)
-				// queue it for later
-				printQueue.PushBack(e)
-				log.Printf("Queued print: %s (%d)", v.s, v.d)
-			case eAlarmOn:
-				mode = modeAlarm
-				alm, _ := toAlarm(e.val)
-				log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
-				log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
-				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
-				// if stopAlarm exists, close it
-				if stopAlarm != nil {
-					stopAlarmEffect(stopAlarm)
-					close(stopAlarm)
-				}
-				stopAlarm = make(chan bool, 1)
-				playAlarmEffect(rt, alm, stopAlarm, done)
-			case eAlarmOff:
+			case d := <-done:
+				// go back to normal clock mode
+				log.Printf("Got a done signal from playEffect: %v", d)
 				mode = modeClock
-				// if stopAlarm exists, close it
-				if stopAlarm != nil {
-					stopAlarmEffect(stopAlarm)
-					close(stopAlarm)
-					log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
-					stopAlarm = nil
+				// tell checkAlarms that it's over?  it could use
+				// that information to figure out what to do with
+				// button presses
+			case e = <-comms.effects:
+				switch e.id {
+				case eDebug:
+					v, _ := toBool(e.val)
+					rt.display.DebugDump(v)
+				case eClock:
+					mode = modeClock
+				case eCountdown:
+					mode = modeCountdown
+					countdown, _ = toAlarm(e.val)
+				case eAlarmError:
+					rt.display.Print("Err")
+					d, _ := toDuration(e.val)
+					rt.clock.Sleep(d)
+				case eTerminate:
+					log.Println("terminate")
+					return
+				case ePrintRolling:
+					v, _ := toPrint(e.val)
+					// queue it for later
+					printQueue.PushBack(e)
+					log.Printf("Queued rolling print: %s (%d)", v.s, v.d)
+				case ePrint:
+					v, _ := toPrint(e.val)
+					// queue it for later
+					printQueue.PushBack(e)
+					log.Printf("Queued print: %s (%d)", v.s, v.d)
+				case eAlarmOn:
+					mode = modeAlarm
+					alm, _ := toAlarm(e.val)
+					log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
+					log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
+					rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
+					// if stopAlarm exists, close it
+					if stopAlarm != nil {
+						stopAlarmEffect(stopAlarm)
+						close(stopAlarm)
+					}
+					stopAlarm = make(chan bool, 1)
+					playAlarmEffect(rt, alm, stopAlarm, done)
+				case eAlarmOff:
+					mode = modeClock
+					// if stopAlarm exists, close it
+					if stopAlarm != nil {
+						stopAlarmEffect(stopAlarm)
+						close(stopAlarm)
+						log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
+						stopAlarm = nil
+					}
+					rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
+				case eMainButton:
+					info, _ := toButtonInfo(e.val)
+					buttonDot = info.pressed
+				case eLongButton:
+				case eDoubleButton:
+				default:
+					log.Printf("Unhandled %d\n", e.id)
 				}
-				rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
-			case eMainButton:
-				info, _ := toButtonInfo(e.val)
-				buttonDot = info.pressed
-			case eLongButton:
-			case eDoubleButton:
 			default:
-				log.Printf("Unhandled %d\n", e.id)
+				// nothing?
+				stopReading = true
 			}
-		default:
-			// nothing?
 		}
 
 		switch mode {
