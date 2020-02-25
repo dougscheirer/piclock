@@ -44,7 +44,7 @@ const dCancelTimeout time.Duration = 5 * time.Second
 
 const sNextAL string = "next AL in..."
 const sYorN string = "Y : n"
-const sCancel string = "cancel"
+const sCancel string = "cancel?"
 const sPin string = "pin"
 const sKey string = "key"
 const sPullup string = "pullup"

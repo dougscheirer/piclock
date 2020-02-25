@@ -191,7 +191,7 @@ func (state *rca) startCancelPrompt() {
 	state.mode.mode = modeCancelStarted
 	// do the math: Y : n should be displayed for n secs, add time to print the rolling effect right before it
 	now := state.rt.clock.Now()
-	offset := time.Duration(len(sCancel)+5) * dRollingPrint
+	offset := calcRolling(sCancel)
 	state.mode.startCancel = now.Add(offset)
 	log.Printf("Start : %s", now.Format("2006-01-02T15:04:05.999999"))
 	log.Printf("YorN  : %s", state.mode.startCancel.Format("2006-01-02T15:04:05.999999"))
