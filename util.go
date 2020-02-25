@@ -41,6 +41,9 @@ const dRollingPrint time.Duration = 250 * time.Millisecond
 const sNextAL string = "next AL in..."
 const sYorN string = "Y : n"
 const sCancel string = "cancel"
+const sPin string = "pin"
+const sKey string = "key"
+const sPullup string = "pullup"
 
 func toBool(val interface{}) (bool, error) {
 	switch v := val.(type) {
@@ -132,9 +135,9 @@ func toButtonMap(result interface{}) (buttonMap, error) {
 		return rt, nil
 	case map[string]interface{}:
 		// get a pin number and a key (TODO: make these s... enums)
-		pin, err := toUInt8(rt["pin"])
-		key, err2 := toString(rt["key"])
-		pullup, err3 := toBool(rt["pullup"])
+		pin, err := toUInt8(rt[sPin])
+		key, err2 := toString(rt[sKey])
+		pullup, err3 := toBool(rt[sPullup])
 
 		if err != nil {
 			return buttonMap{}, err

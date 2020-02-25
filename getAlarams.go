@@ -177,7 +177,7 @@ func runGetAlarms(rt runtimeConfig) {
 	settings := rt.settings
 
 	// keep a list of things that we have done
-	// TODO: GC the list occassionally
+	// TODO: GC the list occassionally?
 	handledAlarms := map[string]alarm{}
 	comms := rt.comms
 
@@ -257,7 +257,6 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 	// make a new config secret
 	secret := rt.events.generateSecret(rt)
 
-	// TODO: handled alarms are no longer considered, need testing
 	alarms, err := getAlarmsFromService(rt)
 	if err != nil {
 		comms.effects <- alarmError(5 * time.Second)

@@ -29,7 +29,6 @@ func (rb *rpioButtons) setupPinButtons(pins map[string]buttonMap, rt runtimeConf
 	now := rt.clock.Now()
 
 	for k, v := range pins {
-		// TODO: configurable pin numbers and high or low
 		// picking GPIO 4 results in collisions with I2C operations
 		var btn button
 		btn.button = v

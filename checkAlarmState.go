@@ -251,7 +251,6 @@ func (state *rca) compareAlarms(alm1 alarm, alm2 alarm) bool {
 }
 
 func (state *rca) reset() {
-	// TODO: reset some stuff
 	state = newStateMachine(state.rt)
 }
 
