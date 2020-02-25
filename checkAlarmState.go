@@ -199,8 +199,9 @@ func (state *rca) startCancelPrompt() {
 
 func (state *rca) cancelPrompt() {
 	log.Println("Cancel next alarm")
-	state.cancelPrint <- true
+	// make sure to queue up the next print first
 	state.rt.comms.effects <- printRollingEffect("-- cancelled --", dRollingPrint)
+	state.cancelPrint <- true
 }
 
 func (state *rca) setConfigError(err configError) {
