@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jonboulle/clockwork"
 	"gotest.tools/assert"
 )
 
@@ -118,7 +119,7 @@ func TestCheckAlarmsCountdown(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
@@ -168,7 +169,7 @@ func TestCheckAlarmsCountdownCancel(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
@@ -237,7 +238,7 @@ func TestCheckAlarmsCountdownMultiCancel(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
@@ -270,7 +271,7 @@ func TestCheckAlarmsCountdownMultiCancel(t *testing.T) {
 	es = effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 1:00
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 1:00")
 
 	// done
@@ -309,7 +310,7 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 3) // next Al... 0:01 (countdown)
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:01")
 	// also should have started the countdown
 	assert.Equal(t, es[2].id, eCountdown)
@@ -339,7 +340,7 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 	es = effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 0:59
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:59")
 
 	// wait another minute and make sure the alarm did *not* fire
@@ -372,7 +373,7 @@ func TestCheckAlarmsCountdownMultiAlarms(t *testing.T) {
 	es = effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 0:58
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:58")
 
 	// done
@@ -559,7 +560,7 @@ func TestCheckAlarmsDoubleClickPendingNoCancel(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 8:59
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 8:59")
 
 	testQuit(rt)
@@ -601,7 +602,7 @@ func TestCheckAlarmsReloadButtonAlarmsAtStart(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 5:59
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 5:59")
 
 	testQuit(rt)
@@ -641,7 +642,7 @@ func TestCheckAlarmsFiredCancel(t *testing.T) {
 	es := effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 2) // next Al... 0:00
 	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
 	assert.Equal(t, es[1].val.(displayPrint).s, " 0:00")
 
 	// should not have started countdown
@@ -808,4 +809,33 @@ func TestClickWithNoAlarms(t *testing.T) {
 	// should not have anything in effects
 	es := effectReadAll(comms.effects)
 	assert.Equal(t, len(es), 0)
+}
+
+func TestCheckAlarmsFarFuture(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	// set the clock for > 7d ago
+	clock = clockwork.NewFakeClockAt(time.Date(2020, 01, 01, 0, 0, 0, 0, time.UTC))
+	rt.clock = clock
+	// events := rt.events.(*testEvents)
+
+	go runCheckAlarms(rt)
+
+	// pretend we loaded some alarms
+	alarms, _ := getAlarmsFromService(rt)
+	comms.chkAlarms <- alarmsLoadedMsg(1, alarms, true)
+
+	// wait for a cycle
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+
+	// should have gotten a bunch of prints in the far future
+	es := effectReadAll(comms.effects)
+	assert.Equal(t, len(es), 3)
+	assert.Equal(t, es[0].id, ePrintRolling)
+	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
+	assert.Equal(t, es[1].id, ePrintRolling)
+	assert.Equal(t, es[1].val.(displayPrint).s, "01.26 2020")
+	assert.Equal(t, es[2].id, ePrint)
+	assert.Equal(t, es[2].val.(displayPrint).s, "06:00")
+	// done
+	testQuit(rt)
 }

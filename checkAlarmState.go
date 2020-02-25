@@ -227,8 +227,6 @@ func (state *rca) reportNextAlarm(force bool) time.Duration {
 	var duration time.Duration = 0
 
 	if alm != nil {
-		comms.effects <- printRollingEffect(sNextAL, dRollingPrint)
-		duration += calcRolling(sNextAL)
 		// calculate days/hours/minutes
 		now := state.rt.clock.Now()
 		diff := alm.When.Sub(now)
@@ -236,16 +234,26 @@ func (state *rca) reportNextAlarm(force bool) time.Duration {
 		diff = diff - time.Duration(days*24)*time.Hour
 		hours := int(diff.Hours())
 		diff = diff - time.Duration(hours)*time.Hour
-		if days > 999 {
-			effect := fmt.Sprintf("%dd", days)
+		// more than 7 days, print the date
+		if days > 7 {
+			comms.effects <- printRollingEffect(sNextAL, dRollingPrint)
+			duration += calcRolling(sNextAL)
+			// date, then time
+			effect := alm.When.Format("01.02 2006")
 			comms.effects <- printRollingEffect(effect, dRollingPrint)
 			duration += calcRolling(effect)
-		} else if days > 0 {
-			comms.effects <- printEffect(fmt.Sprintf("%dd", days), dPrintDuration)
+			comms.effects <- printEffect(alm.When.Format("15:04"), dPrintDuration)
+			duration += dPrintDuration
+		} else {
+			comms.effects <- printRollingEffect(sNextALIn, dRollingPrint)
+			duration += calcRolling(sNextALIn)
+			if days > 0 {
+				comms.effects <- printEffect(fmt.Sprintf("%dd", days), dPrintDuration)
+				duration += dPrintDuration
+			}
+			comms.effects <- printEffect(fmt.Sprintf("%2d:%02d", hours, int(diff.Minutes())), dPrintDuration)
 			duration += dPrintDuration
 		}
-		comms.effects <- printEffect(fmt.Sprintf("%2d:%02d", hours, int(diff.Minutes())), dPrintDuration)
-		duration += dPrintDuration
 	} else {
 		// only print "none" when specifically asked?
 		// if force {
