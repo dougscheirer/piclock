@@ -38,6 +38,10 @@ const dButtonSleep time.Duration = 10 * time.Millisecond
 const dEffectSleep time.Duration = 10 * time.Millisecond
 const dLEDSleep time.Duration = 10 * time.Millisecond
 const dRollingPrint time.Duration = 250 * time.Millisecond
+const dPrintDuration time.Duration = 3 * time.Second
+const dPrintBriefDuration time.Duration = 1 * time.Second
+const dCancelTimeout time.Duration = 5 * time.Second
+
 const sNextAL string = "next AL in..."
 const sYorN string = "Y : n"
 const sCancel string = "cancel"
@@ -256,4 +260,10 @@ func setupLogging(settings configSettings, append bool) (*os.File, error) {
 
 	// default logging is OK
 	return nil, nil
+}
+
+func calcRolling(s string) time.Duration {
+	// the rolling effect pre and post pends 4 spaces, but
+	// it really just adds a total of 4 extra cycles
+	return time.Duration(len(s)+4) * dRollingPrint
 }

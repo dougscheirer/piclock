@@ -32,6 +32,7 @@ func runCheckAlarms(rt runtimeConfig) {
 	settings := rt.settings
 	comms := rt.comms
 	buttonPressActed := false
+	nextDoubleClick := time.Time{}
 
 	// generate a new FSM
 	state := newStateMachine(rt)
@@ -57,7 +58,7 @@ func runCheckAlarms(rt runtimeConfig) {
 				if !info.pressed {
 					continue
 				}
-				if info.duration > 0 {
+				if info.duration > 0 || rt.clock.Now().Sub(nextDoubleClick) < 0 {
 					log.Println("Ignoring duplicate doubleclick")
 					continue
 				}
@@ -65,12 +66,14 @@ func runCheckAlarms(rt runtimeConfig) {
 				// if there is an alarm in the queue, attempt
 				// to cancel it
 				if state.isAlarmPlanned() {
+					// this stays until it goes away with a single click
 					state.startCancelPrompt()
 				} else {
+					nextDoubleClick = rt.clock.Now()
 					if !state.hasConfigError() {
-						state.reportNextAlarm(true) // this is essentially "none"
+						nextDoubleClick = nextDoubleClick.Add(state.reportNextAlarm(true)) // this is essentially "none"
 					}
-					state.showLoginInfo()
+					nextDoubleClick = nextDoubleClick.Add(state.showLoginInfo())
 				}
 			case msgLongButton:
 				// reload on the 0th one only

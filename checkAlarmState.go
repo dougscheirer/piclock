@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-const cancelTimeout time.Duration = 5 * time.Second
 const (
 	modeDefault = iota
 	modeCancelStarted
@@ -29,13 +28,14 @@ type rca struct {
 	cancelPrint chan bool
 }
 
-func (state *rca) showLoginInfo() {
+func (state *rca) showLoginInfo() time.Duration {
 	e := state.rt.comms.effects
 	// show a secret code and our IP address
 	e <- printRollingEffect("secret", dRollingPrint)
-	e <- printEffect(state.cfgError.secret, 3*time.Second)
-	e <- printEffect("IP:  ", 3*time.Second)
+	e <- printEffect(state.cfgError.secret, dPrintDuration)
+	e <- printEffect("IP:  ", dPrintDuration)
 	e <- printRollingEffect(GetOutboundIP().String(), dRollingPrint)
+	return calcRolling("secret") + dPrintDuration + dPrintDuration + calcRolling(GetOutboundIP().String())
 }
 
 func mergeAlarms(curAlarms []alarm, newAlarms []alarm) []alarm {
@@ -101,7 +101,7 @@ func (state *rca) hasNextAlarm() bool {
 }
 
 func (state *rca) driveState(forceReport bool) {
-	if state.mode.mode == modeCancelStarted && state.rt.clock.Now().Sub(state.mode.startCancel) >= cancelTimeout {
+	if state.mode.mode == modeCancelStarted && state.rt.clock.Now().Sub(state.mode.startCancel) >= dCancelTimeout {
 		state.cancelPrint <- true
 		state.mode.mode = modeDefault
 		state.reportNextAlarm(forceReport)
@@ -217,12 +217,15 @@ func compareAlarms(alm1 alarm, alm2 alarm) bool {
 		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
 }
 
-func (state *rca) reportNextAlarm(force bool) {
+func (state *rca) reportNextAlarm(force bool) time.Duration {
 	comms := state.rt.comms
 	alm := state.nextAlarm
 
+	var duration time.Duration = 0
+
 	if alm != nil {
 		comms.effects <- printRollingEffect(sNextAL, dRollingPrint)
+		duration += calcRolling(sNextAL)
 		// calculate days/hours/minutes
 		now := state.rt.clock.Now()
 		diff := alm.When.Sub(now)
@@ -231,17 +234,23 @@ func (state *rca) reportNextAlarm(force bool) {
 		hours := int(diff.Hours())
 		diff = diff - time.Duration(hours)*time.Hour
 		if days > 999 {
-			comms.effects <- printRollingEffect(fmt.Sprintf("%dd", days), dRollingPrint)
+			effect := fmt.Sprintf("%dd", days)
+			comms.effects <- printRollingEffect(effect, dRollingPrint)
+			duration += calcRolling(effect)
 		} else if days > 0 {
-			comms.effects <- printEffect(fmt.Sprintf("%dd", days), 3*time.Second)
+			comms.effects <- printEffect(fmt.Sprintf("%dd", days), dPrintDuration)
+			duration += dPrintDuration
 		}
-		comms.effects <- printEffect(fmt.Sprintf("%2d:%02d", hours, int(diff.Minutes())), 3*time.Second)
+		comms.effects <- printEffect(fmt.Sprintf("%2d:%02d", hours, int(diff.Minutes())), dPrintDuration)
+		duration += dPrintDuration
 	} else {
 		// only print "none" when specifically asked?
 		// if force {
-		comms.effects <- printEffect("none", 1*time.Second)
+		comms.effects <- printEffect("none", dPrintBriefDuration)
+		duration += dPrintBriefDuration
 		// }
 	}
+	return duration
 }
 
 // return true if they look the same

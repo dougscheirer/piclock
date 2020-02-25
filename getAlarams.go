@@ -207,7 +207,7 @@ func runGetAlarms(rt runtimeConfig) {
 				case msgReload:
 					reload = true
 					forceReload = true
-					comms.effects <- printEffect("rLd", 2*time.Second)
+					comms.effects <- printEffect("rLd", dPrintBriefDuration)
 				case msgLoaded:
 					// decide if we display a message or not
 					// it's possible we launched a bunch of loadAlarms threads
@@ -217,7 +217,7 @@ func runGetAlarms(rt runtimeConfig) {
 					if loadedPayload.loadID == curReloadID {
 						// force reload -> show alarm count
 						if loadedPayload.report {
-							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), 2*time.Second)
+							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), dPrintBriefDuration)
 						}
 					} else {
 						log.Printf("Skipping old loadID %v", loadedPayload.loadID)
