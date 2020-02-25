@@ -24,6 +24,7 @@ type displayPrint struct {
 	s      string
 	d      time.Duration
 	cancel chan bool
+	id     int
 }
 
 // one of the interface types for displayEffect
@@ -93,20 +94,26 @@ func toggleDebugDump(on bool) displayEffect {
 	return displayEffect{id: eDebug, val: on}
 }
 
+var globPrintID int = 0
+
 func printEffect(s string, d time.Duration) displayEffect {
-	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d}}
+	globPrintID++
+	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d, id: globPrintID}}
 }
 
 func printCancelableEffect(s string, d time.Duration, cancel chan bool) displayEffect {
-	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d, cancel: cancel}}
+	globPrintID++
+	return displayEffect{id: ePrint, val: displayPrint{s: s, d: d, cancel: cancel, id: globPrintID}}
 }
 
 func printRollingEffect(s string, d time.Duration) displayEffect {
-	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d}}
+	globPrintID++
+	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d, id: globPrintID}}
 }
 
 func printCancelableRollingEffect(s string, d time.Duration, cancel chan bool) displayEffect {
-	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d, cancel: cancel}}
+	globPrintID++
+	return displayEffect{id: ePrintRolling, val: displayPrint{s: s, d: d, cancel: cancel, id: globPrintID}}
 }
 
 func showLoader(rt runtimeConfig) {

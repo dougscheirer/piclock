@@ -102,8 +102,9 @@ func runCheckAlarms(rt runtimeConfig) {
 					log.Printf("Main button pressed: %dms", info.duration)
 					// only send it for the first press event
 					if info.duration < time.Second {
-						state.cancelActiveAlarm()
-						forceReport = true
+						if state.cancelActiveAlarm() {
+							forceReport = true
+						}
 					}
 				}
 			}

@@ -547,7 +547,7 @@ func TestCheckAlarmsDoubleClickPendingNoCancel(t *testing.T) {
 	assert.Assert(t, cancelChan != nil)
 
 	// now wait for 10/11 of the cancel and spaces and the Y or n timeout
-	testBlockDuration(clock, dAlarmSleep, 5*time.Second+10*dRollingPrint)
+	testBlockDuration(clock, dAlarmSleep, dCancelTimeout+10*dRollingPrint)
 	// should be just short of cancel
 	assert.Assert(t, readFalse(cancelChan))
 	// one more rolling print cycle
@@ -787,4 +787,25 @@ func TestMergeAlarms(t *testing.T) {
 	assert.Equal(t, len(results), len(alarms2))
 	assert.Equal(t, results[3].countdown, true)
 	assert.Equal(t, results[3].started, true)
+}
+
+func TestClickWithNoAlarms(t *testing.T) {
+	rt, clock, comms := testRuntime()
+
+	go runCheckAlarms(rt)
+
+	// send in a single click
+	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	comms.chkAlarms <- mainButtonAlmMsg(false, 0)
+	testBlockDuration(clock, dAlarmSleep, 2*dAlarmSleep)
+
+	// advance a few seconds, make sure to read the LED channel
+	testBlockDurationCB(clock, dAlarmSleep, 10*time.Second, func(cnt int) {
+		ledRead(t, rt.comms.leds)
+	})
+
+	// should not have anything in effects
+	es := effectReadAll(comms.effects)
+	assert.Equal(t, len(es), 0)
 }

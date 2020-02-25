@@ -105,6 +105,7 @@ func (state *rca) driveState(forceReport bool) {
 		state.cancelPrint <- true
 		state.mode.mode = modeDefault
 		state.reportNextAlarm(forceReport)
+		return
 	}
 
 	// TODO: this is two state functions, "find next alarm"
@@ -263,13 +264,14 @@ func (state *rca) reset() {
 	state = newStateMachine(state.rt)
 }
 
-func (state *rca) cancelActiveAlarm() {
+func (state *rca) cancelActiveAlarm() bool {
 	if state.activeAlarm == nil {
-		return
+		return false
 	}
 	state.activeAlarm.started = true
 	state.activeAlarm = nil
 	state.rt.comms.effects <- cancelAlarmMode()
+	return true
 }
 
 func (state *rca) isActiveAlarm() bool {
