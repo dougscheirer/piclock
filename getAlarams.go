@@ -217,7 +217,7 @@ func runGetAlarms(rt runtimeConfig) {
 					if loadedPayload.loadID == curReloadID {
 						// force reload -> show alarm count
 						if loadedPayload.report {
-							comms.effects <- printEffect(fmt.Sprintf("AL:%d", len(loadedPayload.alarms)), dPrintBriefDuration)
+							comms.effects <- printRollingEffect(fmt.Sprintf("found %d", len(loadedPayload.alarms)), dPrintBriefDuration)
 						}
 					} else {
 						log.Printf("Skipping old loadID %v", loadedPayload.loadID)
