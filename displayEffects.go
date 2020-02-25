@@ -348,19 +348,25 @@ func runEffects(rt runtimeConfig) {
 	for true {
 		var e displayEffect
 
-		stopReading := false
-		for !stopReading {
+		// read from quit channels
+		select {
+		case <-comms.quit:
+			log.Println("quit from runEffects")
+			return
+		case d := <-done:
+			// go back to normal clock mode
+			log.Printf("Got a done signal from playEffect: %v", d)
+			mode = modeClock
+			// tell checkAlarms that it's over?  it could use
+			// that information to figure out what to do with
+			// button presses
+		default:
+		}
+
+		// consume all effects at once
+		keepReading := true
+		for keepReading {
 			select {
-			case <-comms.quit:
-				log.Println("quit from runEffects")
-				return
-			case d := <-done:
-				// go back to normal clock mode
-				log.Printf("Got a done signal from playEffect: %v", d)
-				mode = modeClock
-				// tell checkAlarms that it's over?  it could use
-				// that information to figure out what to do with
-				// button presses
 			case e = <-comms.effects:
 				switch e.id {
 				case eDebug:
@@ -421,7 +427,7 @@ func runEffects(rt runtimeConfig) {
 				}
 			default:
 				// nothing?
-				stopReading = true
+				keepReading = false
 			}
 		}
 
