@@ -38,13 +38,39 @@ func (state *rca) showLoginInfo() {
 	e <- printRollingEffect(GetOutboundIP().String(), dRollingPrint)
 }
 
-func (state *rca) mergeAlarms(newAlarms []alarm) {
-	if len(state.alarms) == 0 {
-		state.alarms = newAlarms
-		return
+func mergeAlarms(curAlarms []alarm, newAlarms []alarm) []alarm {
+	if len(curAlarms) == 0 {
+		return newAlarms
 	}
 
-	// TODO: merge the newAlarms with our existing list
+	// the resultant list consists of all of the alarms
+	// in sequence order.  for any alarms that "look"
+	// the same, we leave the handled/countdown states
+	// as they are in our current list
+
+	// when you rescedule an alarm it keeps the same
+	// ID.  we will walk through the newAlarm list, remove
+	// things that match from curAlarms and preserve the
+	// handled attribute
+
+	// turn curAlarms into a map based on ID
+	curMap := make(map[string]alarm, 0)
+	for i := range curAlarms {
+		curMap[curAlarms[i].ID] = curAlarms[i]
+	}
+	result := make([]alarm, 0)
+	for i := range newAlarms {
+		alm := newAlarms[i]
+		curAlm, exists := curMap[alm.ID]
+		// if the ID matches and the time is the same
+		// copy the handled bits
+		if exists && alm.When == curAlm.When {
+			alm.countdown = curAlm.countdown
+			alm.started = curAlm.started
+		}
+		result = append(result, alm)
+	}
+	return result
 }
 
 func (state *rca) isAlarmPlanned() bool {

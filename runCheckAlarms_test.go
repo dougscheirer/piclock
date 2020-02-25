@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"sort"
 	"testing"
 	"time"
 
@@ -720,4 +721,70 @@ func TestCheckAlarmsConfigError(t *testing.T) {
 	}
 
 	testQuit(rt)
+}
+
+// alarm sort helper
+type alarmList []alarm
+
+func (a alarmList) Len() int           { return len(a) }
+func (a alarmList) Less(i, j int) bool { return a[i].When.Sub(a[j].When) < 0 }
+func (a alarmList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+func TestMergeAlarms(t *testing.T) {
+	rt, _, _ := testRuntime()
+
+	// just test merge alarms
+	alarms, _ := getAlarmsFromService(rt)
+	alarms2, _ := getAlarmsFromService(rt)
+
+	// test scenarios
+	// same list
+	results := mergeAlarms(alarms, alarms2)
+	assert.Equal(t, len(results), len(alarms))
+	assert.Equal(t, len(results), len(alarms2))
+	for i := range results {
+		assert.Equal(t, results[i], alarms2[i])
+		assert.Equal(t, results[i].started, false)
+	}
+	// some marked as handled
+	alarms[2].countdown = true
+	alarms[2].started = true
+	results = mergeAlarms(alarms, alarms2)
+	assert.Equal(t, len(results), len(alarms))
+	assert.Equal(t, len(results), len(alarms2))
+	assert.Equal(t, results[2].started, true)
+
+	// alarm changed time, marked as handled
+	// make sure to re-sort alarms2
+	alarms2[2].When = alarms2[2].When.Add(24 * time.Hour)
+	modID := alarms2[2].ID
+	alarms[2].countdown = true
+	alarms[2].started = true
+	sort.Sort(alarmList(alarms2))
+	results = mergeAlarms(alarms, alarms2)
+	lastIndex := len(results) - 1
+	assert.Equal(t, len(results), len(alarms))
+	assert.Equal(t, len(results), len(alarms2))
+	assert.Equal(t, results[lastIndex].ID, modID)
+	assert.Equal(t, results[lastIndex].started, false)
+	assert.Equal(t, results[lastIndex].countdown, false)
+
+	// one new alarm, in the middle somewhere
+	alarms2, _ = getAlarmsFromService(rt)
+	almNew := alarm{
+		ID:     "test pizza",
+		Name:   "test pizza alarm",
+		When:   alarms2[2].When.Add(-1 * time.Minute),
+		Effect: 0,
+		Extra:  "tacos on the side",
+	}
+	alarms2 = append(alarms2, almNew)
+	alarms2[2].countdown = true
+	alarms2[2].started = true
+	// sort
+	sort.Sort(alarmList(alarms2))
+	results = mergeAlarms(alarms, alarms2)
+	assert.Equal(t, len(results), len(alarms2))
+	assert.Equal(t, results[3].countdown, true)
+	assert.Equal(t, results[3].started, true)
 }

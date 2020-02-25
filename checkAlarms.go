@@ -47,7 +47,7 @@ func runCheckAlarms(rt runtimeConfig) {
 			switch stateMsg.ID {
 			case msgLoaded:
 				payload, _ := toLoadedPayload(stateMsg.val)
-				state.mergeAlarms(payload.alarms)
+				state.alarms = mergeAlarms(state.alarms, payload.alarms)
 				forceReport = payload.report
 			case msgConfigError:
 				state.setConfigError(stateMsg.val.(configError))
