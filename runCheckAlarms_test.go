@@ -328,9 +328,9 @@ func TestCheckAlarmsCountdownSingle(t *testing.T) {
 	es = effectReadAll(rt.comms.effects)
 	assert.Equal(t, len(es), 0)
 
-	// cancel the alarm firing, wait for a cycle to process
+	// cancel the alarm firing, wait for some cycles to process
 	comms.chkAlarms <- mainButtonAlmMsg(true, 0)
-	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	testBlockDuration(clock, dAlarmSleep, 10*dAlarmSleep)
 
 	// should have gotten the cancel
 	e, _ = effectRead(t, rt.comms.effects)
@@ -338,10 +338,9 @@ func TestCheckAlarmsCountdownSingle(t *testing.T) {
 
 	// also the next alarm msg
 	es = effectReadAll(rt.comms.effects)
-	assert.Equal(t, len(es), 2) // next Al... 0:59
-	assert.Equal(t, es[0].id, ePrintRolling)
-	assert.Equal(t, es[0].val.(displayPrint).s, sNextALIn)
-	assert.Equal(t, es[1].val.(displayPrint).s, " 0:59")
+	assert.Equal(t, len(es), 1) // none
+	assert.Equal(t, es[0].id, ePrint)
+	assert.Equal(t, es[0].val.(displayPrint).s, "none")
 
 	testQuit(rt)
 }
