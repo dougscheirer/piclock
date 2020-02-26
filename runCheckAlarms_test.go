@@ -839,3 +839,25 @@ func TestCheckAlarmsFarFuture(t *testing.T) {
 	// done
 	testQuit(rt)
 }
+
+func TestCheckAlarmsReloadTimed(t *testing.T) {
+	rt, clock, comms := testRuntime()
+
+	go runCheckAlarms(rt)
+
+	alarms, _ := getAlarmsFromService(rt)
+	comms.chkAlarms <- alarmsLoadedMsg(1, alarms, true)
+
+	// wait for a cycle
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	// should have gotten some info
+	es := effectReadAll(comms.effects)
+	assert.Assert(t, len(es) != 0)
+
+	// getAlarms runs independently, so just send in some more
+	comms.chkAlarms <- alarmsLoadedMsg(1, alarms, false)
+	testBlockDuration(clock, dAlarmSleep, dAlarmSleep)
+	// should have gotten no info
+	es = effectReadAll(comms.effects)
+	assert.Equal(t, len(es), 0)
+}

@@ -118,7 +118,7 @@ func (state *rca) driveState(forceReport bool) {
 
 	newNextAlarm := state.findNextAlarm()
 	// TODO: use the compare function?
-	if newNextAlarm != state.nextAlarm || forceReport {
+	if !state.compareAlarms(newNextAlarm, state.nextAlarm) || forceReport {
 		state.nextAlarm = newNextAlarm
 		// only report when there is no active alarm
 		if state.activeAlarm == nil {
@@ -214,12 +214,6 @@ func (state *rca) hasConfigError() bool {
 	return state.cfgError.err
 }
 
-// return true if they look the same
-func compareAlarms(alm1 alarm, alm2 alarm) bool {
-	return (alm1.ID == alm2.ID && alm1.When == alm2.When && alm1.Effect == alm2.Effect &&
-		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
-}
-
 func (state *rca) reportNextAlarm(force bool) time.Duration {
 	comms := state.rt.comms
 	alm := state.nextAlarm
@@ -265,7 +259,13 @@ func (state *rca) reportNextAlarm(force bool) time.Duration {
 }
 
 // return true if they look the same
-func (state *rca) compareAlarms(alm1 alarm, alm2 alarm) bool {
+func (state *rca) compareAlarms(alm1 *alarm, alm2 *alarm) bool {
+	if alm1 == nil && alm2 == nil {
+		return true
+	}
+	if (alm1 != nil && alm2 == nil) || (alm1 == nil && alm2 != nil) {
+		return false
+	}
 	return (alm1.ID == alm2.ID && alm1.When == alm2.When && alm1.Effect == alm2.Effect &&
 		alm1.Name == alm2.Name && alm1.Extra == alm2.Extra)
 }
