@@ -150,7 +150,7 @@ func (state *rca) driveState(forceReport bool) {
 			comms.effects <- setCountdownMode(state.alarms[0])
 			state.nextAlarm.countdown = true
 		}
-	} else {
+	} else if state.activeAlarm == nil || !state.activeAlarm.started {
 		// Set alarm mode
 		// remember this one for later
 		state.activeAlarm = state.nextAlarm
