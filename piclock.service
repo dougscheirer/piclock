@@ -1,0 +1,17 @@
+[Unit]
+Description=piclock service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+WorkingDirectory=/home/pi/random/piclock
+Type=simple
+Restart=always
+RestartSec=1
+User=pi
+ExecStart=./piclock -config=piclock.rpi.conf
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

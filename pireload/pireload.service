@@ -1,0 +1,18 @@
+[Unit]
+Description=piclock reload service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+WorkingDirectory=/home/pi/random/piclock
+Type=simple
+Restart=always
+RestartSec=1
+User=pi
+Environment=BUTTON=16 RUNPROG=reload.sh
+ExecStart=go run pireload/runonbutton.go
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
