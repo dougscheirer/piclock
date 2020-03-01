@@ -42,6 +42,7 @@ func main() {
 		pressState = rpio.High
 	}
 
+	log.Printf("Watching %v for %v", pin, dir)
 	for true {
 		s := rpioPin.Read()
 		if s == pressState {
@@ -49,11 +50,16 @@ func main() {
 			log.Printf("Running %s\n", progS)
 			cmd := exec.Command(progS)
 			// wait for it to exit
-			err = cmd.Run()
+			out, err := cmd.Output()
 			if err != nil {
 				log.Println(err.Error())
 			}
+			log.Printf("%s",out)
+			// take a nap after running the command
+			log.Printf("Sleeping...")
+			time.Sleep(5 * time.Second)
 		}
 		time.Sleep(30 * time.Millisecond)
 	}
 }
+
