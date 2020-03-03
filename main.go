@@ -29,6 +29,12 @@ func main() {
 	// CLI args
 	args := parseCLIArgs()
 
+	// are we just showing the version?
+	if args.version {
+		showVersionInfo()
+		return
+	}
+
 	// read config information
 	settings := initSettings(args.configFile)
 

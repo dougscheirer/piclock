@@ -128,6 +128,7 @@ func (s *configSettings) settingsFromJSON(data []byte) error {
 
 type cliArgs struct {
 	oauth      bool
+	version    bool
 	configFile string
 }
 
@@ -135,6 +136,7 @@ func parseCLIArgs() cliArgs {
 	// define our flags first
 	configFile := flag.String("config", "/etc/default/piclock/piclock.conf", "config file path")
 	oauthOnly := flag.Bool("oauth", false, "connect and generate the oauth token")
+	versionOnly := flag.Bool("version", false, "show the git SHA that we built with")
 
 	// parse the flags
 	flag.Parse()
@@ -142,6 +144,9 @@ func parseCLIArgs() cliArgs {
 	args := cliArgs{oauth: false}
 	if oauthOnly != nil && *oauthOnly {
 		args.oauth = true
+	}
+	if versionOnly != nil && *versionOnly {
+		args.version = true
 	}
 	if configFile != nil {
 		args.configFile = *configFile
