@@ -1,5 +1,7 @@
 /calendar_auth
 /piclock
+pireload
+test-output.txt
 /main
 /client_secret.json
 /alarms/*

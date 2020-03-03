@@ -4,13 +4,13 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
-WorkingDirectory=/home/pi/random/piclock
+WorkingDirectory=/home/pi/random/piroot/piclock
 Type=simple
 Restart=always
 RestartSec=1
-User=pi
-Environment=BUTTON=16 RUNPROG=reload.sh
-ExecStart=go run pireload/runonbutton.go
+User=root
+Environment=PULLUP=1 BUTTON=24 RUNPROG=./pireload/reload.sh
+ExecStart=/home/pi/random/piroot/piclock/pireload/pireload
 PrivateTmp=true
 NoNewPrivileges=true
 
