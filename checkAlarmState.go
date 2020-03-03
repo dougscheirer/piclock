@@ -100,10 +100,18 @@ func (state *rca) hasNextAlarm() bool {
 	return state.nextAlarm != nil
 }
 
+func (state *rca) cancelMessages() {
+	state.cancelPrint <- true
+	close(state.cancelPrint)
+	state.cancelPrint = make(chan bool, 10)
+}
+
 func (state *rca) driveState(forceReport bool) {
 	if state.mode.mode == modeCancelStarted && state.rt.clock.Now().Sub(state.mode.startCancel) >= dCancelTimeout {
 		log.Println("Cancel timed out")
-		state.cancelPrint <- true
+		// we reuse cancelPrint for multiple messages, so close and reopen the channel
+		// to ensure that all messages are cancelled
+		state.cancelMessages()
 		state.mode.mode = modeDefault
 		state.reportNextAlarm(forceReport)
 		return
@@ -202,7 +210,7 @@ func (state *rca) cancelPrompt() {
 	log.Println("Cancel next alarm")
 	// make sure to queue up the next print first
 	state.rt.comms.effects <- printRollingEffect("-- cancelled --", dRollingPrint)
-	state.cancelPrint <- true
+	state.cancelMessages()
 }
 
 func (state *rca) setConfigError(err configError) {

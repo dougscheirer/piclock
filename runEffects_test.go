@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -464,12 +465,11 @@ func TestPrintRollingWithCancel(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, 2*dEffectSleep) // sleep for 2, one for the cancel handler, one for the next clock refresh
 
 	// audit log should be 3 prints then the current time (0:00)
-	assert.Equal(t, len(ld.audit), 5)
+	assert.Equal(t, len(ld.audit), 4)
 	assert.Equal(t, ld.audit[0], "    ")
 	assert.Equal(t, ld.audit[1], "   9")
 	assert.Equal(t, ld.audit[2], "  99")
-	assert.Equal(t, ld.audit[3], " 999")
-	assert.Equal(t, ld.audit[4], " 0:00")
+	assert.Equal(t, ld.audit[3], " 0:00")
 
 	assert.Equal(t, len(ld.auditErrors), 0)
 }
@@ -521,6 +521,35 @@ func TestPrintCancelWithQueue(t *testing.T) {
 	// audit log should be 2 prints
 	assert.Equal(t, len(ld.audit), 2)
 	assert.Equal(t, ld.audit[0], "9999")
+	assert.Equal(t, ld.audit[1], "pie")
+
+	assert.Equal(t, len(ld.auditErrors), 0)
+}
+
+func TestPrintMultipleCancel(t *testing.T) {
+	rt, clock, comms := testRuntime()
+	ld := rt.display.(*logDisplay)
+
+	cancel := make(chan bool, 1)
+	for i := 0; i < 10; i++ {
+		print := fmt.Sprintf("%d%d%d%d", i, i, i, i)
+		comms.effects <- printCancelableEffect(print, 0, cancel)
+	}
+
+	go runEffects(rt)
+
+	// sleep for a bit, should be stuck on the first one
+	testBlockDuration(clock, dEffectSleep, dEffectSleep)
+	// send another print to the queue
+	comms.effects <- printEffect("pie", dPrintDuration)
+
+	// now cancel (close the channel)
+	close(cancel)
+	testBlockDuration(clock, dEffectSleep, 12*dEffectSleep) // sleep for 11 cycles, one for the cancel handler, one for the next clock refresh
+
+	// audit log should be 2 prints
+	assert.Equal(t, len(ld.audit), 2)
+	assert.Equal(t, ld.audit[0], "0000")
 	assert.Equal(t, ld.audit[1], "pie")
 
 	assert.Equal(t, len(ld.auditErrors), 0)

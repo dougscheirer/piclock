@@ -266,18 +266,24 @@ func stopAlarmEffect(stop chan bool) {
 
 func printDisplay(rt runtimeConfig, e displayPrint) {
 	log.Printf("Print: %s (%d)", e.s, e.d)
-	rt.display.Print(e.s)
 	// either sleep the entire duration or chunk it out waiting for a cancel
 	if e.cancel == nil {
+		rt.display.Print(e.s)
 		rt.clock.Sleep(e.d)
 	} else {
 		start := rt.clock.Now()
+		printed := false
+		// delay printing until we checked the cancel
 		for true {
 			select {
 			case c := <-e.cancel:
 				log.Printf("Got print cancel: %v", c)
 				return
 			default:
+			}
+			if !printed {
+				rt.display.Print(e.s)
+				printed = true
 			}
 			// a zero duration is "until cancelled"
 			if e.d > 0 && rt.clock.Now().Sub(start) > e.d {
@@ -294,16 +300,17 @@ func printRolling(rt runtimeConfig, e displayPrint) {
 	// with e.d as the duration on each
 	toprint := "    " + e.s + "    "
 	for i := 0; i <= len(toprint)-4; i++ {
-		_, err := rt.display.PrintOffset(toprint, i)
-		if err != nil {
-			log.Printf("Error: %s\n", err.Error())
-			return
-		}
+		// always check for cancel first
 		select {
 		case c := <-e.cancel:
 			log.Printf("Got rolling print cancel: %v", c)
 			return
 		default:
+		}
+		_, err := rt.display.PrintOffset(toprint, i)
+		if err != nil {
+			log.Printf("Error: %s\n", err.Error())
+			return
 		}
 		rt.clock.Sleep(e.d)
 	}

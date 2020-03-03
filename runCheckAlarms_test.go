@@ -619,7 +619,8 @@ func TestCheckAlarmsDoubleClickPendingNoCancel(t *testing.T) {
 	assert.Assert(t, readFalse(cancelChan))
 	// one more rolling print cycle
 	testBlockDuration(clock, dAlarmSleep, dRollingPrint)
-	// read a cancel value
+	// checkAlarms close the print channel, the display
+	// code counts true and closed as the same
 	assert.Assert(t, readTrue(cancelChan))
 
 	// should get next alarm report effects

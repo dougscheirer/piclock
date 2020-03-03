@@ -12,3 +12,4 @@ test-output.txt
 __debug_bin
 piclock.conf
 .debug.test
+debug.test
