@@ -36,7 +36,7 @@ if [ "$NOW" != "Version $SHA" ] ; then
   su pi -c "$GO build" || die "go build failed!"
 
   # revert the go file we changed
-  git co -- versionInfo.go
+  su pi -c "git co -- versionInfo.go"
 fi
 
 if [ "$NORESTART" == "" ] ; then
