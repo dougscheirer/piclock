@@ -15,6 +15,8 @@ func main() {
 	// RUNPROG is the thing to run
 	pinS, pinSE := os.LookupEnv("BUTTON")
 	progS, progSE := os.LookupEnv("RUNPROG")
+	ledS, ledSE := os.LookupEnv("RUNLED")
+
 	_, dir := os.LookupEnv("PULLUP")
 
 	if !pinSE || !progSE {
@@ -25,14 +27,23 @@ func main() {
 	if pinE != nil {
 		log.Fatalf("%s is not a number", pinS)
 	}
-	// open the button for read
+	if !ledSE {
+		ledS="17"
+	}
+	led, _ := strconv.ParseInt(ledS, 0, 64)
+
+	// open the button and led for read
 	err := rpio.Open()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 	rpioPin := rpio.Pin(pin)
+	ledPin := rpio.Pin(led)
+
 	// for now we only care about the "low" state
 	rpioPin.Input() // Input mode
+	ledPin.Output() // Output mode
+
 	var pressState rpio.State
 	if dir {
 		rpioPin.PullUp() // GND => button press
@@ -47,6 +58,7 @@ func main() {
 		s := rpioPin.Read()
 		if s == pressState {
 			// run the program
+			ledPin.High()
 			log.Printf("Running %s\n", progS)
 			cmd := exec.Command(progS)
 			// wait for it to exit
@@ -57,6 +69,7 @@ func main() {
 			log.Printf("%s",out)
 			// take a nap after running the command
 			log.Printf("Sleeping...")
+			ledPin.Low()
 			time.Sleep(5 * time.Second)
 		}
 		time.Sleep(30 * time.Millisecond)
