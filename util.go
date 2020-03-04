@@ -43,6 +43,7 @@ const dPrintBriefDuration time.Duration = 1 * time.Second
 const dCancelTimeout time.Duration = 5 * time.Second
 
 const sNextAL string = "next AL..."
+const sAt string = "at"
 const sNextALIn string = "next AL in..."
 const sYorN string = "Y : n"
 const sCancel string = "cancel?"

@@ -244,6 +244,8 @@ func (state *rca) reportNextAlarm(force bool) time.Duration {
 			effect := alm.When.Format("01.02 2006")
 			comms.effects <- printRollingEffect(effect, dRollingPrint)
 			duration += calcRolling(effect)
+			comms.effects <- printEffect(sAt, dPrintDuration)
+			duration += dPrintDuration
 			comms.effects <- printEffect(alm.When.Format("15:04"), dPrintDuration)
 			duration += dPrintDuration
 		} else {

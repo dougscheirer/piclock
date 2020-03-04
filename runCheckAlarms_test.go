@@ -896,13 +896,15 @@ func TestCheckAlarmsFarFuture(t *testing.T) {
 
 	// should have gotten a bunch of prints in the far future
 	es := effectReadAll(comms.effects)
-	assert.Equal(t, len(es), 3)
+	assert.Equal(t, len(es), 4)
 	assert.Equal(t, es[0].id, ePrintRolling)
 	assert.Equal(t, es[0].val.(displayPrint).s, sNextAL)
 	assert.Equal(t, es[1].id, ePrintRolling)
 	assert.Equal(t, es[1].val.(displayPrint).s, "01.26 2020")
 	assert.Equal(t, es[2].id, ePrint)
-	assert.Equal(t, es[2].val.(displayPrint).s, "06:00")
+	assert.Equal(t, es[2].val.(displayPrint).s, sAt)
+	assert.Equal(t, es[3].id, ePrint)
+	assert.Equal(t, es[3].val.(displayPrint).s, "06:00")
 	// done
 	testQuit(rt)
 }
