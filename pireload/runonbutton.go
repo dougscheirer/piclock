@@ -53,6 +53,7 @@ func main() {
 		pressState = rpio.High
 	}
 
+	ledPin.Low()
 	log.Printf("Watching %v for %v", pin, dir)
 	for true {
 		s := rpioPin.Read()
