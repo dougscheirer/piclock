@@ -16,9 +16,9 @@ echo "go: $($GO version)"
 su pi -c "git pull" || die "failed to perform git pull"
 
 # always rebuild the pireload binary
-pushd pireload
-su pi -c "$GO build" || die "Failed to rebuild pireload"
-popd
+# pushd pireload
+# su pi -c "$GO build" || die "Failed to rebuild pireload"
+# popd
 
 # is the sha differnt than the build version?
 su pi -c "git diff-index --quiet HEAD"
