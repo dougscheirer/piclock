@@ -15,7 +15,7 @@ echo "Version is $($GO version)"
 # do a git pull, a go test/build, and start the service
 su pi -c "git pull" || die "failed to perform git pull"
 # is the sha differnt than the build version?
-git diff-index --quiet HEAD
+su pi -c "git diff-index --quiet HEAD"
 if [ $? -eq 0 ] ; then 
   SHA=$(git rev-parse HEAD)
   NOW=$(./piclock -version)
