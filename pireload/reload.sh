@@ -10,10 +10,16 @@ NORESTART=$1
 
 GO=/home/pi/gvm/go
 
-echo "Version is $($GO version)"
+echo "go: $($GO version)"
 
 # do a git pull, a go test/build, and start the service
 su pi -c "git pull" || die "failed to perform git pull"
+
+# always rebuild the pireload binary
+pushd pireload
+su pi -c "$GO build" || die "Failed to rebuild pireload"
+popd
+
 # is the sha differnt than the build version?
 su pi -c "git diff-index --quiet HEAD"
 if [ $? -eq 0 ] ; then 
@@ -40,5 +46,7 @@ if [ "$NOW" != "Version $SHA" ] ; then
 fi
 
 if [ "$NORESTART" == "" ] ; then
-  systemctl restart piclock.service || die "failed to restart service"
+  systemctl daemon-reload
+  systemctl restart pireload.service || die "failed to restart pireload"
+  systemctl restart piclock.service || die "failed to restart piclock"
 fi
