@@ -16,9 +16,9 @@ echo "go: $($GO version)"
 su pi -c "git pull" || die "failed to perform git pull"
 
 # always rebuild the pireload binary
-# pushd pireload
-# su pi -c "$GO build" || die "Failed to rebuild pireload"
-# popd
+pushd pireload
+su pi -c "$GO build" || die "Failed to rebuild pireload"
+popd
 
 # is the sha differnt than the build version?
 su pi -c "git diff-index --quiet HEAD"
@@ -46,8 +46,8 @@ if [ "$NOW" != "Version $SHA" ] ; then
 fi
 
 if [ "$NORESTART" == "" ] ; then
-  # systemctl daemon-reload
+  systemctl daemon-reload
   systemctl restart piclock.service || die "failed to restart piclock"
   # this will exit the script as we are launched by it
-  # systemctl restart pireload.service || die "failed to restart pireload"
+  systemctl restart pireload.service || die "failed to restart pireload"
 fi
