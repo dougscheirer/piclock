@@ -50,4 +50,4 @@ if [ "$NORESTART" == "" ] ; then
   systemctl restart piclock.service || die "failed to restart piclock"
   # this will exit the script as we are launched by it
   # systemctl restart pireload.service || die "failed to restart pireload"
-if
+fi
