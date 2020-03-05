@@ -47,6 +47,7 @@ fi
 
 if [ "$NORESTART" == "" ] ; then
   systemctl daemon-reload
-  systemctl restart pireload.service || die "failed to restart pireload"
   systemctl restart piclock.service || die "failed to restart piclock"
-fi
+  # this will exit the script as we are launched by it
+  systemctl restart pireload.service || die "failed to restart pireload"
+if
