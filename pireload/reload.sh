@@ -17,6 +17,7 @@ su pi -c "git pull" || die "failed to perform git pull"
 
 # always rebuild the pireload binary
 pushd pireload
+su pi -c "echo $(pwd)"
 su pi -c "$GO build" || die "Failed to rebuild pireload"
 popd
 
@@ -31,6 +32,7 @@ else
 fi
 if [ "$NOW" != "Version $SHA" ] ; then 
   # generate a new version file from the template
+  echo "New version: $SHA"
   sed 's/unknown/'"$SHA"'/' versionInfo.go.tmpl > versionInfo.go
 
   su pi -c "$GO test -v" >> ./test-output.txt 2>&1
