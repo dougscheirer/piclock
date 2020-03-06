@@ -90,11 +90,14 @@ func runBasicDisplayImpl(t *testing.T, inverted bool) {
 
 func TestCharOutput(t *testing.T) {
 	runTestCharOutput(t, false)
-	// runTestCharOutput(t, true)
+}
+func TestCharInvertOutput(t *testing.T) {
+	runTestCharOutput(t, true)
 }
 
 func runTestCharOutput(t *testing.T, inverted bool) {
 	display := setup(t)
+	display.SetInverted(inverted)
 
 	var knownChars map[byte]byte = digitValues
 	if inverted {
@@ -127,9 +130,9 @@ func runTestCharOutput(t *testing.T, inverted bool) {
 
 	// test the offset print
 	buffer := "test...test...test...done"
-	for i:=0;i<len(buffer);i++ {
+	for i := 0; i < len(buffer); i++ {
 		display.PrintOffset(buffer, i)
-		sleeper(150*time.Millisecond)
+		sleeper(150 * time.Millisecond)
 	}
 }
 
@@ -145,7 +148,7 @@ func TestSegments(t *testing.T) {
 		LED_MID,
 		LED_DECIMAL}
 
-	for j := 0; j < 100; j++ {
+	for j := 0; j < 10; j++ {
 		for i := 0; i < len(segmentOrder); i++ {
 			display.RefreshOn(false)
 			display.ClearDisplay()
@@ -153,7 +156,7 @@ func TestSegments(t *testing.T) {
 				display.SegmentOn(byte(p), segmentOrder[i], true)
 			}
 			display.RefreshOn(true)
-			time.Sleep(25 * time.Millisecond)
+			sleeper(25 * time.Millisecond)
 		}
 	}
 }

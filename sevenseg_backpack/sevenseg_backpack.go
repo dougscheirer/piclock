@@ -88,46 +88,23 @@ var digitValues = map[byte]byte{
 	'?': 0x83,
 }
 
-// TODO: support inverse
-var inverseDigitValues = map[byte]byte{
-	' ': 0x00,
-	'-': 0x40,
-	'_': 0x08, // TODO: support these
-	'0': 0x3F,
-	'1': 0x30,
-	'2': 0x5B,
-	'3': 0x79,
-	'4': 0x74,
-	'5': 0x6D,
-	'6': 0x6F,
-	'7': 0x38,
-	'8': 0x7F,
-	'9': 0x7D,
-	'A': 0x7E,
-	'B': 0x67,
-	'C': 0x0F,
-	'c': 0x43,
-	'D': 0x73,
-	'E': 0x4F,
-	'F': 0x4E,
-	'R': 0x42,
-	'H': 0x76,
-	'h': 0x66,
-	'l': 0x30,
-	'L': 0x70,
-	'n': 0x52,
-	'o': 0x56,
-	'O': 0x3F,
-	'S': 0x6D,
-	'I': 0x06,
-	'i': 0x04,
-	'P': 0x73,
-	'u': 0x1C,
-	'U': 0x3E,
-	't': 0x78,
-	'Y': 0x6E,
-	'X': 0x76,
-	'?': 0x83,
+var inverseDigitValues = createInverseMap(digitValues)
+
+func swapbits(val byte, pos1 byte, pos2 byte) byte {
+	bit1 := (val >> pos1) & 1
+	bit2 := (val >> pos2) & 1
+	x := (bit1 ^ bit2)
+	x = (x << pos1) | (x << pos2)
+	return val ^ x
+}
+
+func createInverseMap(digits map[byte]byte) map[byte]byte {
+	// map bits: 3<->0 2<->5 4<->1
+	ret := make(map[byte]byte, 0)
+	for k, v := range digits {
+		ret[k] = swapbits(swapbits(swapbits(v, 3, 0), 2, 5), 4, 1)
+	}
+	return ret
 }
 
 // one address byte, plus 7-seg skips bytes for each display element
@@ -528,13 +505,12 @@ func (this *Sevenseg) PrintFromPosition(msg string, position int) error {
 
 // Given a string and a start point, print as much as you can (left -> right)
 func (this *Sevenseg) PrintOffset(msg string, offset int) (string, error) {
-	// TODO: adjust for inverse using displayPos and direction
 	display := getClearDisplay()
 	var displayPos = 0
 	var inc = +1
 	var bound = 4
 	if this.inverted {
-		displayPos = 0
+		displayPos = 3
 		inc = -1
 		bound = -1
 	}
