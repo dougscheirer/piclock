@@ -13,3 +13,4 @@ __debug_bin
 piclock.conf
 .debug.test
 debug.test
+alarms.json

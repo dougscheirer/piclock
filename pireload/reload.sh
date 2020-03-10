@@ -27,6 +27,7 @@ if [ $? -eq 0 ] ; then
   SHA=$(git rev-parse HEAD)
   NOW=$(./piclock -version)
 else
+  su pi -c "git diff-index HEAD" | logger
   SHA="contains uncommited changes"
   NOW="who cares"
 fi
