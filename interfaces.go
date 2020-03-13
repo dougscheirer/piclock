@@ -40,13 +40,19 @@ type led interface {
 
 type events interface {
 	fetch(rt runtimeConfig) (*calendar.Events, error)
-	getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error)
+	getCalendarService(rt runtimeConfig, prompt bool) (*calendar.Service, error)
 	loadAlarms(rt runtimeConfig, loadID int, report bool)
-	downloadMusicFiles(settings configSettings, cE chan displayEffect)
+	downloadMusicFiles(rt runtimeConfig, cE chan displayEffect)
 	generateSecret(rt runtimeConfig) string
 }
 
 type configService interface {
 	launch(handler *APIHandler, addr string)
 	stop()
+}
+
+type flogger interface {
+	Printf(format string, v ...interface{})
+	Print(v ...interface{})
+	Println(v ...interface{})
 }

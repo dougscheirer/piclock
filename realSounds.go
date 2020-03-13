@@ -3,7 +3,6 @@
 package main
 
 import (
-	"log"
 	"os/exec"
 )
 
@@ -18,7 +17,7 @@ type realSounds struct {
 
 func (rs *realSounds) playIt(rt runtimeConfig, sfreqs []string, timing []string, stop chan bool, done chan bool) {
 	// TODO: make this work without pulseaudio
-	log.Printf("playIt is not really implemented")
+	rt.logger.Printf("playIt is not really implemented")
 }
 
 func (rs *realSounds) playMP3(rt runtimeConfig, fName string, loop bool, stop chan bool, done chan bool) {
@@ -52,12 +51,12 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 		case <-stop:
 			stopPlayback = true
 		case done := <-completed:
-			log.Printf("%v", done)
+			rt.logger.Printf("%v", done)
 			if !loop || replayMax < 0 {
 				return
 			}
 			replayMax--
-			log.Println("Replay")
+			rt.logger.Println("Replay")
 			cmd = exec.Command("mpg123", fName)
 			go func() {
 				completed <- cmd.Run()
@@ -65,7 +64,7 @@ func (rs *realSounds) playMP3Later(rt runtimeConfig, fName string, loop bool, st
 		default:
 		}
 		if stopPlayback {
-			log.Println("Stopping playback")
+			rt.logger.Println("Stopping playback")
 			cmd.Process.Kill()
 			return
 		}

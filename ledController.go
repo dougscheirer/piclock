@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"time"
 )
 
@@ -60,10 +59,15 @@ func setLEDEffect(effect ledEffect) ledEffect {
 	return effect
 }
 
+func startLEDController(rt runtimeConfig) {
+	rt.logger = &ThreadLogger{name: "LEDs"}
+	go runLEDController(rt)
+}
+
 func runLEDController(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
-		log.Printf("Exiting runLEDController")
+		rt.logger.Printf("Exiting runLEDController")
 	}()
 
 	comms := rt.comms
@@ -77,23 +81,23 @@ func runLEDController(rt runtimeConfig) {
 		for keepReading {
 			select {
 			case <-comms.quit:
-				log.Printf("Got a quit signal in runLEDController")
+				rt.logger.Printf("Got a quit signal in runLEDController")
 				return
 			case msg := <-comms.leds:
 				// find in leds, determine if we need to change the state
 				if val, ok := leds[msg.pin]; ok {
 					// if the state is changed, set the new effect state
 					if val.force || diffLEDEffect(val, msg) {
-						log.Printf("Received led message: %v", msg)
+						rt.logger.Printf("Received led message: %v", msg)
 						leds[msg.pin] = setLEDEffect(msg)
 					} else {
-						// log.Println("Duplicate message")
+						// rt.logger.Println("Duplicate message")
 					}
 				} else {
 					// it's new, add to the leds map?
 					// if it's "turn off" assume that we already did that unless it's "force"
 					if msg.mode != modeOff {
-						log.Printf("Received led message: %v", msg)
+						rt.logger.Printf("Received led message: %v", msg)
 						leds[msg.pin] = setLEDEffect(msg)
 					}
 				}

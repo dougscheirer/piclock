@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -108,7 +107,7 @@ func (state *rca) cancelMessages() {
 
 func (state *rca) driveState(forceReport bool) {
 	if state.mode.mode == modeCancelStarted && state.rt.clock.Now().Sub(state.mode.startCancel) >= dCancelTimeout {
-		log.Println("Cancel timed out")
+		state.rt.logger.Println("Cancel timed out")
 		// we reuse cancelPrint for multiple messages, so close and reopen the channel
 		// to ensure that all messages are cancelled
 		state.cancelMessages()
@@ -142,7 +141,7 @@ func (state *rca) driveState(forceReport bool) {
 
 	if state.lastLog != nowSec && nowSec%30 == 0 {
 		state.lastLog = nowSec
-		log.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration/time.Second, (duration-settings.GetDuration(sCountdown))/time.Second))
+		state.rt.logger.Println(fmt.Sprintf("Time to next alarm: %ds (%ds to countdown)", duration/time.Second, (duration-settings.GetDuration(sCountdown))/time.Second))
 	}
 
 	// light the LED to show we have a pending alarm
@@ -202,12 +201,12 @@ func (state *rca) startCancelPrompt() {
 	now := state.rt.clock.Now()
 	offset := calcRolling(sCancel)
 	state.mode.startCancel = now.Add(offset)
-	log.Printf("Start : %s", now.Format("2006-01-02T15:04:05.999999"))
-	log.Printf("YorN  : %s", state.mode.startCancel.Format("2006-01-02T15:04:05.999999"))
+	state.rt.logger.Printf("Start : %s", now.Format("2006-01-02T15:04:05.999999"))
+	state.rt.logger.Printf("YorN  : %s", state.mode.startCancel.Format("2006-01-02T15:04:05.999999"))
 }
 
 func (state *rca) cancelPrompt() {
-	log.Println("Cancel next alarm")
+	state.rt.logger.Println("Cancel next alarm")
 	// make sure to queue up the next print first
 	state.rt.comms.effects <- printRollingEffect("-- cancelled --", dRollingPrint)
 	state.cancelMessages()

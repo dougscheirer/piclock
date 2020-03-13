@@ -3,7 +3,6 @@ package main
 import (
 	"container/list"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -120,7 +119,7 @@ func showLoader(rt runtimeConfig) {
 	info, err := os.Stat(os.Args[0])
 	if err != nil {
 		// log error?  non-fatal
-		log.Printf("%v", err)
+		rt.logger.Printf("%v", err)
 		return
 	}
 	effects := rt.comms.effects
@@ -188,7 +187,7 @@ func displayClock(rt runtimeConfig, blinkColon bool, dot bool) {
 	}
 	err := rt.display.Print(timeString)
 	if err != nil {
-		log.Printf("Error: %s\n", err.Error())
+		rt.logger.Printf("Error: %s\n", err.Error())
 	}
 }
 
@@ -233,7 +232,7 @@ func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool, done chan boo
 
 		files, err := filepath.Glob(musicPath + "/*")
 		if err != nil {
-			log.Println(err)
+			rt.logger.Println(err)
 			break
 		}
 		if len(files) > 0 {
@@ -252,10 +251,10 @@ func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool, done chan boo
 	}
 
 	if playTones {
-		log.Printf("Playing tones")
+		rt.logger.Printf("Playing tones")
 		rt.sounds.playIt(rt, []string{"250", "340"}, []string{"100ms", "100ms", "100ms", "100ms", "100ms", "2000ms"}, stop, done)
 	} else {
-		log.Printf("Playing %s", musicFile)
+		rt.logger.Printf("Playing %s", musicFile)
 		rt.sounds.playMP3(rt, musicFile, true, stop, done)
 	}
 }
@@ -265,7 +264,7 @@ func stopAlarmEffect(stop chan bool) {
 }
 
 func printDisplay(rt runtimeConfig, e displayPrint) {
-	log.Printf("Print: %s (%d)", e.s, e.d)
+	rt.logger.Printf("Print: %s (%d)", e.s, e.d)
 	// either sleep the entire duration or chunk it out waiting for a cancel
 	if e.cancel == nil {
 		rt.display.Print(e.s)
@@ -277,7 +276,7 @@ func printDisplay(rt runtimeConfig, e displayPrint) {
 		for true {
 			select {
 			case c := <-e.cancel:
-				log.Printf("Got print cancel: %v", c)
+				rt.logger.Printf("Got print cancel: %v", c)
 				return
 			default:
 			}
@@ -295,7 +294,7 @@ func printDisplay(rt runtimeConfig, e displayPrint) {
 }
 
 func printRolling(rt runtimeConfig, e displayPrint) {
-	log.Printf("Rolling print: %s (%d)", e.s, e.d)
+	rt.logger.Printf("Rolling print: %s (%d)", e.s, e.d)
 	// pre/postpend 4/8 spaces, then rotate trhough the string
 	// with e.d as the duration on each
 	toprint := "    " + e.s + "    "
@@ -303,23 +302,28 @@ func printRolling(rt runtimeConfig, e displayPrint) {
 		// always check for cancel first
 		select {
 		case c := <-e.cancel:
-			log.Printf("Got rolling print cancel: %v", c)
+			rt.logger.Printf("Got rolling print cancel: %v", c)
 			return
 		default:
 		}
 		_, err := rt.display.PrintOffset(toprint, i)
 		if err != nil {
-			log.Printf("Error: %s\n", err.Error())
+			rt.logger.Printf("Error: %s\n", err.Error())
 			return
 		}
 		rt.clock.Sleep(e.d)
 	}
 }
 
+func startEffects(rt runtimeConfig) {
+	rt.logger = &ThreadLogger{name: "Effects"}
+	go runEffects(rt)
+}
+
 func runEffects(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
-		log.Println("exiting runEffects")
+		rt.logger.Println("exiting runEffects")
 	}()
 
 	settings := rt.settings
@@ -328,7 +332,7 @@ func runEffects(rt runtimeConfig) {
 	err := rt.display.OpenDisplay(settings)
 
 	if err != nil {
-		log.Printf("Error: %s", err.Error())
+		rt.logger.Printf("Error: %s", err.Error())
 		return
 	}
 
@@ -358,11 +362,11 @@ func runEffects(rt runtimeConfig) {
 		// read from quit channels
 		select {
 		case <-comms.quit:
-			log.Println("quit from runEffects")
+			rt.logger.Println("quit from runEffects")
 			return
 		case d := <-done:
 			// go back to normal clock mode
-			log.Printf("Got a done signal from playEffect: %v", d)
+			rt.logger.Printf("Got a done signal from playEffect: %v", d)
 			mode = modeClock
 			// tell checkAlarms that it's over?  it could use
 			// that information to figure out what to do with
@@ -389,23 +393,23 @@ func runEffects(rt runtimeConfig) {
 					d, _ := toDuration(e.val)
 					rt.clock.Sleep(d)
 				case eTerminate:
-					log.Println("terminate")
+					rt.logger.Println("terminate")
 					return
 				case ePrintRolling:
 					v, _ := toPrint(e.val)
 					// queue it for later
 					printQueue.PushBack(e)
-					log.Printf("Queued rolling print: %s (%d)", v.s, v.d)
+					rt.logger.Printf("Queued rolling print: %s (%d)", v.s, v.d)
 				case ePrint:
 					v, _ := toPrint(e.val)
 					// queue it for later
 					printQueue.PushBack(e)
-					log.Printf("Queued print: %s (%d)", v.s, v.d)
+					rt.logger.Printf("Queued print: %s (%d)", v.s, v.d)
 				case eAlarmOn:
 					mode = modeAlarm
 					alm, _ := toAlarm(e.val)
-					log.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
-					log.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
+					rt.logger.Printf(">>>>>>>>>>>>>>> ALARM <<<<<<<<<<<<<<<<<<")
+					rt.logger.Printf("%s %s %d", alm.Name, alm.When, alm.Effect)
 					rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
 					// if stopAlarm exists, close it
 					if stopAlarm != nil {
@@ -420,7 +424,7 @@ func runEffects(rt runtimeConfig) {
 					if stopAlarm != nil {
 						stopAlarmEffect(stopAlarm)
 						close(stopAlarm)
-						log.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
+						rt.logger.Printf(">>>>>>>>>>>>>>> STOP ALARM <<<<<<<<<<<<<<<<<<")
 						stopAlarm = nil
 					}
 					rt.display.SetBlinkRate(sevenseg_backpack.BLINK_OFF)
@@ -430,7 +434,7 @@ func runEffects(rt runtimeConfig) {
 				case eLongButton:
 				case eDoubleButton:
 				default:
-					log.Printf("Unhandled %d\n", e.id)
+					rt.logger.Printf("Unhandled %d\n", e.id)
 				}
 			default:
 				// nothing?
@@ -441,7 +445,7 @@ func runEffects(rt runtimeConfig) {
 		switch mode {
 		case modeClock:
 			if printQueue.Len() > 0 {
-				log.Printf("Print from queue (%d)", printQueue.Len())
+				rt.logger.Printf("Print from queue (%d)", printQueue.Len())
 				e := printQueue.Front()
 				v := e.Value.(displayEffect)
 				switch v.id {
@@ -459,7 +463,7 @@ func runEffects(rt runtimeConfig) {
 				mode = modeClock
 			}
 		case modeAlarmError:
-			log.Printf("Error: %d\n", errorID)
+			rt.logger.Printf("Error: %d\n", errorID)
 			rt.display.Print("Err")
 		case modeOutput:
 			// do nothing
@@ -481,7 +485,7 @@ func runEffects(rt runtimeConfig) {
 				}
 			}
 		default:
-			log.Printf("Unknown mode: '%d'\n", mode)
+			rt.logger.Printf("Unknown mode: '%d'\n", mode)
 		}
 
 		rt.clock.Sleep(dEffectSleep)
