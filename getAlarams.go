@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -100,7 +99,7 @@ func configErrorMsg(err bool, secret string) almStateMsg {
 
 func writeAlarms(alarms []alarm, fname string) error {
 	output, err := json.Marshal(alarms)
-	log.Println(string(output))
+	// rt.logger.Println(string(output))
 	if err != nil {
 		return err
 	}
@@ -143,7 +142,7 @@ func getAlarmsFromCache(rt runtimeConfig) ([]alarm, error) {
 		// TODO: account for countdown time?
 		if alarms[i].When.Sub(rt.clock.Now()) < 0 {
 			// remove is append two slices without the part we don't want
-			log.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
+			rt.logger.Println(fmt.Sprintf("Discard expired alarm: %s", alarms[i].ID))
 			alarms = append(alarms[:i], alarms[i+1:]...)
 		}
 	}
@@ -168,10 +167,15 @@ func OOBFetch(url string) []byte {
 	return body
 }
 
+func startGetAlarms(rt runtimeConfig) {
+	rt.logger = &ThreadLogger{name: "Get alarms"}
+	go runGetAlarms(rt)
+}
+
 func runGetAlarms(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
-		log.Println("exiting runGetAlarms")
+		rt.logger.Println("exiting runGetAlarms")
 	}()
 
 	settings := rt.settings
@@ -197,7 +201,7 @@ func runGetAlarms(rt runtimeConfig) {
 		for keepReading {
 			select {
 			case <-comms.quit:
-				log.Println("quit from runGetAlarms")
+				rt.logger.Println("quit from runGetAlarms")
 				return
 			case msg := <-comms.getAlarms:
 				switch msg.ID {
@@ -220,10 +224,10 @@ func runGetAlarms(rt runtimeConfig) {
 							comms.effects <- printRollingEffect(fmt.Sprintf("found %d", len(loadedPayload.alarms)), dRollingPrint)
 						}
 					} else {
-						log.Printf("Skipping old loadID %v", loadedPayload.loadID)
+						rt.logger.Printf("Skipping old loadID %v", loadedPayload.loadID)
 					}
 				default:
-					log.Println(fmt.Sprintf("Unknown msg id: %d", msg.ID))
+					rt.logger.Println(fmt.Sprintf("Unknown msg id: %d", msg.ID))
 				}
 			default:
 				keepReading = false
@@ -249,7 +253,7 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 	settings := rt.settings
 
 	// also grab all of the music we can
-	rt.events.downloadMusicFiles(settings, comms.effects)
+	rt.events.downloadMusicFiles(rt, comms.effects)
 
 	// set error LED now, it should go out almost right away
 	comms.leds <- ledMessage(settings.GetInt(sLEDErr), modeBlink75, 0)
@@ -262,14 +266,14 @@ func loadAlarmsImpl(rt runtimeConfig, loadID int, report bool) {
 		comms.effects <- alarmError(5 * time.Second)
 		comms.chkAlarms <- configErrorMsg(true, secret)
 		comms.configSvc <- configSvcMsg{secret: secret}
-		log.Println(err.Error())
+		rt.logger.Println(err.Error())
 		// try the backup
 		alarms, err = getAlarmsFromCache(rt)
 		if err != nil {
 			// very bad, so...delete and try again later?
 			// more effects?
 			comms.effects <- alarmError(5 * time.Second)
-			log.Printf("Error reading alarm cache: %s\n", err.Error())
+			rt.logger.Printf("Error reading alarm cache: %s\n", err.Error())
 			return
 		}
 		return
@@ -302,7 +306,7 @@ func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
 		// an error here is probably a system config issue
 		if err != nil {
 			// TODO: severe error effect
-			log.Printf("Error: %s", err.Error())
+			rt.logger.Printf("Error: %s", err.Error())
 			return alarms, err
 		}
 	}
@@ -313,22 +317,22 @@ func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
 			// If the DateTime is an empty string the Event is an all-day Event.
 			// So only Date is available.
 			if i.Start.DateTime == "" {
-				log.Println(fmt.Sprintf("Not a time based alarm, ignoring: %s @ %s", i.Summary, i.Start.Date))
+				rt.logger.Println(fmt.Sprintf("Not a time based alarm, ignoring: %s @ %s", i.Summary, i.Start.Date))
 				continue
 			}
 			var when time.Time
 			when, err = time.Parse(time.RFC3339, i.Start.DateTime)
 			if err != nil {
 				// skip bad formats
-				log.Println(err.Error())
+				rt.logger.Println(err.Error())
 				continue
 			}
 
 			// account for countdown time?
 			if when.Sub(rt.clock.Now()) < 0 {
-				log.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
-				log.Println(fmt.Sprintf("NOW: %v", rt.clock.Now()))
-				log.Println(fmt.Sprintf("ALM: %v", when))
+				rt.logger.Println(fmt.Sprintf("Skipping old alarm: %s", i.Id))
+				rt.logger.Println(fmt.Sprintf("NOW: %v", rt.clock.Now()))
+				rt.logger.Println(fmt.Sprintf("ALM: %v", when))
 				continue
 			}
 
@@ -349,7 +353,7 @@ func getAlarmsFromService(rt runtimeConfig) ([]alarm, error) {
 				alm.Effect = almRandom
 			}
 
-			log.Printf("Alarm: %v", alm)
+			rt.logger.Printf("Alarm: %v", alm)
 			alarms = append(alarms, alm)
 		}
 

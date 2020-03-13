@@ -79,11 +79,11 @@ func (te *testEvents) fetch(rt runtimeConfig) (*calendar.Events, error) {
 	return &events, nil
 }
 
-func (te *testEvents) getCalendarService(settings configSettings, prompt bool) (*calendar.Service, error) {
+func (te *testEvents) getCalendarService(rt runtimeConfig, prompt bool) (*calendar.Service, error) {
 	return nil, nil
 }
 
-func (te *testEvents) downloadMusicFiles(settings configSettings, display chan displayEffect) {
+func (te *testEvents) downloadMusicFiles(rt runtimeConfig, display chan displayEffect) {
 	// note that we got a call to do this?
 }
 

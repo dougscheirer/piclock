@@ -23,10 +23,15 @@ func GetOutboundIP() net.IP {
 	return localAddr.IP
 }
 
+func startCheckAlarms(rt runtimeConfig) {
+	rt.logger = &ThreadLogger{name: "Check alarms"}
+	go runCheckAlarms(rt)
+}
+
 func runCheckAlarms(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
-		log.Println("exiting runCheckAlarm")
+		rt.logger.Println("exiting runCheckAlarm")
 	}()
 
 	settings := rt.settings
@@ -38,11 +43,11 @@ func runCheckAlarms(rt runtimeConfig) {
 	state := newStateMachine(rt)
 	for true {
 		forceReport := false
-		// log.Printf("Read loop")
+		// rt.logger.Printf("Read loop")
 		// try reading from our channel
 		select {
 		case <-comms.quit:
-			log.Println("quit from runCheckAlarm")
+			rt.logger.Println("quit from runCheckAlarm")
 			return
 		case stateMsg := <-comms.chkAlarms:
 			switch stateMsg.ID {
@@ -59,7 +64,7 @@ func runCheckAlarms(rt runtimeConfig) {
 					continue
 				}
 				if info.duration > 0 || rt.clock.Now().Sub(nextDoubleClick) < 0 {
-					log.Println("Ignoring duplicate doubleclick")
+					rt.logger.Println("Ignoring duplicate doubleclick")
 					continue
 				}
 
@@ -85,10 +90,10 @@ func runCheckAlarms(rt runtimeConfig) {
 				}
 			case msgMainButton:
 				info := stateMsg.val.(buttonInfo)
-				log.Printf("Check alarms got main button msg: %v", info)
+				rt.logger.Printf("Check alarms got main button msg: %v", info)
 				if !info.pressed {
 					buttonPressActed = false
-					log.Printf("Main button released: %dms", info.duration/time.Millisecond)
+					rt.logger.Printf("Main button released: %dms", info.duration/time.Millisecond)
 					continue
 				}
 				if state.isCancelPrompting() {
@@ -97,9 +102,9 @@ func runCheckAlarms(rt runtimeConfig) {
 					forceReport = true
 				}
 				if buttonPressActed {
-					log.Println("Ignore button hold")
+					rt.logger.Println("Ignore button hold")
 				} else {
-					log.Printf("Main button pressed: %dms", info.duration)
+					rt.logger.Printf("Main button pressed: %dms", info.duration)
 					// only send it for the first press event
 					if info.duration < time.Second {
 						if state.cancelActiveAlarm() {
@@ -120,7 +125,7 @@ func runCheckAlarms(rt runtimeConfig) {
 		}
 
 		// take some time off
-		// log.Printf("Sleep")
+		// rt.logger.Printf("Sleep")
 		rt.clock.Sleep(dAlarmSleep)
 	}
 }

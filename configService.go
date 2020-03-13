@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -59,7 +58,7 @@ func (m *APIHandler) getRealm() string {
 func (m *APIHandler) BasicAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, pass, ok := r.BasicAuth()
-		// log.Printf("cur: %s / %s, got: %s / %s", m.getUser(), m.getSecret(), user, pass)
+		// rt.logger.Printf("cur: %s / %s, got: %s / %s", m.getUser(), m.getSecret(), user, pass)
 		if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(m.user)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(m.secret)) != 1 {
 			w.Header().Set("WWW-Authenticate", `Basic realm="`+m.getRealm()+`"`)
 			w.WriteHeader(401)
@@ -107,6 +106,11 @@ func (m *APIHandler) rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/static/index.html", 301)
 }
 
+func startConfigService(rt runtimeConfig) {
+	rt.logger = &ThreadLogger{name: "Config service"}
+	go runConfigService(rt)
+}
+
 func runConfigService(rt runtimeConfig) {
 	defer wg.Done()
 
@@ -114,20 +118,20 @@ func runConfigService(rt runtimeConfig) {
 
 	rt.configService.launch(&handler, fmt.Sprintf(":%d", rt.settings.GetInt(sConfigSvc)))
 
-	log.Println("starting config service comms loop")
+	rt.logger.Println("starting config service comms loop")
 	comms := rt.comms
 
 	// comms loop, listen for secrets
 	for true {
 		select {
 		case <-comms.quit:
-			log.Printf("quit from config service")
+			rt.logger.Printf("quit from config service")
 			// stop the server
 			rt.configService.stop()
 			return
 		case msg := <-comms.configSvc:
 			// we only accept secret strings
-			log.Printf("Got a new secret: %s", msg.secret)
+			rt.logger.Printf("Got a new secret: %s", msg.secret)
 			handler.secret = msg.secret
 		default:
 			rt.clock.Sleep(dAlarmSleep) // should we just have a default?

@@ -15,7 +15,11 @@ var features = []string{}
 func confirmCalendarAuth(settings configSettings) {
 	// this is only for real auth, so specifcally use the gcalEvents impl
 	events := &gcalEvents{}
-	_, err := events.getCalendarService(settings, true)
+	rt := runtimeConfig{
+		settings: settings,
+		logger:   &ThreadLogger{name: "confirmCalendarAuth"},
+	}
+	_, err := events.getCalendarService(rt, true)
 	if err == nil {
 		// success!
 		log.Println("OAuth successful")
@@ -72,8 +76,8 @@ func main() {
 	rt := initRuntimeConfig(settings)
 
 	// start the effect threads so we can update the LEDs
-	go runLEDController(rt)
-	go runEffects(rt)
+	startLEDController(rt)
+	startEffects(rt)
 
 	// force the LEDs to an on state
 	rt.comms.leds <- ledMessageForce(settings.GetInt(sLEDAlm), modeOn, 0)
@@ -88,12 +92,12 @@ func main() {
 	}
 
 	// launch the rest of the threads
-	go runGetAlarms(rt)
-	go runCheckAlarms(rt)
-	go runWatchButtons(rt)
+	startGetAlarms(rt)
+	startCheckAlarms(rt)
+	startWatchButtons(rt)
 	// optional config service
 	if settings.GetInt(sConfigSvc) > 0 {
-		go runConfigService(rt)
+		startConfigService(rt)
 	}
 
 	wg.Wait()

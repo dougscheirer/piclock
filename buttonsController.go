@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"time"
 
 	"github.com/stianeikeland/go-rpio"
@@ -94,7 +93,7 @@ func checkButtons(rt runtimeConfig) (map[string]button, error) {
 			}
 		}
 		if btn.state.changed {
-			log.Printf("button changed state: %+v", btn)
+			rt.logger.Printf("button changed state: %+v", btn)
 		}
 		(*btns)[k] = btn
 	}
@@ -102,17 +101,22 @@ func checkButtons(rt runtimeConfig) (map[string]button, error) {
 	return *btns, nil
 }
 
+func startWatchButtons(rt runtimeConfig) {
+	rt.logger = &ThreadLogger{name: "Buttons"}
+	go runWatchButtons(rt)
+}
+
 func runWatchButtons(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
-		log.Println("exiting runWatchButtons")
+		rt.logger.Println("exiting runWatchButtons")
 	}()
 
 	settings := rt.settings
 	comms := rt.comms
 	err := rt.buttons.initButtons(settings)
 	if err != nil {
-		log.Println(err.Error())
+		rt.logger.Println(err.Error())
 		return
 	}
 
@@ -126,7 +130,7 @@ func runWatchButtons(rt runtimeConfig) {
 
 	err = rt.buttons.setupButtons(pins, rt)
 	if err != nil {
-		log.Println(err.Error())
+		rt.logger.Println(err.Error())
 		return
 	}
 
@@ -134,7 +138,7 @@ func runWatchButtons(rt runtimeConfig) {
 		select {
 		case <-comms.quit:
 			// we shouldn't get here ATM
-			log.Println("quit from runWatchButtons (surprise)")
+			rt.logger.Println("quit from runWatchButtons (surprise)")
 			return
 		default:
 		}
@@ -142,7 +146,7 @@ func runWatchButtons(rt runtimeConfig) {
 		newButtons, err := checkButtons(rt)
 		if err != nil {
 			// we're done
-			log.Println("quit from runWatchButtons")
+			rt.logger.Println("quit from runWatchButtons")
 			close(comms.quit)
 			return
 		}
@@ -152,19 +156,19 @@ func runWatchButtons(rt runtimeConfig) {
 				diff := time.Duration(v.state.count) * time.Second
 				switch k {
 				case sMainBtn:
-					log.Println("sending main button message")
+					rt.logger.Println("sending main button message")
 					comms.effects <- mainButtonEffect(v.state.pressed, diff)
 					comms.chkAlarms <- mainButtonAlmMsg(v.state.pressed, diff)
 				case sLongBtn:
-					log.Println("sending long button messages")
+					rt.logger.Println("sending long button messages")
 					comms.effects <- longButtonEffect(v.state.pressed, diff)
 					comms.chkAlarms <- longButtonAlmMsg(v.state.pressed, diff)
 				case sDblBtn:
-					log.Println("sending double click button message")
+					rt.logger.Println("sending double click button message")
 					comms.effects <- doubleButtonEffect(v.state.pressed, diff)
 					comms.chkAlarms <- doubleButtonAlmMsg(v.state.pressed, diff)
 				default:
-					log.Printf("Unhandled button %s", k)
+					rt.logger.Printf("Unhandled button %s", k)
 				}
 			}
 		}

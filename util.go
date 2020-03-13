@@ -31,6 +31,7 @@ type runtimeConfig struct {
 	led           led
 	events        events
 	configService configService
+	logger        flogger
 }
 
 const dAlarmSleep time.Duration = 100 * time.Millisecond
@@ -222,6 +223,7 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 		led:           led,
 		events:        &gcalEvents{},
 		configService: &httpConfigService{},
+		logger:        &ThreadLogger{name: "main"},
 	}
 }
 
@@ -237,6 +239,7 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 		led:           &logLed{},
 		events:        &testEvents{},
 		configService: &testConfigService{},
+		logger:        &ThreadLogger{},
 	}
 }
 
@@ -268,4 +271,36 @@ func calcRolling(s string) time.Duration {
 	// the rolling effect pre and post pends 4 spaces, but
 	// it really just adds a total of 4 extra cycles
 	return time.Duration(len(s)+4) * dRollingPrint
+}
+
+// ThreadLogger - special formatting for logs
+type ThreadLogger struct {
+	name string
+}
+
+// Printf - special formatting for logs
+func (l *ThreadLogger) Printf(format string, v ...interface{}) {
+	if l.name != "" {
+		log.Printf("%s: %s", l.name, fmt.Sprintf(format, v...))
+	} else {
+		log.Printf(format, v...)
+	}
+}
+
+// Print - special formatting for logs
+func (l *ThreadLogger) Print(v ...interface{}) {
+	if l.name != "" {
+		log.Printf("%s: %s", l.name, fmt.Sprint(v...))
+	} else {
+		log.Print(v...)
+	}
+}
+
+// Println - special formatting for logs
+func (l *ThreadLogger) Println(v ...interface{}) {
+	if l.name != "" {
+		log.Println(fmt.Sprintf("%s: %s", l.name, fmt.Sprint(v...)))
+	} else {
+		log.Println(v...)
+	}
 }
