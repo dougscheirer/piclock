@@ -25,6 +25,7 @@ type rca struct {
 	lastLog     int
 	cfgError    configError
 	cancelPrint chan bool
+	invalid     bool
 }
 
 func (state *rca) showLoginInfo() time.Duration {
@@ -85,12 +86,14 @@ func newStateMachine(rt runtimeConfig) *rca {
 		activeAlarm: nil,
 		lastLog:     -1,
 		cancelPrint: make(chan bool, 10),
+		invalid:     true,
 	}
 }
 
 func (state *rca) clearAlarms() {
 	state.alarms = make([]alarm, 0)
 	state.nextAlarm = nil
+	state.invalid = true
 	// maybe? we may lose track if a reload comes during an active alarm
 	state.activeAlarm = nil
 }
@@ -123,21 +126,24 @@ func (state *rca) driveState(forceReport bool) {
 	now := state.rt.clock.Now()
 	nowSec := now.Second()
 
-	newNextAlarm := state.findNextAlarm()
-	// TODO: use the compare function?
-	if !state.compareAlarms(newNextAlarm, state.nextAlarm) || forceReport {
-		state.nextAlarm = newNextAlarm
-		// only report when there is no active alarm
-		if state.activeAlarm == nil {
-			state.reportNextAlarm(forceReport)
+	if state.invalid {
+		newNextAlarm := state.findNextAlarm()
+		// TODO: use the compare function?
+		if !state.compareAlarms(newNextAlarm, state.nextAlarm) || forceReport {
+			state.nextAlarm = newNextAlarm
+			// only report when there is no active alarm
+			if state.activeAlarm == nil {
+				state.reportNextAlarm(forceReport)
+			}
 		}
+		state.invalid = false
 	}
 
-	if newNextAlarm == nil {
+	if state.nextAlarm == nil {
 		return
 	}
 
-	duration := newNextAlarm.When.Sub(now)
+	duration := state.nextAlarm.When.Sub(now)
 
 	if state.lastLog != nowSec && nowSec%30 == 0 {
 		state.lastLog = nowSec
@@ -185,12 +191,13 @@ func (state *rca) isCancelPrompting() bool {
 
 func (state *rca) cancelNextAlarm() {
 	state.mode.mode = modeDefault
+	state.invalid = true
+
 	if state.nextAlarm == nil {
 		return
 	}
 
 	state.nextAlarm.started = true
-	// TODO: other things?
 }
 
 func (state *rca) startCancelPrompt() {
@@ -290,6 +297,7 @@ func (state *rca) cancelActiveAlarm() bool {
 	state.activeAlarm.started = true
 	state.activeAlarm = nil
 	state.rt.comms.effects <- cancelAlarmMode()
+	state.invalid = true
 	return true
 }
 

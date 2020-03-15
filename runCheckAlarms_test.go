@@ -190,18 +190,20 @@ func TestCheckAlarmsCountdownCancel(t *testing.T) {
 	testBlockDuration(clock, dAlarmSleep, 2*dAlarmSleep)
 
 	// should see a cancel effect
-	e, _ := effectRead(t, rt.comms.effects)
-	assert.Equal(t, e.id, eAlarmOff)
+	eA = effectReadAll(rt.comms.effects)
+	assert.Equal(t, eA[0].id, eAlarmOff)
+	assert.Equal(t, eA[1].id, ePrint)
+	assert.Equal(t, eA[1].val.(displayPrint).s, "none")
+	assert.Equal(t, len(eA), 2)
 
 	// wait another minute and make sure the alarm did *not* fire
 	testBlockDurationCB(clock, dAlarmSleep, time.Minute+time.Second, func(int) {
 		le, _ = ledRead(t, rt.comms.leds)
 	})
 
-	// should have said "none"
+	// should have no effects
 	eA = effectReadAll(rt.comms.effects)
-	assert.Equal(t, len(eA), 1)
-	assert.Equal(t, eA[0].val.(displayPrint).s, "none")
+	assert.Equal(t, len(eA), 0)
 
 	// done
 	testQuit(rt)

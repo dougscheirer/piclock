@@ -124,7 +124,7 @@ func showLoader(rt runtimeConfig) {
 	}
 	effects := rt.comms.effects
 
-	effects <- printRollingEffect(fmt.Sprintf("bLd %s %s", info.ModTime().Format("01.02"), info.ModTime().Format("2006")), dRollingPrint)
+	effects <- printRollingEffect(fmt.Sprintf("build... %s %s", info.ModTime().Format("01.02"), info.ModTime().Format("2006")), dRollingPrint)
 	effects <- printEffect(info.ModTime().Format("15:04"), 1500*time.Millisecond)
 	// also sleep for a few seconds
 	rt.clock.Sleep(3 * time.Second)

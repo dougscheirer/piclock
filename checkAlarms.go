@@ -55,6 +55,7 @@ func runCheckAlarms(rt runtimeConfig) {
 				payload, _ := toLoadedPayload(stateMsg.val)
 				state.alarms = mergeAlarms(state.alarms, payload.alarms)
 				forceReport = payload.report
+				state.invalid = true
 			case msgConfigError:
 				state.setConfigError(stateMsg.val.(configError))
 			case msgDoubleButton:
