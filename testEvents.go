@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"google.golang.org/api/calendar/v3"
 )
@@ -31,7 +30,7 @@ func (te *testEvents) setFails(cnt int) {
 
 func (te *testEvents) fetch(rt runtimeConfig) (*calendar.Events, error) {
 	te.fetches++
-	log.Printf("Fetch: %d", te.fetches)
+	// log.Printf("Fetch: %d", te.fetches)
 	if te.errorResult {
 		err := errors.New("Bad fetch error")
 		if te.errorCount != infinite {

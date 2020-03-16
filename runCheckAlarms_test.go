@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"sort"
 	"testing"
 	"time"
@@ -518,7 +517,7 @@ func TestCheckAlarmsDoubleClick(t *testing.T) {
 
 	for i := range compares {
 		assert.Equal(t, prints[i], dE[i].id)
-		log.Printf("%d / %d", len(compares[i]), len(dE[i].val.(displayPrint).s))
+		// log.Printf("%d / %d", len(compares[i]), len(dE[i].val.(displayPrint).s))
 		assert.Equal(t, compares[i], dE[i].val.(displayPrint).s)
 	}
 	assert.Equal(t, len(compares), len(dE))

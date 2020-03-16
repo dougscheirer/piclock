@@ -125,7 +125,7 @@ func (this *Sevenseg) simLog(v string, args ...interface{}) {
 	if !this.sim {
 		return
 	}
-	log.Printf(v, args...)
+	log.Printf("%-20s: %s", "sevengseg", fmt.Sprintf(v, args...))
 }
 
 func getClearDisplay() [displaySize]uint8 {

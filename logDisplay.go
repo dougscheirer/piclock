@@ -71,7 +71,7 @@ func (ld *logDisplay) Print(e string) error {
 
 func (ld *logDisplay) PrintOffset(e string, offset int) (string, error) {
 	if e != ld.curDisplay {
-		log.Printf("%s / %d", e, offset)
+		log.Printf("%-20s: %s / %d", "sevenseg", e, offset)
 	}
 	cur, err := ld.ssb.PrintOffset(e, offset)
 	ld.curDisplay = cur

@@ -7,6 +7,7 @@ import (
 )
 
 type rpioLed struct {
+	logger flogger
 }
 
 func (rpi *rpioLed) init() {
@@ -14,10 +15,11 @@ func (rpi *rpioLed) init() {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
+	rpi.logger = &ThreadLogger{name: "LEDs"}
 }
 
 func (rpi *rpioLed) set(pinNum int, on bool) {
-	log.Printf("Set pin %v to %v", pinNum, on)
+	rpi.logger.Printf("Set pin %v to %v", pinNum, on)
 	pin := rpio.Pin(pinNum)
 	pin.Output()
 	if on {

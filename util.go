@@ -239,7 +239,7 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 		led:           &logLed{},
 		events:        &testEvents{},
 		configService: &testConfigService{},
-		logger:        &ThreadLogger{},
+		logger:        &ThreadLogger{name: "test"},
 	}
 }
 
@@ -280,27 +280,15 @@ type ThreadLogger struct {
 
 // Printf - special formatting for logs
 func (l *ThreadLogger) Printf(format string, v ...interface{}) {
-	if l.name != "" {
-		log.Printf("%s: %s", l.name, fmt.Sprintf(format, v...))
-	} else {
-		log.Printf(format, v...)
-	}
+	log.Printf("%-20s: %s", l.name, fmt.Sprintf(format, v...))
 }
 
 // Print - special formatting for logs
 func (l *ThreadLogger) Print(v ...interface{}) {
-	if l.name != "" {
-		log.Printf("%s: %s", l.name, fmt.Sprint(v...))
-	} else {
-		log.Print(v...)
-	}
+	log.Printf("%-20s: %s", l.name, fmt.Sprint(v...))
 }
 
 // Println - special formatting for logs
 func (l *ThreadLogger) Println(v ...interface{}) {
-	if l.name != "" {
-		log.Println(fmt.Sprintf("%s: %s", l.name, fmt.Sprint(v...)))
-	} else {
-		log.Println(v...)
-	}
+	log.Println(fmt.Sprintf("%-20s: %s", l.name, fmt.Sprint(v...)))
 }
