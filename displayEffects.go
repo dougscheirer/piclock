@@ -382,6 +382,8 @@ func runEffects(rt runtimeConfig) {
 				case eCountdown:
 					mode = modeCountdown
 					countdown, _ = toAlarm(e.val)
+					// also clear the print queue
+					printQueue = list.New()
 				case eAlarmError:
 					rt.display.Print("Err")
 					d, _ := toDuration(e.val)

@@ -298,9 +298,10 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 		countdown: true,
 	}
 
+	rt.comms.effects <- printEffect("do not display", 5*time.Second)
 	rt.comms.effects <- setCountdownMode(alm)
 
-	// should start the countdown
+	// should start the countdown, but not display the print effect
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	assert.Equal(t, ld.curDisplay, "59.9")
 
