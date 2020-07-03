@@ -391,14 +391,22 @@ func runEffects(rt runtimeConfig) {
 					return
 				case ePrintRolling:
 					v, _ := toPrint(e.val)
-					// queue it for later
-					printQueue.PushBack(e)
-					rt.logger.Printf("Queued rolling print: %s (%d)", v.s, v.d)
+					// queue it for later?
+					if mode == modeCountdown {
+						rt.logger.Printf("Ignored print during countdown: %s", v.s)
+					} else {
+						printQueue.PushBack(e)
+						rt.logger.Printf("Queued rolling print: %s (%d)", v.s, v.d)
+					}
 				case ePrint:
 					v, _ := toPrint(e.val)
-					// queue it for later
-					printQueue.PushBack(e)
-					rt.logger.Printf("Queued print: %s (%d)", v.s, v.d)
+					// queue it for later?
+					if mode == modeCountdown {
+						rt.logger.Printf("Ignored print during countdown: %s", v.s)
+					} else {
+						printQueue.PushBack(e)
+						rt.logger.Printf("Queued print: %s (%d)", v.s, v.d)
+					}
 				case eAlarmOn:
 					mode = modeAlarm
 					alm, _ := toAlarm(e.val)

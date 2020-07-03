@@ -304,6 +304,12 @@ func TestPrintDoesNotOverrideAlarm(t *testing.T) {
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
 	assert.Equal(t, ld.curDisplay, "59.9")
 
+	// send in some rolling prints.  in countdown mode they
+	// should get flushed when it completes.  we don't need
+	// an assert for this because if it did display then it
+	// would trigger all of the other asserts later
+	rt.comms.effects <- printEffect("do not display", 5*time.Second)
+
 	// advance to the last 10 seconds
 	clock.Advance(50 * time.Second)
 	testBlockDuration(clock, dEffectSleep, dEffectSleep)
