@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -54,8 +55,9 @@ func main() {
 		defer f.Close()
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 
+	log.Printf("\n\nMain process ID: %d\n", os.Getpid())
 	// build features
 	var build string
 	for _, f := range features {
