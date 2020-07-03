@@ -260,8 +260,8 @@ func TestClockModeAlarmOver(t *testing.T) {
 	assert.Equal(t, ld.curDisplay, "_-_-")
 	// make sure the alarm effect did fire
 	s = rt.sounds.(*noSounds)
-	assert.Equal(t, s.playMP3Cnt, 1)
-	assert.Equal(t, s.playItCnt, 1)
+	assert.Equal(t, s.playMP3Cnt, 2)
+	assert.Equal(t, s.playItCnt, 0)
 
 	// signal the play completed
 	ns = rt.sounds.(*noSounds)
