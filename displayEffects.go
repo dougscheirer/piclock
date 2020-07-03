@@ -239,7 +239,7 @@ func playAlarmEffect(rt runtimeConfig, alm *alarm, stop chan bool, done chan boo
 	if !playTones {
 		// make sure the file exists
 		fstat, err := os.Stat(musicFile)
-		if err != nil || fstat == nil {
+		if err != nil || fstat == nil || fstat.Size() == 0 {
 			playTones = true
 		}
 	}
