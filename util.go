@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"time"
 
 	"github.com/jonboulle/clockwork"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type commChannels struct {
@@ -243,28 +243,19 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 	}
 }
 
-func setupLogging(settings configSettings, append bool) (*os.File, error) {
-	if settings.GetString(sLog) != "" {
-		flags := os.O_WRONLY | os.O_CREATE
-		if append {
-			flags |= os.O_APPEND
-		} else {
-			flags |= os.O_TRUNC
-		}
-		f, err := os.OpenFile(settings.GetString(sLog), flags, 0644)
-		if err != nil {
-			wd, _ := os.Getwd()
-			log.Printf("CWD: %s", wd)
-			log.Fatal(err)
-		}
-
-		// set output of logs to f
-		log.SetOutput(f)
-		return f, nil
+func setupLogging(settings configSettings, append bool) {
+	if settings.GetString(sLog) == "" {
+		return
 	}
 
-	// default logging is OK
-	return nil, nil
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   settings.GetString(sLog),
+		MaxSize:    50, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28,   //days
+		Compress:   true, // disabled by default
+	})
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds) // | log.Lshortfile)
 }
 
 func calcRolling(s string) time.Duration {

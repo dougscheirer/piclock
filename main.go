@@ -50,12 +50,7 @@ func main() {
 	}
 
 	// first try to set up the log (optional)
-	f, _ := setupLogging(settings, true)
-	if f != nil {
-		defer f.Close()
-	}
-
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds) // | log.Lshortfile)
+	setupLogging(settings, true)
 
 	log.Printf("STARTUP : %d\n", os.Getpid())
 	// build features

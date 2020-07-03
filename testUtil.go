@@ -20,7 +20,7 @@ var cfgFile string = "./test/config.conf"
 
 func piTestMain(m *testing.M) {
 	testSettings = initSettings(cfgFile)
-	testlog, _ = setupLogging(testSettings, false)
+	setupLogging(testSettings, false)
 
 	// run the tests
 	code := m.Run()

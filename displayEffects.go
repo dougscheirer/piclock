@@ -383,6 +383,7 @@ func runEffects(rt runtimeConfig) {
 					mode = modeCountdown
 					countdown, _ = toAlarm(e.val)
 					// also clear the print queue
+					rt.logger.Printf("Dumping print queue: %d", printQueue.Len())
 					printQueue = list.New()
 				case eAlarmError:
 					rt.display.Print("Err")
