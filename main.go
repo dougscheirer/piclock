@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"sync"
 	"time"
 )
@@ -48,6 +50,13 @@ func main() {
 		confirmCalendarAuth(settings)
 		return
 	}
+
+	// make sure the date is synced
+	out, err := exec.Command("timedatectl status").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("The date is %s\n", out)
 
 	// first try to set up the log (optional)
 	setupLogging(settings, true)
