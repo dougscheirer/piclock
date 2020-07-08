@@ -29,6 +29,8 @@ func setup(t *testing.T) *Sevenseg {
 		assert.Assert(t, false)
 	}
 
+	display.DisplayOn(true)
+
 	return display
 }
 
@@ -84,8 +86,7 @@ func runBasicDisplayImpl(t *testing.T, inverted bool) {
 		display.DisplayOn(on)
 		sleeper(250 * time.Millisecond)
 	}
-
-	display.DisplayOn(true)
+	display.DisplayOn(false)
 }
 
 func TestCharOutput(t *testing.T) {
@@ -134,6 +135,7 @@ func runTestCharOutput(t *testing.T, inverted bool) {
 		display.PrintOffset(buffer, i)
 		sleeper(150 * time.Millisecond)
 	}
+	display.DisplayOn(false)
 }
 
 func TestSegments(t *testing.T) {
@@ -159,4 +161,5 @@ func TestSegments(t *testing.T) {
 			sleeper(25 * time.Millisecond)
 		}
 	}
+	display.DisplayOn(false)
 }

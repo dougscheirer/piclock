@@ -12,6 +12,8 @@ func (ss *rpioDisplay) OpenDisplay(settings configSettings) error {
 		settings.GetByte(sI2CDev),
 		settings.GetInt(sI2CBus),
 		false)
+	// by default, turn it on?
+	ss.DisplayOn(true)
 	return err
 }
 
