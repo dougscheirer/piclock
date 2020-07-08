@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// make sure the date is synced
-	out, err := exec.Command("timedatectl status").Output()
+	out, err := exec.Command("/usr/bin/timedatectl status").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
