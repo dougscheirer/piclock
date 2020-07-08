@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -107,7 +108,10 @@ func main() {
 
 func startWaitSigterm(rt runtimeConfig) {
 	wg.Add(1)
+	go runWaitSigterm(rt)
+}
 
+func runWaitSigterm(rt runtimeConfig) {
 	defer wg.Done()
 
 	// make a signal channel to listen to
@@ -117,9 +121,7 @@ func startWaitSigterm(rt runtimeConfig) {
 	select {
 	case <-sigChan:
 		// signal a stop
-		rt.logger.Println("exiting startWaitSigterm")
-		close(rt.comms.quit)
+		fmt.Print("exiting startWaitSigterm")
+		// close(rt.comms.quit)
 	}
-
-	rt.logger.Println("exiting startWaitSigterm 2")
 }
