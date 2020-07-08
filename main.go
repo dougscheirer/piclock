@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -114,14 +111,18 @@ func startWaitSigterm(rt runtimeConfig) {
 func runWaitSigterm(rt runtimeConfig) {
 	defer wg.Done()
 
-	// make a signal channel to listen to
-	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	// TODO: make this work with systemd services
+	return
+	/*
+		// make a signal channel to listen to
+		sigChan := make(chan os.Signal)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	select {
-	case <-sigChan:
-		// signal a stop
-		fmt.Print("exiting startWaitSigterm")
-		// close(rt.comms.quit)
-	}
+		select {
+		case <-sigChan:
+			// signal a stop
+			fmt.Print("exiting startWaitSigterm")
+			// close(rt.comms.quit)
+		}
+	*/
 }
