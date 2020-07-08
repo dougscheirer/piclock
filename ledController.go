@@ -65,13 +65,16 @@ func startLEDController(rt runtimeConfig) {
 }
 
 func runLEDController(rt runtimeConfig) {
+	comms := rt.comms
+	leds := make(map[int]ledEffect)
+
 	defer wg.Done()
 	defer func() {
 		rt.logger.Printf("Exiting runLEDController")
+		for _, v := range leds {
+			rt.led.off(v.pin)
+		}
 	}()
-
-	comms := rt.comms
-	leds := make(map[int]ledEffect)
 
 	rt.led.init()
 

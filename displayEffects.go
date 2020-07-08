@@ -316,6 +316,8 @@ func startEffects(rt runtimeConfig) {
 func runEffects(rt runtimeConfig) {
 	defer wg.Done()
 	defer func() {
+		// turn off display
+		rt.display.DisplayOn(false)
 		rt.logger.Println("exiting runEffects")
 	}()
 
