@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -72,6 +74,9 @@ func main() {
 	// init rt objects with a real clock
 	rt := initRuntimeConfig(settings)
 
+	// start the sigterm thread
+	startWaitSigterm(rt)
+
 	// start the effect threads so we can update the LEDs
 	startLEDController(rt)
 	startEffects(rt)
@@ -98,4 +103,20 @@ func main() {
 	}
 
 	wg.Wait()
+}
+
+func startWaitSigterm(rt runtimeConfig) {
+	wg.Add(1)
+
+	defer wg.Done()
+
+	// make a signal channel to listen to
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case <-sigChan:
+		// signal a stop
+		close(rt.comms.quit)
+	}
 }
