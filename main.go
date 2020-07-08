@@ -117,6 +117,9 @@ func startWaitSigterm(rt runtimeConfig) {
 	select {
 	case <-sigChan:
 		// signal a stop
+		rt.logger.Println("exiting startWaitSigterm")
 		close(rt.comms.quit)
 	}
+
+	rt.logger.Println("exiting startWaitSigterm 2")
 }
