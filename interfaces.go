@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/stianeikeland/go-rpio"
 	"google.golang.org/api/calendar/v3"
 )
@@ -55,4 +57,8 @@ type flogger interface {
 	Printf(format string, v ...interface{})
 	Print(v ...interface{})
 	Println(v ...interface{})
+}
+
+type ntpcheck interface {
+	getIPDateTime(rt runtimeConfig) time.Time
 }

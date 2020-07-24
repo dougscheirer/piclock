@@ -46,6 +46,7 @@ const sKeyboard string = "keys"
 const sRPi string = "rpi"
 const sAudio string = "audio"
 const sConfigSvc string = "configService"
+const sIPTime string = "ipTimeUrl"
 
 func defaultSettings() *configSettings {
 	s := make(map[string]interface{})
@@ -61,6 +62,7 @@ func defaultSettings() *configSettings {
 	s[sDebug] = false
 	s[sLog] = "/var/log/piclock.log"
 	s[sMusicURL] = "http://localhost/pimusic/music.json"
+	s[sIPTime] = "http://worldtimeapi.org/api/ip"
 	s[sMusicPath] = "/etc/default/piclock/music"
 	s[sBlink] = true
 	s[sStrobe] = true

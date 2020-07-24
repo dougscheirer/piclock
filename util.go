@@ -32,6 +32,7 @@ type runtimeConfig struct {
 	events        events
 	configService configService
 	logger        flogger
+	ntpCheck      ntpcheck
 }
 
 const dAlarmSleep time.Duration = 100 * time.Millisecond
@@ -42,6 +43,7 @@ const dRollingPrint time.Duration = 250 * time.Millisecond
 const dPrintDuration time.Duration = 3 * time.Second
 const dPrintBriefDuration time.Duration = 1 * time.Second
 const dCancelTimeout time.Duration = 5 * time.Second
+const dNTPCheckSleep time.Duration = 5 * time.Minute
 
 const sNextAL string = "next AL..."
 const sAt string = "at"
@@ -51,6 +53,7 @@ const sCancel string = "cancel?"
 const sPin string = "pin"
 const sKey string = "key"
 const sPullup string = "pullup"
+const sNeedSync string = "need sync..."
 
 func toBool(val interface{}) (bool, error) {
 	switch v := val.(type) {
@@ -224,6 +227,7 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 		events:        &gcalEvents{},
 		configService: &httpConfigService{},
 		logger:        &ThreadLogger{name: "main"},
+		ntpCheck:      &ntpChecker{},
 	}
 }
 
@@ -240,6 +244,7 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 		events:        &testEvents{},
 		configService: &testConfigService{},
 		logger:        &ThreadLogger{name: "test"},
+		ntpCheck:      &testNtpChecker{},
 	}
 }
 

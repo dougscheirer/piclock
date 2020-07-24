@@ -92,6 +92,7 @@ func main() {
 	}
 
 	// launch the rest of the threads
+	startNTPWatcher(rt)
 	startGetAlarms(rt)
 	startCheckAlarms(rt)
 	startWatchButtons(rt)
