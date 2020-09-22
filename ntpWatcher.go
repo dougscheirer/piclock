@@ -17,6 +17,8 @@ func runNTPWatcher(rt runtimeConfig) {
 		rt.logger.Println("Exiting runNTPWatcher")
 	}()
 
+	rt.badTime = true
+
 	for true {
 		select {
 		case <-rt.comms.quit:
@@ -30,8 +32,16 @@ func runNTPWatcher(rt runtimeConfig) {
 		// is our clock more than 5m off?
 		if diff > time.Minute*5 || diff < time.Minute*-5 {
 			// print a message, also error flag
-			rt.comms.effects <- printRollingEffect(sNeedSync, 5*time.Second)
+			rt.comms.effects <- printRollingEffect(sNeedSync, dRollingPrint)
+			rt.comms.leds <- ledMessage(rt.settings.GetInt(sLEDErr), modeBlink75, 0)
+			rt.badTime = true
+			rt.clock.Sleep(dNTPCheckBadSleep)
+			rt.comms.ntpVerify <- false
+		} else {
+			rt.badTime = false
+			rt.comms.ntpVerify <- true
+			// check less often
+			rt.clock.Sleep(dNTPCheckSleep)
 		}
-		rt.clock.Sleep(dNTPCheckSleep)
 	}
 }

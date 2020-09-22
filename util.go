@@ -19,6 +19,7 @@ type commChannels struct {
 	getAlarms chan almStateMsg
 	leds      chan ledEffect
 	configSvc chan configSvcMsg
+	ntpVerify chan bool
 }
 
 type runtimeConfig struct {
@@ -33,6 +34,7 @@ type runtimeConfig struct {
 	configService configService
 	logger        flogger
 	ntpCheck      ntpcheck
+	badTime       bool
 }
 
 const dAlarmSleep time.Duration = 100 * time.Millisecond
@@ -43,6 +45,7 @@ const dRollingPrint time.Duration = 250 * time.Millisecond
 const dPrintDuration time.Duration = 3 * time.Second
 const dPrintBriefDuration time.Duration = 1 * time.Second
 const dCancelTimeout time.Duration = 5 * time.Second
+const dNTPCheckBadSleep time.Duration = 15 * time.Second
 const dNTPCheckSleep time.Duration = 5 * time.Minute
 
 const sNextAL string = "next AL..."
@@ -172,6 +175,7 @@ func initCommChannels() commChannels {
 	loaderChannel := make(chan almStateMsg, 10)
 	leds := make(chan ledEffect, 100)
 	configSvc := make(chan configSvcMsg, 10)
+	ntp := make(chan bool, 10)
 
 	return commChannels{
 		quit:      quit,
@@ -180,6 +184,7 @@ func initCommChannels() commChannels {
 		getAlarms: loaderChannel,
 		leds:      leds,
 		configSvc: configSvc,
+		ntpVerify: ntp,
 	}
 }
 
@@ -228,6 +233,7 @@ func initRuntimeConfig(settings configSettings) runtimeConfig {
 		configService: &httpConfigService{},
 		logger:        &ThreadLogger{name: "main"},
 		ntpCheck:      &ntpChecker{},
+		badTime:       false,
 	}
 }
 
@@ -245,6 +251,7 @@ func initTestRuntime(settings configSettings) runtimeConfig {
 		configService: &testConfigService{},
 		logger:        &ThreadLogger{name: "test"},
 		ntpCheck:      &testNtpChecker{},
+		badTime:       false,
 	}
 }
 

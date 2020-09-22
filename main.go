@@ -91,15 +91,23 @@ func main() {
 		rt.clock.Sleep(250 * time.Millisecond)
 	}
 
-	// launch the rest of the threads
+	// launch the non-time dependant threads
 	startNTPWatcher(rt)
-	startGetAlarms(rt)
-	startCheckAlarms(rt)
 	startWatchButtons(rt)
 	// optional config service
 	if settings.GetInt(sConfigSvc) > 0 {
 		startConfigService(rt)
 	}
+
+	// wait for NTP verify
+	ok := false
+	for !ok {
+		ok = <-rt.comms.ntpVerify
+	}
+
+	// launch time-dependant threads
+	startGetAlarms(rt)
+	startCheckAlarms(rt)
 
 	wg.Wait()
 }
