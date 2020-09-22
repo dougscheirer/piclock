@@ -33,6 +33,7 @@ func runNTPWatcher(rt runtimeConfig) {
 		if diff > time.Minute*5 || diff < time.Minute*-5 {
 			// print a message, also error flag
 			rt.comms.effects <- printRollingEffect(sNeedSync, dRollingPrint)
+			rt.logger.Printf("NTP: %v  DIFF: %v", ipTime, diff)
 			rt.comms.leds <- ledMessage(rt.settings.GetInt(sLEDErr), modeBlink75, 0)
 			rt.badTime = true
 			rt.clock.Sleep(dNTPCheckBadSleep)
