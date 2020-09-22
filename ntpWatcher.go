@@ -29,11 +29,8 @@ func runNTPWatcher(rt runtimeConfig) {
 		ipTime := rt.ntpCheck.getIPDateTime(rt)
 		diff := rt.clock.Now().Sub(ipTime)
 
-		badTriesSim := 10
-
 		// is our clock more than 5m off?
-		if badTriesSim > 0 || diff > time.Minute*5 || diff < time.Minute*-5 {
-			badTriesSim--
+		if diff > time.Minute*5 || diff < time.Minute*-5 {
 			// print a message, also error flag
 			rt.comms.effects <- printRollingEffect(sNeedSync, dRollingPrint)
 			rt.comms.leds <- ledMessage(rt.settings.GetInt(sLEDErr), modeBlink75, 0)
