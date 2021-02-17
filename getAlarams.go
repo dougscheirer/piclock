@@ -153,7 +153,7 @@ func getAlarmsFromCache(rt runtimeConfig) ([]alarm, error) {
 // OOBFetch helper for grabbing http files
 func OOBFetch(url string) []byte {
 	resp, err := http.Get(url)
-	if err != nil {
+	if err != nil && resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
 
