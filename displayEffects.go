@@ -333,8 +333,8 @@ func runEffects(rt runtimeConfig) {
 
 	// turn on LED dump?
 	rt.display.DebugDump(settings.GetBool(sDebug))
-
-	rt.display.SetBrightness(3)
+	// configurable brightness
+	rt.display.SetBrightness(uint8(settings.GetInt(sBrightness)))
 	// ready to rock
 	rt.display.DisplayOn(true)
 

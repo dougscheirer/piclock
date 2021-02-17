@@ -47,6 +47,7 @@ const sRPi string = "rpi"
 const sAudio string = "audio"
 const sConfigSvc string = "configService"
 const sIPTime string = "ipTimeUrl"
+const sBrightness string = "brightness"
 
 func defaultSettings() *configSettings {
 	s := make(map[string]interface{})
@@ -73,6 +74,7 @@ func defaultSettings() *configSettings {
 	s[sLEDErr] = byte(6)
 	s[sLEDAlm] = byte(16)
 	s[sConfigSvc] = 8080 // port for the config service to run on, 0 -> no service
+	s[sBrightness] = 3
 
 	if runtime.GOARCH == "arm" {
 		s[sButtons] = sRPi
